@@ -342,23 +342,10 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bits (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 
-    // Upload texture to graphics system
-    GLint last_texture;
-    glad_glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glad_glGenTextures(1, &g_FontTexture);
-    glad_glBindTexture(GL_TEXTURE_2D, g_FontTexture);
-    glad_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glad_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-#ifdef GL_UNPACK_ROW_LENGTH
-    glad_glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-#endif
-    glad_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    g_FontTexture = ImGui_ImplOpenGL3_CreateTexture(pixels, width, height, true);
 
     // Store our identifier
     io.Fonts->TexID = (ImTextureID)(intptr_t)g_FontTexture;
-
-    // Restore state
-    glad_glBindTexture(GL_TEXTURE_2D, last_texture);
 
     return true;
 }
@@ -368,10 +355,40 @@ void ImGui_ImplOpenGL3_DestroyFontsTexture()
     if (g_FontTexture)
     {
         ImGuiIO& io = ImGui::GetIO();
-        glad_glDeleteTextures(1, &g_FontTexture);
+        ImGui_ImplOpenGL3_DestroyTexture(g_FontTexture);
         io.Fonts->TexID = 0;
         g_FontTexture = 0;
     }
+}
+
+unsigned int ImGui_ImplOpenGL3_CreateTexture(unsigned char* pixels, int width, int height, bool withAlpha)
+{
+    GLuint texture=0;
+    // Build texture atlas
+    ImGuiIO& io = ImGui::GetIO();
+    // Upload texture to graphics system
+    GLint last_texture;
+    glad_glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+    glad_glGenTextures(1, &texture);
+    glad_glBindTexture(GL_TEXTURE_2D, texture);
+    glad_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glad_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+#ifdef GL_UNPACK_ROW_LENGTH
+    glad_glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+#endif
+
+    glad_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, withAlpha ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
+
+    // Restore state
+    glad_glBindTexture(GL_TEXTURE_2D, (GLuint)last_texture);
+
+    return texture;
+}
+
+void ImGui_ImplOpenGL3_DestroyTexture(unsigned int id)
+{
+    if(glad_glIsTexture(id))
+        glad_glDeleteTextures(1, &id);
 }
 
 // If you get an error please report on github. You may try different GL context version or GLSL version. See GL<>GLSL version table at the top of this file.

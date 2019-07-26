@@ -12,6 +12,8 @@ add_subdirectory(libs/glfw)
 include_directories(
         ${PROJECT_SOURCE_DIR}/inc
         ${PROJECT_SOURCE_DIR}/libs/imgui
+        ${PROJECT_SOURCE_DIR}/libs/tfd
+        ${PROJECT_SOURCE_DIR}/libs/stb
         ${PROJECT_SOURCE_DIR}
 )
 
@@ -22,6 +24,7 @@ file(GLOB all_SRCS
         ${PROJECT_SOURCE_DIR}/src/*.c
         ${PROJECT_SOURCE_DIR}/glad/src/glad.c
         ${PROJECT_SOURCE_DIR}/libs/imgui/*.cpp
+        ${PROJECT_SOURCE_DIR}/libs/tfd/tinyfiledialogs.c
         )
 
 

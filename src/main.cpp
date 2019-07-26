@@ -101,6 +101,9 @@ int init()
 
     auto start=std::chrono::high_resolution_clock::now();
 
+    int w,h;
+    int prevW=mainWindow.width, prevH=mainWindow.height;
+
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -111,6 +114,13 @@ int init()
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        glfwGetWindowSize(window, &w, &h);
+        if(w!=prevW || h!=prevH)
+        {
+            prevW=w;prevH=h;
+            mainWindow.on_resize(w,h);
+        }
 
         mainWindow.on_render();
 
