@@ -93,13 +93,34 @@
 #define IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX     1
 #endif
 
+
+// Data
+static int			g_ImageTexID = -1;
+static int			g_BinarizationLevel = 127;
+
 // OpenGL Data
 static char         g_GlslVersionString[32] = "";
 static GLuint       g_FontTexture = 0;
 static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
+
+static int			g_AttribLocationMakeBin = 0;
+static int			g_AttribLocationBinLevel = 0;
+
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
 static int          g_AttribLocationVtxPos = 0, g_AttribLocationVtxUV = 0, g_AttribLocationVtxColor = 0; // Vertex attributes location
 static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
+
+
+void ImGui_ImplOpenGL3_SetImageTexID(int ID)
+{
+    g_ImageTexID = ID;
+}
+
+void ImGui_ImplOpenGL3_SetBinarizationLevel(int Level)
+{
+    g_BinarizationLevel = Level;
+}
+
 
 // Functions
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
@@ -291,12 +312,21 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                         glad_glScissor((int)clip_rect.x, (int)(fb_height - clip_rect.w), (int)(clip_rect.z - clip_rect.x), (int)(clip_rect.w - clip_rect.y));
                     else
                         glad_glScissor((int)clip_rect.x, (int)clip_rect.y, (int)clip_rect.z, (int)clip_rect.w); // Support for GL 4.5 rarely used glad_glClipControl(GL_UPPER_LEFT)
-
+    
+                    if (g_ImageTexID == (intptr_t)pcmd->TextureId)
+                    {
+                        glUniform1i(g_AttribLocationMakeBin, 1);
+                        glUniform1f(g_AttribLocationBinLevel, float(g_BinarizationLevel) / 255.0f);
+                    }
+                    else
+                    {
+                        glUniform1i(g_AttribLocationMakeBin, 0);
+                    }
+                    
                     // Bind texture, Draw
                     glad_glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
 #if IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX
-//                    glad_glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
-                    glad_glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
+                    glad_glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
 #else
                     glad_glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
 #endif
@@ -361,7 +391,7 @@ void ImGui_ImplOpenGL3_DestroyFontsTexture()
     }
 }
 
-unsigned int ImGui_ImplOpenGL3_CreateTexture(unsigned char* pixels, int width, int height, bool withAlpha)
+unsigned int ImGui_ImplOpenGL3_CreateTexture(unsigned char* pixels, int width, int height, bool withAlpha, bool smooth)
 {
     GLuint texture=0;
     // Build texture atlas
@@ -371,8 +401,9 @@ unsigned int ImGui_ImplOpenGL3_CreateTexture(unsigned char* pixels, int width, i
     glad_glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glad_glGenTextures(1, &texture);
     glad_glBindTexture(GL_TEXTURE_2D, texture);
-    glad_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glad_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    glad_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, smooth ? GL_LINEAR : GL_NEAREST);
+    glad_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, smooth ? GL_LINEAR : GL_NEAREST);
 #ifdef GL_UNPACK_ROW_LENGTH
     glad_glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 #endif
@@ -438,25 +469,9 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glad_glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
 #endif
 
-    // Parse GLSL version string
     int glsl_version = 130;
-    sscanf(g_GlslVersionString, "#version %d", &glsl_version);
 
-    const GLchar* vertex_shader_glsl_120 =
-        "uniform mat4 ProjMtx;\n"
-        "attribute vec2 Position;\n"
-        "attribute vec2 UV;\n"
-        "attribute vec4 Color;\n"
-        "varying vec2 Frag_UV;\n"
-        "varying vec4 Frag_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Frag_UV = UV;\n"
-        "    Frag_Color = Color;\n"
-        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-        "}\n";
-
-    const GLchar* vertex_shader_glsl_130 =
+    const GLchar* vertex_shader =
         "uniform mat4 ProjMtx;\n"
         "in vec2 Position;\n"
         "in vec2 UV;\n"
@@ -470,101 +485,31 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
         "}\n";
 
-    const GLchar* vertex_shader_glsl_300_es =
-        "precision mediump float;\n"
-        "layout (location = 0) in vec2 Position;\n"
-        "layout (location = 1) in vec2 UV;\n"
-        "layout (location = 2) in vec4 Color;\n"
-        "uniform mat4 ProjMtx;\n"
-        "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Frag_UV = UV;\n"
-        "    Frag_Color = Color;\n"
-        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-        "}\n";
-
-    const GLchar* vertex_shader_glsl_410_core =
-        "layout (location = 0) in vec2 Position;\n"
-        "layout (location = 1) in vec2 UV;\n"
-        "layout (location = 2) in vec4 Color;\n"
-        "uniform mat4 ProjMtx;\n"
-        "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Frag_UV = UV;\n"
-        "    Frag_Color = Color;\n"
-        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-        "}\n";
-
-    const GLchar* fragment_shader_glsl_120 =
-        "#ifdef GL_ES\n"
-        "    precision mediump float;\n"
-        "#endif\n"
+    //simple shader that accounts for binarization of image
+    const GLchar* fragment_shader =
         "uniform sampler2D Texture;\n"
-        "varying vec2 Frag_UV;\n"
-        "varying vec4 Frag_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);\n"
-        "}\n";
-
-    const GLchar* fragment_shader_glsl_130 =
-        "uniform sampler2D Texture;\n"
+        "uniform bool bMakeBin;\n"
+        "uniform float ColorLevel;\n"
         "in vec2 Frag_UV;\n"
         "in vec4 Frag_Color;\n"
         "out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "	vec4 TexColor = texture( Texture, Frag_UV.st);\n"
+        "	if(bMakeBin)\n"
+        "	{\n"
+        "		if(0.216f*TexColor.x+0.7152f*TexColor.y+0.0722*TexColor.z < ColorLevel)\n"
+        "		{\n"
+        "			TexColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+        "		}\n"
+        "		else\n"
+        "		{\n"
+        "			TexColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
+        "		}\n"
+        "	}\n"
+        "	Out_Color = Frag_Color * TexColor;\n"
         "}\n";
 
-    const GLchar* fragment_shader_glsl_300_es =
-        "precision mediump float;\n"
-        "uniform sampler2D Texture;\n"
-        "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Color;\n"
-        "layout (location = 0) out vec4 Out_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-        "}\n";
-
-    const GLchar* fragment_shader_glsl_410_core =
-        "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Color;\n"
-        "uniform sampler2D Texture;\n"
-        "layout (location = 0) out vec4 Out_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-        "}\n";
-
-    // Select shaders matching our GLSL versions
-    const GLchar* vertex_shader = NULL;
-    const GLchar* fragment_shader = NULL;
-    if (glsl_version < 130)
-    {
-        vertex_shader = vertex_shader_glsl_120;
-        fragment_shader = fragment_shader_glsl_120;
-    }
-    else if (glsl_version >= 410)
-    {
-        vertex_shader = vertex_shader_glsl_410_core;
-        fragment_shader = fragment_shader_glsl_410_core;
-    }
-    else if (glsl_version == 300)
-    {
-        vertex_shader = vertex_shader_glsl_300_es;
-        fragment_shader = fragment_shader_glsl_300_es;
-    }
-    else
-    {
-        vertex_shader = vertex_shader_glsl_130;
-        fragment_shader = fragment_shader_glsl_130;
-    }
 
     // Create shaders
     const GLchar* vertex_shader_with_version[2] = { g_GlslVersionString, vertex_shader };
@@ -584,7 +529,10 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glad_glAttachShader(g_ShaderHandle, g_FragHandle);
     glad_glLinkProgram(g_ShaderHandle);
     CheckProgram(g_ShaderHandle, "shader program");
-
+    
+    g_AttribLocationMakeBin = glad_glGetUniformLocation(g_ShaderHandle, "bMakeBin");
+    g_AttribLocationBinLevel = glad_glGetUniformLocation(g_ShaderHandle, "ColorLevel");
+    
     g_AttribLocationTex = glad_glGetUniformLocation(g_ShaderHandle, "Texture");
     g_AttribLocationProjMtx = glad_glGetUniformLocation(g_ShaderHandle, "ProjMtx");
     g_AttribLocationVtxPos = glad_glGetAttribLocation(g_ShaderHandle, "Position");

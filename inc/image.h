@@ -3,6 +3,8 @@
 #define CURVEDETECT_IMAGE_H
 
 #include <string>
+#include <Eigen/Dense>
+using Eigen::MatrixXi;
 
 class Image {
 public:
@@ -15,6 +17,17 @@ public:
     unsigned int get_texture() {
         return texture;
     }
+    
+    bool isPixelInside(int px, int py);
+    bool getClosestBlack(int& px, int& py, int hside, int ColorLevel);
+    
+    
+    int getPixelValue(int px, int py);
+    
+    //px and py will be replaced with the local coordinates
+    //inside of returned region
+    //region will be a square with side = (2*hside+1)
+    bool getNearbyPoints(int& px, int& py, int hside, MatrixXi& out_PointRegion);
 
 private:
 
@@ -23,6 +36,8 @@ private:
     unsigned int texture;
     int width;
     int height;
+    
+    MatrixXi ImageMatrix;
 
 };
 
