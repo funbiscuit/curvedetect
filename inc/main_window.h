@@ -2,7 +2,9 @@
 #ifndef CURVEDETECT_MAINWINDOW_H
 #define CURVEDETECT_MAINWINDOW_H
 
-#include "main_controller.h"
+#include <memory>
+#include "image.h"
+#include "imgui.h"
 
 
 enum ActionMode
@@ -40,10 +42,6 @@ public:
 
     void on_render();
     void on_resize(int w, int h);
-
-    MainController& get_controller() {
-        return controller;
-    }
     
     void init();
     
@@ -171,14 +169,6 @@ private:
     std::string unescape(const std::string& s);
     std::string escape(const std::string& s);
     
-    
-    
-    
-    void render_toolbar();
-    void render_area();
-    void render_hints();
-
-    MainController controller;
 };
 
 
