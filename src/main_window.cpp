@@ -22,7 +22,6 @@
 #include <filesystem>
 
 #include "tinyfiledialogs.h"
-#include "mat_file_writer.h"
 
 #include <Eigen/Dense>
 using Eigen::MatrixXd;
@@ -45,22 +44,13 @@ MainWindow::MainWindow()
     
     ZoomWndSize = 200.0f;
     
-    BinarizationLevel = 127;
-    
-    SubdivideIterations = 3;
-    
-    SelectedItem = -1;
-    HoveredItem = -1;
-    
     decimalSeparator = '.';
     columnSeparator = "\t";
     lineEnding = "\n";
     
     image = nullptr;
+    curve = nullptr;
     
-    CoordOriginImg = ImVec2(200, 200);
-    
-    CoordOriginTargetX = ImVec2(400, 200);
 }
 
 
@@ -109,6 +99,7 @@ void MainWindow::init()
 {
 #ifndef NDEBUG
     image=std::make_shared<Image>("../img/test.png");
+    curve=std::make_shared<CurveDetect>(image);
 #endif
 }
 
@@ -268,8 +259,8 @@ void MainWindow::ShowMainWindow()
     HoveredPixel.x /= CurrentImageScale;
     HoveredPixel.y /= CurrentImageScale;
     
-    
-    UpdateHoveredItemIndex(CurrentImPos);
+    if(curve)
+        curve->UpdateHoveredItemIndex(HoveredPixel, CurrentMode);
     
     ProcessInput(HoveredPixel);
     
@@ -390,7 +381,7 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
     
     auto& app=MainApp::getInstance();
     
-    if (image && ImGui::IsMouseHoveringWindow() && !bIsContextMenuOpened && bIsReadyForAction)
+    if (curve && ImGui::IsMouseHoveringWindow() && !bIsContextMenuOpened && bIsReadyForAction)
     {
         if (ImGui::IsMouseDown(0))
         {
@@ -405,103 +396,56 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
                         case ActionMode1_AddPoints:
                             if (app.isCtrlPressed())
                             {
-                                UserPoints.push_back(HoveredPixel);
-                                SnapToCurve(UserPoints.back());
-                                SnapToBary(UserPoints.back());
-                                SortPoints();
-                                UpdateSubdivision();
-                                SelectedItem = UserPoints.size() - 1;
-                                std::cout << "ctrl was pressed\n";
+                                curve->AddPoint(HoveredPixel);
                             }
-                            else if (HoveredItem >= 0 && HoveredItem < int(UserPoints.size()))
+                            else if (curve->GetHoveredPoint()!=-1)
                             {
                                 if (app.isShiftPressed())
                                 {
-                                    UserPoints.erase(UserPoints.begin() + HoveredItem);
-                                    HoveredItem = -1;
-                                    SelectedItem = -1;
-                                    SortPoints();
-                                    UpdateSubdivision();
-                                    //std::cout << "delete";
+                                    curve->DeleteHoveredPoint();
                                 }
                                 else
                                 {
-                                    SelectedItem = HoveredItem;
+                                    curve->SelectHovered();
                                 }
-                                std::cout << "shift was pressed\n";
                             }
                             break;
                         case ActionMode2_MoveOrigin:
-                            CoordOriginTargetX += HoveredPixel - CoordOriginImg;
-                            CoordOriginImg = HoveredPixel;
+                            curve->SetOrigin(HoveredPixel, app.isCtrlPressed());
                             break;
                         case ActionMode3_MoveXTarget:
-                            CoordOriginTargetX = HoveredPixel;
-                            SortPoints();
-                            UpdateSubdivision();
+                            curve->SetTarget(HoveredPixel, app.isCtrlPressed());
                             break;
                         case ActionMode4_AddXTick:
-                            if (app.isCtrlPressed() && XTicks.size() < 2)
+                            if (app.isCtrlPressed() && curve->AddXTick(HoveredPixel))
                             {
-                                float value = 0.0f;
-
-#ifdef _DEBUG
-                                
-                                value = (float) XTicks.size();
-							if (value > 0.5f)
-							{
-								value = XTicks[0].z + 1.0f;
-							}
-#endif // _DEBUG
-                                
-                                
-                                XTicks.push_back(ImVec4(HoveredPixel.x, HoveredPixel.y, value, 0.0f));
-                                SelectedItem = XTicks.size() - 1;
                             }
-                            else if (HoveredItem >= 0 && HoveredItem < int(XTicks.size()))
+                            else if (curve->GetHoveredXTick()!=-1)
                             {
                                 if (app.isShiftPressed())
                                 {
-                                    XTicks.erase(XTicks.begin() + HoveredItem);
-                                    HoveredItem = -1;
-                                    SelectedItem = -1;
+                                    curve->DeleteHoveredXTick();
                                 }
                                 else
                                 {
-                                    SelectedItem = HoveredItem;
+                                    curve->SelectHovered();
                                 }
-                                std::cout << "shift was pressed\n";
                             }
                             break;
                         case ActionMode5_AddYTick:
-                            if (app.isCtrlPressed() && YTicks.size() < 2)
+                            if (app.isCtrlPressed() && curve->AddYTick(HoveredPixel))
                             {
-                                float value = 0.0f;
-#ifdef _DEBUG
-                                
-                                value = (float) YTicks.size();
-							if (value > 0.5f)
-							{
-								value = YTicks[0].z + 1.0f;
-							}
-#endif // _DEBUG
-                                
-                                YTicks.push_back(ImVec4(HoveredPixel.x, HoveredPixel.y, value, 0.0f));
-                                SelectedItem = YTicks.size() - 1;
                             }
-                            else if (HoveredItem >= 0 && HoveredItem < int(YTicks.size()))
+                            else if (curve->GetHoveredYTick()!=-1)
                             {
                                 if (app.isShiftPressed())
                                 {
-                                    YTicks.erase(YTicks.begin() + HoveredItem);
-                                    HoveredItem = -1;
-                                    SelectedItem = -1;
+                                    curve->DeleteHoveredYTick();
                                 }
                                 else
                                 {
-                                    SelectedItem = HoveredItem;
+                                    curve->SelectHovered();
                                 }
-                                std::cout << "shift was pressed\n";
                             }
                             break;
                         default:
@@ -520,70 +464,27 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
                         case ActionMode0_None:
                             break;
                         case ActionMode1_AddPoints:
-                            if (SelectedItem >= 0)
+                            if (curve->GetSelected()>=0)
                             {
-                                UserPoints[SelectedItem] = HoveredPixel;
-                                if (app.isCtrlPressed()) // snap only if we hold CTRL
-                                {
-                                    SnapToCurve(UserPoints[SelectedItem]);
-                                    SnapToBary(UserPoints[SelectedItem]);
-                                }
-                                SortPoints();
-                                UpdateSubdivision();
+                                curve->MoveSelectedPoint(HoveredPixel, app.isCtrlPressed());
                             }
                             break;
                         case ActionMode2_MoveOrigin:
-                            CoordOriginTargetX += HoveredPixel - CoordOriginImg;
-                            CoordOriginImg = HoveredPixel;
-                            
-                            SnappedPoint = CoordOriginImg;
-                            if (app.isCtrlPressed()) // snap only if we hold CTRL
-                            {
-                                SnapToCurve(SnappedPoint);
-                                SnapToBary(SnappedPoint);
-                                CoordOriginTargetX += SnappedPoint - CoordOriginImg;
-                                CoordOriginImg = SnappedPoint;
-                            }
+                            curve->SetOrigin(HoveredPixel, app.isCtrlPressed());
                             break;
                         case ActionMode3_MoveXTarget:
-                            SnappedPoint = HoveredPixel;
-                            
-                            if (app.isCtrlPressed()) // snap only if we hold CTRL
-                            {
-                                SnapToCurve(SnappedPoint);
-                                SnapToBary(SnappedPoint);
-                            }
-                            CoordOriginTargetX = SnappedPoint;
-                            
-                            SortPoints();
-                            UpdateSubdivision();
+                            curve->SetTarget(HoveredPixel, app.isCtrlPressed());
                             break;
                         case ActionMode4_AddXTick:
-                            if (SelectedItem >= 0)
+                            if (curve->GetSelected()>=0)
                             {
-                                SnappedPoint = HoveredPixel;
-                                
-                                if (app.isCtrlPressed()) // snap only if we hold CTRL
-                                {
-                                    SnapToCurve(SnappedPoint);
-                                    SnapToBary(SnappedPoint);
-                                }
-                                XTicks[SelectedItem].x = SnappedPoint.x;
-                                XTicks[SelectedItem].y = SnappedPoint.y;
+                                curve->MoveSelectedXTick(HoveredPixel, app.isCtrlPressed());
                             }
                             break;
                         case ActionMode5_AddYTick:
-                            if (SelectedItem >= 0)
+                            if (curve->GetSelected()>=0)
                             {
-                                SnappedPoint = HoveredPixel;
-                                
-                                if (app.isCtrlPressed()) // snap only if we hold CTRL
-                                {
-                                    SnapToCurve(SnappedPoint);
-                                    SnapToBary(SnappedPoint);
-                                }
-                                YTicks[SelectedItem].x = SnappedPoint.x;
-                                YTicks[SelectedItem].y = SnappedPoint.y;
+                                curve->MoveSelectedYTick(HoveredPixel, app.isCtrlPressed());
                             }
                             break;
                         default:
@@ -603,37 +504,28 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
                 case ActionMode0_None:
                     break;
                 case ActionMode1_AddPoints:
-                    if (SelectedItem >= 0)
+                    if (curve->GetSelected()>=0)
                     {
                         
                         if (image->isPixelInside((int)HoveredPixel.x, (int)HoveredPixel.y))
                         {
-                            UserPoints[SelectedItem] = HoveredPixel;
-                            
-                            if (app.isCtrlPressed()) // snap only if we hold CTRL
-                            {
-                                SnapToCurve(UserPoints[SelectedItem]);
-                                SnapToBary(UserPoints[SelectedItem]);
-                            }
-                            
-                            SortPoints();
-                            UpdateSubdivision();
+                            curve->MoveSelectedPoint(HoveredPixel, app.isCtrlPressed());
                         }
                         
                         
-                        SelectedItem = -1;
+                        curve->Deselect();
                     }
                     break;
                 case ActionMode2_MoveOrigin:
                     break;
                 case ActionMode4_AddXTick:
-                    if (SelectedItem >= 0)
+                    if (curve->GetSelected()>=0)
                     {
                         ImGui::OpenPopup("TickConfig");
                     }
                     break;
                 case ActionMode5_AddYTick:
-                    if (SelectedItem >= 0)
+                    if (curve->GetSelected()>=0)
                     {
                         ImGui::OpenPopup("TickConfig");
                     }
@@ -656,10 +548,8 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
         
     }
     
-    if (std::abs(CoordOriginTargetX.x - CoordOriginImg.x) < 2.0f && std::abs(CoordOriginTargetX.y - CoordOriginImg.y) < 2.0f)
-    {
-        CoordOriginTargetX = CoordOriginImg + ImVec2(10.0f, 0.0f);
-    }
+    if(curve)
+        curve->CheckTarget();
     
     if (ImGui::IsMouseReleased(0) && !bIsContextMenuOpened)
     {
@@ -671,19 +561,26 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
 
 void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
 {
+    if(!curve)
+        return;
+    
     ImVec2 WinPos = ImGui::GetWindowPos();
     
     
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     
+    int SelectedItem=curve->GetSelected();
+    int HoveredItem=curve->GetHovered();
+    auto& allPoints=curve->GetAllPoints();
+    auto& userPoints=curve->GetUserPoints();
+    
     //draw lines between subdivided points
-    if (SubdividedPoints.size() > 1)
+    if (allPoints.size() > 1)
     {
-        for (size_t kp = 0; kp < SubdividedPoints.size() - 1; kp++)
+        for (size_t kp = 0; kp < allPoints.size() - 1; kp++)
         {
-            ImVec2 PointPos0 = SubdividedPoints[kp] * im_scale + im_pos + WinPos;
-            ImVec2 PointPos1 = SubdividedPoints[kp + 1] * im_scale + im_pos + WinPos;
-            
+            ImVec2 PointPos0 = allPoints[kp] * im_scale + im_pos + WinPos;
+            ImVec2 PointPos1 = allPoints[kp + 1] * im_scale + im_pos + WinPos;
             
             ImU32 LineColor = ImColor(80, 255, 80, 200);
             draw_list->AddLine(PointPos0, PointPos1, LineColor, 2.0f);
@@ -697,22 +594,21 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     }
     
     
-    
+    //TODO maybe not needed
     //if we are pressing button - draw a line from press location to snapped point
-    if (SelectedItem >= 0 && ImGui::IsMouseDown(0) && CurrentMode == ActionMode1_AddPoints
-        && SelectedItem < int(UserPoints.size()) && ImGui::IsMouseHoveringWindow())
-    {
-        ImVec2 PointPos0 = UserPoints[SelectedItem] * im_scale + im_pos + WinPos;
-        
-        ImU32 LineColor = ImColor(80, 220, 80, 220);
-        draw_list->AddLine(PointPos0, MousePos, LineColor, 2.0f);
-    }
+//    if (SelectedItem >= 0 && ImGui::IsMouseDown(0) && CurrentMode == ActionMode1_AddPoints
+//        && SelectedItem < int(UserPoints.size()) && ImGui::IsMouseHoveringWindow())
+//    {
+//        ImVec2 PointPos0 = UserPoints[SelectedItem] * im_scale + im_pos + WinPos;
+//
+//        ImU32 LineColor = ImColor(80, 220, 80, 220);
+//        draw_list->AddLine(PointPos0, MousePos, LineColor, 2.0f);
+//    }
     
     auto& app=MainApp::getInstance();
-    
-    for (size_t kp = 0; kp < UserPoints.size(); kp++)
+    for (size_t kp = 0; kp < userPoints.size(); kp++)
     {
-        ImVec2 PointPos = UserPoints[kp] * im_scale + im_pos + WinPos;
+        ImVec2 PointPos = userPoints[kp] * im_scale + im_pos + WinPos;
         
         ImU32 CircleFill = ImColor(150, 150, 150, 255);
         
@@ -737,13 +633,16 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
 
 void MainWindow::ShowTickConfigPopup()
 {
+    if(!curve)
+        return;
+    
     static bool bTickInputAutoFocus = true;
     
     static bool bTickConfigInit = true;
     
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
-    if (ImGui::BeginPopupModal("TickConfig", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::BeginPopupModal("TickConfig", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         
         if (ImGui::IsMouseDown(0))
@@ -758,7 +657,11 @@ void MainWindow::ShowTickConfigPopup()
         static int TickType = 0; //X
         static int TickPrecision = 3; //X
         static float TickValue = 0;
-        
+    
+        int SelectedItem=curve->GetSelected();
+        auto& XTicks=curve->GetXTicks();
+        auto& YTicks=curve->GetYTicks();
+    
         if (bTickConfigInit)
         {
             if (CurrentMode == ActionMode4_AddXTick)//X
@@ -931,12 +834,21 @@ bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, const ImVec2 &HoveredPi
 
 void MainWindow::ShowTickLines(ImVec2 im_pos)
 {
+    if(!curve)
+        return;
+    
     ImVec2 WinPos = ImGui::GetWindowPos();
     
     
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     
     ImU32 TickColor = ImColor(120, 120, 120, 255);
+    
+    auto CoordOriginImg=curve->GetOrigin();
+    auto CoordOriginTargetX=curve->GetTarget();
+    int HoveredItem=curve->GetHovered();
+    auto& XTicks=curve->GetXTicks();
+    auto& YTicks=curve->GetYTicks();
     
     ImVec2 TargetDirX = CoordOriginTargetX - CoordOriginImg;
     
@@ -1048,7 +960,7 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
 
 void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
 {
-    if(!image)
+    if(!curve)
         return;
     
     ImVec2 WinPos = ImGui::GetWindowPos();
@@ -1057,6 +969,10 @@ void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
     
     float im_width = float(image->get_width())*CurrentImageScale;
     
+    auto CoordOriginImg=curve->GetOrigin();
+    auto CoordOriginTargetX=curve->GetTarget();
+    auto& XTicks=curve->GetXTicks();
+    auto& YTicks=curve->GetYTicks();
     
     ImVec2 CoordOriginScreen = CoordOriginImg*CurrentImageScale + im_pos + WinPos;
     
@@ -1143,101 +1059,6 @@ void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
     //draw_list->AddLine(LineStart, LineEnd, AxisColor, 2.0f);
 }
 
-void MainWindow::UpdateHoveredItemIndex(ImVec2 im_pos)
-{
-    ImVec2 WinPos = ImGui::GetWindowPos();
-    ImVec2 MousePos = ImGui::GetMousePos();
-    
-    HoveredItem = -1;
-    float MinDist = float(ZoomPixelHSide);
-    float MinDist2 = MinDist*MinDist;
-    
-    if (CurrentMode == ActionMode1_AddPoints)
-    {
-        
-        for (size_t kp = 0; kp < UserPoints.size(); kp++)
-        {
-            ImVec2 DeltaPos = UserPoints[kp] * CurrentImageScale + im_pos + WinPos - MousePos;
-            
-            float dist2 = DeltaPos.x*DeltaPos.x + DeltaPos.y*DeltaPos.y;
-            
-            if (dist2 < MinDist2)
-            {
-                MinDist2 = dist2;
-                HoveredItem = kp;
-            }
-        }
-    }
-    else if (CurrentMode == ActionMode4_AddXTick)
-    {
-        for (size_t kp = 0; kp < XTicks.size(); kp++)
-        {
-            //float DeltaPos = std::abs(XTicks[kp].x * im_scale + im_pos.x + WinPos.x - MousePos.x);
-            
-            ImVec2 Direction;
-            Direction.x = CoordOriginTargetX.y - CoordOriginImg.y;
-            Direction.y = -(CoordOriginTargetX.x - CoordOriginImg.x);
-            
-            ImVec2 Point;
-            Point.x = XTicks[kp].x;
-            Point.y = XTicks[kp].y;
-            
-            float A = Direction.y;
-            float B = -Direction.x;
-            float C = -A*Point.x - B*Point.y;
-            //	float C2 = B*Point.x - A*Point.y;
-            
-            
-            ImVec2 MouseImg = (MousePos - WinPos - im_pos) / CurrentImageScale;
-            
-            float DeltaPos = (A*MouseImg.x + B*MouseImg.y + C);
-            DeltaPos = DeltaPos*DeltaPos / (A*A + B*B);
-            
-            //std::cout << "del: " << DeltaPos << " mx:" << MouseImg.x << "," << MouseImg.y << "\n";
-            
-            if (DeltaPos < MinDist2)
-            {
-                MinDist2 = DeltaPos;
-                HoveredItem = kp;
-            }
-        }
-    }
-    else if (CurrentMode == ActionMode5_AddYTick)
-    {
-        for (size_t kp = 0; kp < YTicks.size(); kp++)
-        {
-            ImVec2 Direction;
-            Direction.x = CoordOriginTargetX.x - CoordOriginImg.x;
-            Direction.y = CoordOriginTargetX.y - CoordOriginImg.y;
-            
-            
-            
-            ImVec2 Point;
-            Point.x = YTicks[kp].x;
-            Point.y = YTicks[kp].y;
-            
-            float A = Direction.y;
-            float B = -Direction.x;
-            float C = -A*Point.x - B*Point.y;
-            
-            
-            ImVec2 MouseImg = (MousePos - WinPos - im_pos) / CurrentImageScale;
-            
-            float DeltaPos = (A*MouseImg.x + B*MouseImg.y + C);
-            DeltaPos = DeltaPos*DeltaPos / (A*A + B*B);
-            
-            
-            if (DeltaPos < MinDist)
-            {
-                MinDist = DeltaPos;
-                HoveredItem = kp;
-            }
-        }
-    }
-    
-    
-}
-
 void MainWindow::ShowSidePanel()
 {
     float SettingsWidth = 250.0f;
@@ -1246,6 +1067,10 @@ void MainWindow::ShowSidePanel()
     ImGui::BeginChild("SettingsWindow", ImVec2(SettingsWidth, 0));
     ImGui::Text("Settings");
     
+    int SubdivideIterations=0;
+    
+    if(curve)
+        SubdivideIterations=curve->SubdivideIterations;
     
     int PrevSubdivideIterations = SubdivideIterations;
 // 	ImGui::PushItemWidth(65.0f);
@@ -1260,25 +1085,25 @@ void MainWindow::ShowSidePanel()
     ImGui::SetCursorPosY(CurPos.y);
     ImGui::SetCursorPosX(SettingsWidth -30.0f*2-5.0f);
     
-    if (PrevSubdivideIterations <=0)
+    if (PrevSubdivideIterations <=0 || !curve)
         ImGui_PushDisableButton();
     if (ImGui::Button("-", ImVec2(30.f, 0)) && SubdivideIterations>0)
     {
         SubdivideIterations--;
     }
-    if (PrevSubdivideIterations <=0)
+    if (PrevSubdivideIterations <=0 || !curve)
         ImGui_PopDisableButton();
     
     ImGui::SameLine();
     ImGui::SetCursorPosX(SettingsWidth - 30.0f);
     
-    if (PrevSubdivideIterations >=MaxSubdivideIterations)
+    if (PrevSubdivideIterations >=CurveDetect::MaxSubdivideIterations || !curve)
         ImGui_PushDisableButton();
-    if (ImGui::Button("+", ImVec2(30.f, 0)) && SubdivideIterations<MaxSubdivideIterations)
+    if (ImGui::Button("+", ImVec2(30.f, 0)) && SubdivideIterations<CurveDetect::MaxSubdivideIterations)
     {
         SubdivideIterations++;
     }
-    if (PrevSubdivideIterations >=MaxSubdivideIterations)
+    if (PrevSubdivideIterations >=CurveDetect::MaxSubdivideIterations || !curve)
         ImGui_PopDisableButton();
 
 // 	if (SubdivideIterations > MaxSubdivideIterations)
@@ -1292,9 +1117,9 @@ void MainWindow::ShowSidePanel()
     
     float barTotalWidth = SettingsWidth;
     float barSpacing = 5.0f;
-    float barWidth = (barTotalWidth - (MaxSubdivideIterations - 1)*barSpacing) / float(MaxSubdivideIterations);
+    float barWidth = (barTotalWidth - (CurveDetect::MaxSubdivideIterations - 1)*barSpacing) / float(CurveDetect::MaxSubdivideIterations);
     
-    for (int i = 0; i < MaxSubdivideIterations; i++)
+    for (int i = 0; i < CurveDetect::MaxSubdivideIterations; i++)
     {
         ImVec2 PointPos0 = ImVec2((barWidth + barSpacing)*i, 5.0f) + WinPos + CurPos;
         ImVec2 PointPos1 = ImVec2((barWidth + barSpacing)*i+barWidth, 5.0f) + WinPos + CurPos;
@@ -1319,9 +1144,9 @@ void MainWindow::ShowSidePanel()
     //ImGui::Checkbox("Smooth Subdivision", &bSmoothPoints);
     
     
-    if (image)
+    if (curve)
     {
-        
+        int BinarizationLevel = curve->BinarizationLevel;
         int PrevBinarizationLevel = BinarizationLevel;
         
         CurPos = ImGui::GetCursorPos();
@@ -1344,10 +1169,8 @@ void MainWindow::ShowSidePanel()
         
         ImGui_ImplOpenGL3_SetBinarizationLevel(BinarizationLevel);
         
-        if (SubdivideIterations != PrevSubdivideIterations ||
-            PrevBinarizationLevel != BinarizationLevel)
-            UpdateSubdivision(true);
-        
+        curve->SetSubdivIterations(SubdivideIterations);
+        curve->SetBinarizationLevel(BinarizationLevel);
         
         
         
@@ -1390,7 +1213,7 @@ void MainWindow::ShowSidePanel()
     }
     
     int out_Result;
-    bool bExportReady = IsReadyForExport(out_Result, true);
+    bool bExportReady = curve ? curve->IsReadyForExport(out_Result) : false;
     
     if(!bExportReady)
     {
@@ -1402,7 +1225,7 @@ void MainWindow::ShowSidePanel()
     }
     if (ImGui::Button("Copy to Clipboard", ImVec2(SettingsWidth, 0)) && bExportReady)
     {
-        ExportToClipboard();
+        curve->ExportToClipboard(columnSeparator, lineEnding, decimalSeparator);
     }
     
     if(!bExportReady)
@@ -1569,277 +1392,18 @@ void MainWindow::ShowSidePanel()
     ImGui::EndChild();
 }
 
-
-void MainWindow::numToStr(float num, std::string& out_String)
-{
-    
-    out_String = std::to_string(num);
-    
-    if (decimalSeparator == '.')
-        std::replace(out_String.begin(), out_String.end(), ',', '.');
-    else if (decimalSeparator == ',')
-        std::replace(out_String.begin(), out_String.end(), '.', ',');
-    
-    //std::cout << out_String << "\n";
-}
-
-void MainWindow::ImVec2toString(const ImVec2& num, std::string& out_String)
-{
-
-}
-
-void MainWindow::OpenImage()
-{
-    char const * filename;
-    char const * lFilterPatterns[3] = { "*.png", "*.jpg", "*.bmp" };
-    
-    std::string path;
-    
-    auto full_path=std::filesystem::current_path();
-    //std::cout << "Current path is : " << full_path << std::endl;
-    
-    path = full_path.string();
-    
-    path.append("\\");
-    
-    std::cout << "default path: " << path << "\n";
-    
-    path = "";
-    
-    filename = tinyfd_openFileDialog(
-            "Choose an Image",
-            path.c_str(),
-            3,
-            lFilterPatterns,
-            NULL,
-            0);
-    
-    if (!filename)
-        return;
-    
-    
-    path = filename;
-    
-    std::cout << "open: "<<filename<<"\n";
-    
-    image=std::make_shared<Image>(path);
-    
-    if(!image->is_loaded())
-    {
-        tinyfd_messageBox("Can't open image", "Opened file is not an image.\nTry again.", "ok", "error", 0);
-        image= nullptr;
-    }
-    
-    ResetAll();
-}
-
-bool MainWindow::IsReadyForExport(int& out_Result, bool bSilent /*=false*/)
-{
-    
-    out_Result = ExportReadyStatus::ExportReadyStatus_Ready;
-    
-    if (SortedUserPoints.size() < 2)
-    {
-        out_Result |= ExportReadyStatus::ExportReadyStatus_NoPoints;
-    }
-    if (XTicks.size() < 2)
-    {
-        out_Result |= ExportReadyStatus::ExportReadyStatus_NoXTicks;
-    }
-    else
-    {
-        float norm = std::sqrt((CoordOriginTargetX.x - CoordOriginImg.x)*(CoordOriginTargetX.x - CoordOriginImg.x) +
-                               (CoordOriginTargetX.y - CoordOriginImg.y)*(CoordOriginTargetX.y - CoordOriginImg.y));
-        
-        //for deriving a and b
-        float det1 = ((XTicks[0].x - XTicks[1].x)*(CoordOriginTargetX.x - CoordOriginImg.x)
-                      + (XTicks[0].y - XTicks[1].y)*(CoordOriginTargetX.y - CoordOriginImg.y))/norm;
-        
-        //std::cout << "det1: "<< det1 << "\n";
-        
-        //float dist=det1/
-        
-        if (std::abs(det1) < MinTickPixelDistance)
-        {
-            out_Result |= ExportReadyStatus::ExportReadyStatus_XTicksSimilarPositions;
-        }
-        else if (std::abs(XTicks[0].z - XTicks[1].z) < MinTickRealDistance)
-        {
-            out_Result |= ExportReadyStatus::ExportReadyStatus_XTicksSimilarValues;
-        }
-    }
-    
-    if (YTicks.size() < 2)
-    {
-        out_Result |= ExportReadyStatus::ExportReadyStatus_NoYTicks;
-    }
-    else
-    {
-        float norm = std::sqrt((CoordOriginTargetX.x - CoordOriginImg.x)*(CoordOriginTargetX.x - CoordOriginImg.x) +
-                               (CoordOriginTargetX.y - CoordOriginImg.y)*(CoordOriginTargetX.y - CoordOriginImg.y));
-        
-        //for deriving c and d
-        float det2 = ((YTicks[0].x - YTicks[1].x)*(CoordOriginImg.y - CoordOriginTargetX.y)
-                      - (YTicks[0].y - YTicks[1].y)*(CoordOriginImg.x - CoordOriginTargetX.x))/norm;
-        
-        //std::cout << "det2: " << det2 << "\n";
-        
-        if (std::abs(det2)<MinTickPixelDistance)
-        {
-            out_Result |= ExportReadyStatus::ExportReadyStatus_YTicksSimilarPositions;
-        }
-        else if (std::abs(YTicks[0].z - YTicks[1].z)<MinTickRealDistance)
-        {
-            out_Result |= ExportReadyStatus::ExportReadyStatus_YTicksSimilarValues;
-        }
-    }
-    
-    if (out_Result != ExportReadyStatus_Ready)
-    {
-        if(!bSilent)
-        {
-            if (out_Result & ExportReadyStatus_NoPoints)
-            {
-                tinyfd_messageBox(
-                        "Error",
-                        "At least two points should be defined!",
-                        "ok",
-                        "error",
-                        1);
-            }
-            else if (out_Result & ExportReadyStatus_NoXTicks)
-            {
-                
-                tinyfd_messageBox(
-                        "Error",
-                        "Not enough X ticks!",
-                        "ok",
-                        "error",
-                        1);
-            }
-            else if (out_Result & ExportReadyStatus_NoYTicks)
-            {
-                
-                tinyfd_messageBox(
-                        "Error",
-                        "Not enough Y ticks!",
-                        "ok",
-                        "error",
-                        1);
-            }
-            else if (out_Result & ExportReadyStatus_XTicksSimilarPositions)
-            {
-                tinyfd_messageBox(
-                        "Error",
-                        "X ticks have overlapping positions!",
-                        "ok",
-                        "error",
-                        1);
-            }
-            else if (out_Result & ExportReadyStatus_XTicksSimilarValues)
-            {
-                tinyfd_messageBox(
-                        "Error",
-                        "X ticks have overlapping values!",
-                        "ok",
-                        "error",
-                        1);
-            }
-            else if (out_Result & ExportReadyStatus_YTicksSimilarPositions)
-            {
-                tinyfd_messageBox(
-                        "Error",
-                        "Y ticks have overlapping positions!",
-                        "ok",
-                        "error",
-                        1);
-            }
-            else if (out_Result & ExportReadyStatus_YTicksSimilarValues)
-            {
-                tinyfd_messageBox(
-                        "Error",
-                        "Y ticks have overlapping values!",
-                        "ok",
-                        "error",
-                        1);
-            }
-        }
-        
-        return false;
-    }
-    
-    return true;
-}
-
-void MainWindow::ExportToClipboard()
+void MainWindow::ExportPoints()
 {
     
     int out_Result;
-    if (!IsReadyForExport(out_Result))
+    if (!curve || !curve->IsReadyForExport(out_Result))
         return;
     
-    SortPoints();
-    UpdateSubdivision(true);
-    SortArray(SubdividedPoints);
-    
-    ImVec2 RealPoint;
-    std::stringstream sstr;
-    //std::stringstream sstr;
-    
-    std::string nums = "";
-    
-    std::string tempColumnSeparator = columnSeparator;
-    std::string tempLineEnding = lineEnding;
-    
-    
-    //new line sequence that is needed by default notepad
-    const char newLineSeq[3] = { char(0x0d), char(0x0a), '\0' };
-    
-    for (size_t i = 0; i<tempColumnSeparator.size(); i++)
-    {
-        if (tempColumnSeparator[i] == '\n')
-        {
-            tempColumnSeparator.replace(i, i + 1, newLineSeq);
-            i++;//since we added one extra char
-        }
-    }
-    
-    for (size_t i = 0; i<tempLineEnding.size(); i++)
-    {
-        if (tempLineEnding[i] == '\n')
-        {
-            tempLineEnding.replace(i, i + 1, newLineSeq);
-            i++;//since we added one extra char
-        }
-    }
-    
-    for (size_t kp = 0; kp < SubdividedPoints.size(); kp++)
-    {
-        RealPoint = ConvertImageToReal(SubdividedPoints[kp]);
-        
-        numToStr(RealPoint.x, nums);
-        
-        sstr << nums;
-        sstr << tempColumnSeparator;
-        
-        numToStr(RealPoint.y, nums);
-        sstr<< nums;
-        sstr << tempLineEnding;
-        //sstr << newLineSeq;
-    }
-    
-    MainApp::getInstance().copy_to_clipboard(sstr.str().c_str());
-}
-
-void MainWindow::ExportPoints()
-{
     char const * lFilterPatterns[2] = { "*.txt", "*.mat" };
     
     std::string path;
     
-    
     auto full_path=std::filesystem::current_path();
-    //std::cout << "Current path is : " << full_path << std::endl;
     
     path = full_path.string();
     
@@ -1858,7 +1422,6 @@ void MainWindow::ExportPoints()
             2,
             lFilterPatterns,
             NULL);
-    
     
     
     if (!lTheSaveFileName)
@@ -1926,365 +1489,68 @@ void MainWindow::ExportPoints()
     
     std::cout << "save: " << path << "\n";
     
-    int out_Result;
-    if (!IsReadyForExport(out_Result))
+    curve->ExportPoints(lTheSaveFileName, bUseTextFormat);
+}
+
+
+void MainWindow::OpenImage()
+{
+    char const * filename;
+    char const * lFilterPatterns[3] = { "*.png", "*.jpg", "*.bmp" };
+    
+    std::string path;
+    
+    auto full_path=std::filesystem::current_path();
+    //std::cout << "Current path is : " << full_path << std::endl;
+    
+    path = full_path.string();
+    
+    path.append("\\");
+    
+    std::cout << "default path: " << path << "\n";
+    
+    path = "";
+    
+    filename = tinyfd_openFileDialog(
+            "Choose an Image",
+            path.c_str(),
+            3,
+            lFilterPatterns,
+            NULL,
+            0);
+    
+    if (!filename)
         return;
     
     
+    path = filename;
     
-    SortPoints();
-    UpdateSubdivision(true);
-    SortArray(SubdividedPoints);
+    std::cout << "open: "<<filename<<"\n";
     
-    ImVec2 RealPoint;
+    image=std::make_shared<Image>(path);
     
-    std::vector<ImVec2> RealUserPoints = SortedUserPoints;
-    std::vector<ImVec2> RealSubdividedPoints = SubdividedPoints;
-    
-    
-    std::ofstream ofs;
-    
-    if(bUseTextFormat)
-        ofs.open(lTheSaveFileName);// , std::ofstream::out | std::ofstream::app);
-    
-    
-    
-    
-    for (size_t kp = 0; kp < SubdividedPoints.size(); kp++)
+    if(!image->is_loaded())
     {
-        RealPoint = ConvertImageToReal(SubdividedPoints[kp]);
-        RealSubdividedPoints[kp] = RealPoint;
-        
-        if (bUseTextFormat)
-        {
-            ofs << RealPoint.x << "\t" << RealPoint.y << "\n";
-            
-            //sstr << char(0x0d) << char(0x0a);
-        }
-        
+        tinyfd_messageBox("Can't open image", "Opened file is not an image.\nTry again.", "ok", "error", 0);
+        image= nullptr;
     }
+    else
+        curve=std::make_shared<CurveDetect>(image);
     
-    if (bUseTextFormat)
-    {
-        ofs.close();
-        return;
-    }
-    
-    
-    for (size_t kp = 0; kp < SortedUserPoints.size(); kp++)
-    {
-        RealPoint = ConvertImageToReal(SortedUserPoints[kp]);
-        RealUserPoints[kp] = RealPoint;
-    }
-    
-    
-    FILE* fp=fopen(lTheSaveFileName, "wb");
-    
-    if (fp != nullptr)
-    {
-        writeHeader(fp);
-        writeMatrixToMatFile(fp, "UserPointsPixels", &(SortedUserPoints[0].x), SortedUserPoints.size(), 2);
-        writeMatrixToMatFile(fp, "SubdividedPointsPixels", &(SubdividedPoints[0].x), SubdividedPoints.size(), 2);
-        writeMatrixToMatFile(fp, "UserPointsReal", &(RealUserPoints[0].x), RealUserPoints.size(), 2);
-        writeMatrixToMatFile(fp, "SubdividedPointsReal", &(RealSubdividedPoints[0].x), RealSubdividedPoints.size(), 2);
-    }
-    
-    fclose(fp);
+    ResetAll();
 }
 
-
-void MainWindow::SortPoints()
-{
-    SortedUserPoints = UserPoints;
-    
-    SortArray(SortedUserPoints);
-}
-
-
-void MainWindow::SortArray(std::vector<ImVec2>& Array)
-{
-    struct sort_class_x
-    {
-        ImVec2 origin;
-        ImVec2 target;
-        
-        bool operator() (ImVec2 i, ImVec2 j)
-        {
-            float proj_i = (target.x - origin.x)*(i.x - origin.x) + (target.y - origin.y)*(i.y - origin.y);
-            float proj_j = (target.x - origin.x)*(j.x - origin.x) + (target.y - origin.y)*(j.y - origin.y);
-            
-            return proj_i<proj_j;
-            //return (i.x<j.x);
-        }
-    } sort_objectX;
-    
-    sort_objectX.origin = CoordOriginImg;
-    sort_objectX.target = CoordOriginTargetX;
-    
-    sort(Array.begin(), Array.end(), sort_objectX);
-}
 
 void MainWindow::ResetAll()
 {
-    UserPoints.clear();
-    SortedUserPoints.clear();
-    SubdividedPoints.clear();
-    
-    XTicks.clear();
-    YTicks.clear();
-    
-    CoordOriginTargetX = CoordOriginImg + ImVec2(100.0f, 0.0f);
-    
     CurrentImageScale = 0.0f;
     
-    if (image)
+    if (curve)
     {
-        
-        CoordOriginImg = ImVec2((float)image->get_width(), (float)image->get_height())*0.5f;
-        CoordOriginTargetX = CoordOriginImg + ImVec2((float)image->get_width()*0.3f, 0.0f);
+        curve->ResetAll();
     }
     
 }
-
-void MainWindow::UpdateSubdivision(bool bUpdateAll)
-{
-    int PointsNum = SortedUserPoints.size();
-    
-    if (PointsNum < 2)
-    {
-        SubdividedPoints.clear();
-        return;
-    }
-    
-    
-    //extra points for each two user points
-    //int ExtraPoints = std::pow(2, SubdivideIterations) - 1;
-    int ExtraPoints = (1 << SubdivideIterations) - 1;//=(2^S)-1
-    
-    //std::cout << "ep: " << ExtraPoints << " new: " << (1 << SubdivideIterations)-1 << "\n";
-    
-    int SubPointNum = (ExtraPoints + 1)*(PointsNum - 1) + 1;
-    
-    
-    static std::vector<ImVec2> LastUserPoints;
-    
-    
-    if (SubdividedPoints.size() != SubPointNum)
-        SubdividedPoints.resize(SubPointNum);
-    
-    
-    
-    //copy existing point to new array
-    for (size_t k = 0; k < SortedUserPoints.size(); k++)
-    {
-        SubdividedPoints[k*(ExtraPoints+1)] = SortedUserPoints[k];
-    }
-    
-    
-    
-    auto PrevPoints = SubdividedPoints;
-    for (size_t k = 0; k < SortedUserPoints.size()-1; k++)
-    {
-        if (SortedUserPoints.size() == LastUserPoints.size())
-        {
-            if (!bUpdateAll
-                && SortedUserPoints[k].x == LastUserPoints[k].x
-                && SortedUserPoints[k].y == LastUserPoints[k].y
-                && SortedUserPoints[k+1].x == LastUserPoints[k+1].x
-                && SortedUserPoints[k+1].y == LastUserPoints[k+1].y)
-            {
-                continue;
-            }
-        }
-        
-        ImVec2 MidPoint = SortedUserPoints[k];
-        for (int k_it = 0; k_it < SubdivideIterations; k_it++)
-        {
-            //k*(ExtraPoints + 1) - left, (k+1)*(ExtraPoints+1) - right
-            
-            int step = (1 << (SubdivideIterations-k_it));// for 0 it
-            
-            for (int k_p = 0; k_p < ExtraPoints + 1; k_p+=step)
-            {
-                int n0 = k*(ExtraPoints + 1) + k_p;
-                
-                MidPoint = (SubdividedPoints[n0] + SubdividedPoints[n0 + step]) * 0.5f;
-                
-                SnapToCurve(MidPoint);
-                SnapToBary(MidPoint);
-                SubdividedPoints[n0 + step / 2] = MidPoint;
-            }
-        }
-        
-        
-        //if(!bSmoothPoints)
-        continue;
-        
-        //std::cout << "---------\n";
-        
-        PrevPoints = SubdividedPoints;
-        
-        for (int k_p = 0; k_p < ExtraPoints; k_p++)
-        {
-            //float a = 1.0f - float(k_p + 1) / float(ExtraPoints + 1);
-            //float a = 1.0f - 1.0f / float(ExtraPoints - k_p + 1);
-            
-            //std::cout << "a: " << a << "\n";
-            
-            MidPoint = (PrevPoints[k*(ExtraPoints + 1) + k_p] + PrevPoints[k*(ExtraPoints + 1) + k_p + 1]
-                        + PrevPoints[k*(ExtraPoints + 1) + k_p + 2])/3.0f;
-            
-            //SnapToCurve(MidPoint);
-            //SnapToBary(MidPoint);
-            SubdividedPoints[k*(ExtraPoints + 1) + k_p + 1] = MidPoint;
-        }
-        //SubdividedPoints = PrevPoints;
-    }
-    
-    
-    //SortArray(SubdividedPoints);
-
-
-// 	std::cout << "------------\n";
-// 	for (auto it = SubdividedPoints.rbegin(); it != SubdividedPoints.rend(); ++it)
-// 	{
-// 		std::cout << "point (" << (*it).x << "," << (*it).y << ")\n";
-// 	}
-// 	std::cout << "------------\n";
-    
-    LastUserPoints = SortedUserPoints;
-}
-
-void MainWindow::SnapToCurve(ImVec2& ImagePoint)
-{
-    
-    int localX, localY;//to this vars local coords will be written
-    
-    int hside = ZoomPixelHSide;
-    
-    localX = int(ImagePoint.x);
-    localY = int(ImagePoint.y);
-    
-    if (!image->getClosestBlack(localX, localY, hside, BinarizationLevel))
-    {
-        //std::cout << "Bad point!\n";
-        return;
-    }
-    
-    if (localX != int(ImagePoint.x))
-    {
-        ImagePoint.x = float(localX);
-    }
-    if (localY != int(ImagePoint.y))
-    {
-        ImagePoint.y = float(localY);
-    }
-    //std::cout << "loc snap: (" << snapX << "," << snapY << ")\n";
-}
-
-void MainWindow::SnapToBary(ImVec2& ImagePoint)
-{
-    int localX, localY;//to this vars local coords will be written
-    
-    int baryX, baryY; //local coords of snapped point
-    
-    int hside = 3;// ZoomPixelHSide;
-    
-    localX = int(ImagePoint.x);
-    localY = int(ImagePoint.y);
-    
-    MatrixXi PointRegion;
-    
-    if (!image->getNearbyPoints(localX, localY, hside, PointRegion))
-    {
-        std::cout << "Bad point!\n";
-        return;
-    }
-    
-    //by default just leave point where it was
-    baryX = localX;
-    baryY = localY;
-    
-    
-    
-    int baryMass = 0;
-    
-    ImVec2 BaryOffset;
-    
-    for (int kx = 0; kx <= 2 * hside; kx++)
-    {
-        for (int ky = 0; ky <= 2 * hside; ky++)
-        {
-            if (PointRegion(ky, kx) < BinarizationLevel)
-            {
-                baryMass += BinarizationLevel - PointRegion(ky, kx);
-                
-                BaryOffset += ImVec2(float(kx - localX), float(ky - localY))*float(BinarizationLevel - PointRegion(ky, kx));
-                
-            }
-            
-        }
-    }
-    
-    if (baryMass > 0)
-    {
-        BaryOffset /= float(baryMass);
-        
-        ImagePoint += BaryOffset;
-    }
-    
-    //ImagePoint.x += (baryX - localX);
-    //ImagePoint.y += (baryY - localY);
-}
-
-ImVec2 MainWindow::ConvertImageToReal(const ImVec2& ImagePoint)
-{
-    ImVec2 RealPoint;
-    
-    //this function should be called after check that
-    //we can really calculate real points
-    //so all x and y ticks are defined
-    
-    ImVec2 Scale, Offset;
-    
-    Scale.x = (XTicks[0].z - XTicks[1].z) / (XTicks[0].x - XTicks[1].x);
-    Scale.y = (YTicks[0].z - YTicks[1].z) / (YTicks[0].y - YTicks[1].y);
-    
-    
-    Offset.x = XTicks[1].z - XTicks[1].x*Scale.x;
-    Offset.y = YTicks[1].z - YTicks[1].y*Scale.y;
-    
-    //XTicks[1].z + (ImagePoint.x- XTicks[1].x)*Scale.x
-    
-    RealPoint.x = Offset.x + ImagePoint.x*Scale.x;
-    RealPoint.y = Offset.y + ImagePoint.y*Scale.y;
-    
-    //for deriving a and b
-    float det1 = (XTicks[0].x - XTicks[1].x)*(CoordOriginTargetX.x - CoordOriginImg.x)
-                 + (XTicks[0].y - XTicks[1].y)*(CoordOriginTargetX.y - CoordOriginImg.y);
-    
-    //for deriving c and d
-    float det2 = (YTicks[0].x - YTicks[1].x)*(CoordOriginImg.y - CoordOriginTargetX.y)
-                 - (YTicks[0].y - YTicks[1].y)*(CoordOriginImg.x - CoordOriginTargetX.x);
-    
-    float a, b, c, d, e, f;
-    
-    a = (XTicks[0].z - XTicks[1].z)*(CoordOriginTargetX.x - CoordOriginImg.x) / det1;
-    b = (XTicks[0].z - XTicks[1].z)*(CoordOriginTargetX.y - CoordOriginImg.y) / det1;
-    
-    c = (YTicks[0].z - YTicks[1].z)*(CoordOriginImg.y - CoordOriginTargetX.y) / det2;
-    d = -(YTicks[0].z - YTicks[1].z)*(CoordOriginImg.x - CoordOriginTargetX.x) / det2;
-    
-    e = XTicks[0].z - a*XTicks[0].x - b*XTicks[0].y;
-    f = YTicks[0].z - c*YTicks[0].x - d*YTicks[0].y;
-    
-    RealPoint.x = a*ImagePoint.x + b*ImagePoint.y + e;
-    RealPoint.y = c*ImagePoint.x + d*ImagePoint.y + f;
-    
-    
-    return RealPoint;
-}
-
 
 
 bool MainWindow::MakeFullLine(ImVec2 Point, ImVec2 Direction, ImVec2& out_Start, ImVec2& out_End, ImVec2 RegionSize, ImVec2 RegionTL/*=ImVec2(0.0f,0.0f)*/)
