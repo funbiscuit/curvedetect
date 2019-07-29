@@ -39,6 +39,7 @@ void writeTestMatFile(FILE* fp);
 
 
 void writeMatrixToMatFile(FILE* fp, const char* name, float* first, size_t rows, size_t cols = 1, bool bRowMajor = true);
+void writeMatrixToMatFile(FILE* fp, const char* name, double* first, size_t rows, size_t cols = 1, bool bRowMajor = true);
 
 void writeVectorToMatFile(FILE* fp, const char* name, float* first, size_t nItems);
 

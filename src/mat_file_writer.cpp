@@ -149,6 +149,121 @@ void writeMatrixToMatFile(FILE* fp, const char* name, float* first, size_t rows,
 
 }
 
+
+void writeMatrixToMatFile(FILE* fp, const char* name, double* first, size_t rows, size_t cols /*= 1*/, bool bRowMajor /*= true*/)
+{
+	//TODO combine matrix of different types in one function (a lot of repeating code)
+
+	//write data element
+	uint32_t data_type = miMATRIX;
+	uint32_t bytes_num = 0;
+
+	//char ArrayName[] = "TempArr";
+	//float data[4] = { 324.65f, 213.685f, 324.65f, 213.685f };
+
+	int32_t dims[2]; //1xn - row; nx1 - column
+
+	if (bRowMajor)
+	{
+		//dims[0] = cols;
+		//dims[1] = rows;
+	}
+	//else
+	{
+		dims[0] = rows;
+		dims[1] = cols;
+	}
+
+
+	uint32_t name_size = strlen(name) * sizeof(char);
+
+	if (name_size % 8 > 0)
+		name_size += 8 - name_size % 8;
+
+	uint32_t data_size = rows * cols * sizeof(double);
+
+	if (data_size % 8 > 0)
+		data_size += 8 - data_size % 8;
+
+	bytes_num = 16 //array flags subelement
+				+ 16 //dimensions subelement
+				+ name_size + 8 //name subelement
+				+ data_size + 8; //data subelement
+
+
+	fwrite(&data_type, sizeof(uint32_t), 1, fp);
+	fwrite(&bytes_num, sizeof(uint32_t), 1, fp);
+
+
+	//write subelements
+
+	//write array flags block (8 bytes)
+	data_type = miUINT32;
+	bytes_num = 8;
+	fwrite(&data_type, sizeof(uint32_t), 1, fp);
+	fwrite(&bytes_num, sizeof(uint32_t), 1, fp);
+
+	uint32_t flags = 0x00;
+	flags <<= 8;  //left shift the flags by one byte
+	flags |= mxDOUBLE_CLASS;
+	fwrite(&flags, sizeof(uint32_t), 1, fp);
+	//write 4 bytes of undefined data to array flags block
+	uint32_t TempUInt32 = 0x00;
+	fwrite(&TempUInt32, sizeof(uint32_t), 1, fp);
+
+	//write dimenstions
+	writeDataElement(fp, miINT32, dims, sizeof(int32_t), 2);
+
+	//write array name
+	writeDataElement(fp, miINT8, (void*)name, sizeof(char), static_cast<uint32_t>(strlen(name)));
+
+
+	//write array data
+	writeDataElementTag(fp, miDOUBLE, first, sizeof(double), static_cast<uint32_t>(rows * cols));
+	if (!bRowMajor)
+	{
+		writeDataElementBody(fp, miDOUBLE, first, sizeof(double), static_cast<uint32_t>(rows * cols));
+	}
+	else
+	{
+		uint32_t    nBytes;
+		uint32_t    paddingBytes = 0;
+		uintptr_t   i;
+		uint8_t     emptyChar = 0x00;
+
+		//calculate the number of data bytes:
+		nBytes = sizeof(double) * rows*cols;
+
+		// write the data
+		for (size_t col = 0; col < cols; col++)
+		{
+			for (size_t row = 0; row < rows; row++)
+			{
+				size_t offset = col + row * cols;
+				fwrite(first + offset, sizeof(double), 1, fp);
+
+			}
+		}
+
+
+		/*
+		* padding may be required to ensure 64bit boundaries between
+		* data elements.
+		*/
+		if (nBytes % 8 > 0) {
+			paddingBytes = 8 - nBytes % 8;   //This could probably be neatly rewritten with the ternary operator
+		}
+
+		for (i = 0; i<paddingBytes; i++)
+		{
+			fwrite(&emptyChar, sizeof(uint8_t), 1, fp);
+		}
+	}
+
+
+
+}
+
 void writeVectorToMatFile(FILE* fp, const char* name, float* first, size_t nItems)
 {
 

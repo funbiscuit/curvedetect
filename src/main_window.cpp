@@ -100,6 +100,7 @@ void MainWindow::init()
 #ifndef NDEBUG
     image=std::make_shared<Image>("../img/test.png");
     curve=std::make_shared<CurveDetect>(image);
+    curve->ResetAll();
 #endif
 }
 
@@ -260,7 +261,7 @@ void MainWindow::ShowMainWindow()
     HoveredPixel.y /= CurrentImageScale;
     
     if(curve)
-        curve->UpdateHoveredItemIndex(HoveredPixel, CurrentMode);
+        curve->UpdateHoveredItemIndex(Vec2D(HoveredPixel), CurrentMode);
     
     ProcessInput(HoveredPixel);
     
@@ -396,7 +397,7 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
                         case ActionMode1_AddPoints:
                             if (app.isCtrlPressed())
                             {
-                                curve->AddPoint(HoveredPixel);
+                                curve->AddPoint(Vec2D(HoveredPixel));
                             }
                             else if (curve->GetHoveredPoint()!=-1)
                             {
@@ -411,13 +412,13 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
                             }
                             break;
                         case ActionMode2_MoveOrigin:
-                            curve->SetOrigin(HoveredPixel, app.isCtrlPressed());
+                            curve->SetOrigin(Vec2D(HoveredPixel), app.isCtrlPressed());
                             break;
                         case ActionMode3_MoveXTarget:
-                            curve->SetTarget(HoveredPixel, app.isCtrlPressed());
+                            curve->SetTarget(Vec2D(HoveredPixel), app.isCtrlPressed());
                             break;
                         case ActionMode4_AddXTick:
-                            if (app.isCtrlPressed() && curve->AddXTick(HoveredPixel))
+                            if (app.isCtrlPressed() && curve->AddXTick(Vec2D(HoveredPixel)))
                             {
                             }
                             else if (curve->GetHoveredXTick()!=-1)
@@ -433,7 +434,7 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
                             }
                             break;
                         case ActionMode5_AddYTick:
-                            if (app.isCtrlPressed() && curve->AddYTick(HoveredPixel))
+                            if (app.isCtrlPressed() && curve->AddYTick(Vec2D(HoveredPixel)))
                             {
                             }
                             else if (curve->GetHoveredYTick()!=-1)
@@ -466,25 +467,25 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
                         case ActionMode1_AddPoints:
                             if (curve->GetSelected()>=0)
                             {
-                                curve->MoveSelectedPoint(HoveredPixel, app.isCtrlPressed());
+                                curve->MoveSelectedPoint(Vec2D(HoveredPixel), app.isCtrlPressed());
                             }
                             break;
                         case ActionMode2_MoveOrigin:
-                            curve->SetOrigin(HoveredPixel, app.isCtrlPressed());
+                            curve->SetOrigin(Vec2D(HoveredPixel), app.isCtrlPressed());
                             break;
                         case ActionMode3_MoveXTarget:
-                            curve->SetTarget(HoveredPixel, app.isCtrlPressed());
+                            curve->SetTarget(Vec2D(HoveredPixel), app.isCtrlPressed());
                             break;
                         case ActionMode4_AddXTick:
                             if (curve->GetSelected()>=0)
                             {
-                                curve->MoveSelectedXTick(HoveredPixel, app.isCtrlPressed());
+                                curve->MoveSelectedXTick(Vec2D(HoveredPixel), app.isCtrlPressed());
                             }
                             break;
                         case ActionMode5_AddYTick:
                             if (curve->GetSelected()>=0)
                             {
-                                curve->MoveSelectedYTick(HoveredPixel, app.isCtrlPressed());
+                                curve->MoveSelectedYTick(Vec2D(HoveredPixel), app.isCtrlPressed());
                             }
                             break;
                         default:
@@ -509,7 +510,7 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
                         
                         if (image->isPixelInside((int)HoveredPixel.x, (int)HoveredPixel.y))
                         {
-                            curve->MoveSelectedPoint(HoveredPixel, app.isCtrlPressed());
+                            curve->MoveSelectedPoint(Vec2D(HoveredPixel), app.isCtrlPressed());
                         }
                         
                         
@@ -579,8 +580,8 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     {
         for (size_t kp = 0; kp < allPoints.size() - 1; kp++)
         {
-            ImVec2 PointPos0 = allPoints[kp] * im_scale + im_pos + WinPos;
-            ImVec2 PointPos1 = allPoints[kp + 1] * im_scale + im_pos + WinPos;
+            ImVec2 PointPos0 = allPoints[kp].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
+            ImVec2 PointPos1 = allPoints[kp + 1].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
             
             ImU32 LineColor = ImColor(80, 255, 80, 200);
             draw_list->AddLine(PointPos0, PointPos1, LineColor, 2.0f);
@@ -608,7 +609,7 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     auto& app=MainApp::getInstance();
     for (size_t kp = 0; kp < userPoints.size(); kp++)
     {
-        ImVec2 PointPos = userPoints[kp] * im_scale + im_pos + WinPos;
+        ImVec2 PointPos = userPoints[kp].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
         
         ImU32 CircleFill = ImColor(150, 150, 150, 255);
         
@@ -656,7 +657,7 @@ void MainWindow::ShowTickConfigPopup()
         
         static int TickType = 0; //X
         static int TickPrecision = 3; //X
-        static float TickValue = 0;
+        static double TickValue = 0;
     
         int SelectedItem=curve->GetSelected();
         auto& XTicks=curve->GetXTicks();
@@ -666,11 +667,11 @@ void MainWindow::ShowTickConfigPopup()
         {
             if (CurrentMode == ActionMode4_AddXTick)//X
             {
-                TickValue = XTicks[SelectedItem].z;
+                TickValue = XTicks[SelectedItem].tickValue;
             }
             else if (CurrentMode == ActionMode5_AddYTick)//Y
             {
-                TickValue = YTicks[SelectedItem].z;
+                TickValue = YTicks[SelectedItem].tickValue;
             }
             
             bTickConfigInit = false;
@@ -688,8 +689,9 @@ void MainWindow::ShowTickConfigPopup()
         
         if (!ImGui::IsAnyItemActive())
             ImGui::SetKeyboardFocusHere();
-        
-        ImGui::InputFloat("Value", &TickValue, 0.0f, 0.0f, TickPrecision);
+
+        //TODO use filtered text input
+        ImGui::InputDouble("Value", &TickValue, 0.0, 0.0);
         
         auto& app=MainApp::getInstance();
         
@@ -699,11 +701,11 @@ void MainWindow::ShowTickConfigPopup()
             
             if (CurrentMode == ActionMode4_AddXTick)//X
             {
-                XTicks[SelectedItem].z = TickValue;
+                XTicks[SelectedItem].tickValue = TickValue;
             }
             else if (CurrentMode == ActionMode5_AddYTick)//Y
             {
-                YTicks[SelectedItem].z = TickValue;
+                YTicks[SelectedItem].tickValue = TickValue;
             }
             
             SelectedItem = -1;
@@ -714,7 +716,7 @@ void MainWindow::ShowTickConfigPopup()
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2(120, 0)))
         {
-            
+            //TODO restore from backup
             if (CurrentMode == ActionMode4_AddXTick)//X
             {
                 //XTicks.pop_back();
@@ -844,8 +846,9 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
     
     ImU32 TickColor = ImColor(120, 120, 120, 255);
     
-    auto CoordOriginImg=curve->GetOrigin();
-    auto CoordOriginTargetX=curve->GetTarget();
+    auto horizon=curve->GetHorizon();
+    auto CoordOriginImg=horizon.imagePosition.ToImVec2();
+    auto CoordOriginTargetX=horizon.targetPosition.ToImVec2();
     int HoveredItem=curve->GetHovered();
     auto& XTicks=curve->GetXTicks();
     auto& YTicks=curve->GetYTicks();
@@ -872,10 +875,7 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
             col = ImColor(255, 20, 20, 255);
         }
         
-        ImVec2 XTickPosition;
-        
-        XTickPosition.x = XTicks[kp].x;
-        XTickPosition.y = XTicks[kp].y;
+        ImVec2 XTickPosition=XTicks[kp].imagePosition.ToImVec2();
         
         if (!MakeFullLine(XTickPosition, TargetDirY, LineStart, LineEnd,
                           ImVec2((float)image->get_width(), (float)image->get_height()) - LineMargin * 2, LineMargin))
@@ -902,7 +902,8 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
         //ImGui::SetCursorPos(ImVec2(TickPos+2.0f, CoordOriginScreen.y - WinPos.y+2.0f));
         ImGui::SetCursorPos(LabelPos);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
-        ImGui::Text("%0.2f", XTicks[kp].z);
+        //TODO better format (maybe store users input string)
+        ImGui::Text("%0.2f", XTicks[kp].tickValue);
         ImGui::PopStyleColor();
     }
     for (size_t kp = 0; kp < YTicks.size(); kp++)
@@ -915,12 +916,8 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
         {
             col = ImColor(255, 20, 20, 255);
         }
-        
-        
-        ImVec2 YTickPosition;
-        
-        YTickPosition.x = YTicks[kp].x;
-        YTickPosition.y = YTicks[kp].y;
+
+        ImVec2 YTickPosition=YTicks[kp].imagePosition.ToImVec2();
         
         if (!MakeFullLine(YTickPosition, TargetDirX, LineStart, LineEnd,
                           ImVec2((float)image->get_width(), (float)image->get_height()) - LineMargin * 2, LineMargin))
@@ -947,7 +944,8 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
         //ImGui::SetCursorPos(ImVec2(TickPos+2.0f, CoordOriginScreen.y - WinPos.y+2.0f));
         ImGui::SetCursorPos(LabelPos);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
-        ImGui::Text("%0.2f", YTicks[kp].z);
+        //TODO better format (maybe store users input string)
+        ImGui::Text("%0.2f", YTicks[kp].tickValue);
         ImGui::PopStyleColor();
         
         //draw_list->AddLine(ImVec2(0.0f, TickPos) + WinPos, ImVec2(canvas_sz.x, TickPos) + WinPos, col, 1.0f);
@@ -968,9 +966,10 @@ void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     
     float im_width = float(image->get_width())*CurrentImageScale;
-    
-    auto CoordOriginImg=curve->GetOrigin();
-    auto CoordOriginTargetX=curve->GetTarget();
+
+    auto horizon=curve->GetHorizon();
+    auto CoordOriginImg=horizon.imagePosition.ToImVec2();
+    auto CoordOriginTargetX=horizon.targetPosition.ToImVec2();
     auto& XTicks=curve->GetXTicks();
     auto& YTicks=curve->GetYTicks();
     

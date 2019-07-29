@@ -29,7 +29,7 @@ using Eigen::Vector2d;
 
 
 
-CurveDetect::CurveDetect(std::shared_ptr<Image> image)
+CurveDetect::CurveDetect(std::shared_ptr<Image> image) : horizon(Vec2D(100,100))
 {
     this->image=image;
     
@@ -41,28 +41,28 @@ CurveDetect::CurveDetect(std::shared_ptr<Image> image)
     
     SelectedItem = -1;
     HoveredItem = -1;
-    
-    CoordOriginImg = ImVec2(200, 200);
-    CoordOriginTargetX = ImVec2(400, 200);
+
+//    CoordOriginImg = ImVec2(200, 200);
+//    CoordOriginTargetX = ImVec2(400, 200);
 }
 
 
-void CurveDetect::UpdateHoveredItemIndex(ImVec2 im_pos, int mode)
+void CurveDetect::UpdateHoveredItemIndex(Vec2D im_pos, int mode)
 {
 //    ImVec2 WinPos = ImGui::GetWindowPos();
 //    ImVec2 MousePos = ImGui::GetMousePos();
     
     HoveredItem = -1;
-    float MinDist = SnapDistance;
-    float MinDist2 = MinDist*MinDist;
+    double MinDist = SnapDistance;
+    double MinDist2 = MinDist*MinDist;
     
     if (mode == ActionMode1_AddPoints)
     {
         for (size_t kp = 0; kp < UserPoints.size(); kp++)
         {
-            ImVec2 DeltaPos = UserPoints[kp] - im_pos;
-            
-            float dist2 = DeltaPos.x*DeltaPos.x + DeltaPos.y*DeltaPos.y;
+            Vec2D DeltaPos = UserPoints[kp].imagePosition - im_pos;
+
+            double dist2 = DeltaPos.x*DeltaPos.x + DeltaPos.y*DeltaPos.y;
             
             if (dist2 < MinDist2)
             {
@@ -77,23 +77,16 @@ void CurveDetect::UpdateHoveredItemIndex(ImVec2 im_pos, int mode)
         {
             //float DeltaPos = std::abs(XTicks[kp].x * im_scale + im_pos.x + WinPos.x - MousePos.x);
             
-            ImVec2 Direction;
-            Direction.x = CoordOriginTargetX.y - CoordOriginImg.y;
-            Direction.y = -(CoordOriginTargetX.x - CoordOriginImg.x);
+            Vec2D Direction = horizon.VerticalDirection();
             
-            ImVec2 Point;
-            Point.x = XTicks[kp].x;
-            Point.y = XTicks[kp].y;
+            Vec2D Point=XTicks[kp].imagePosition;
             
-            float A = Direction.y;
-            float B = -Direction.x;
-            float C = -A*Point.x - B*Point.y;
+            double A = Direction.y;
+            double B = -Direction.x;
+            double C = -A*Point.x - B*Point.y;
             //	float C2 = B*Point.x - A*Point.y;
             
-            
-            ImVec2 MouseImg = im_pos;
-            
-            float DeltaPos = (A*MouseImg.x + B*MouseImg.y + C);
+            double DeltaPos = (A*im_pos.x + B*im_pos.y + C);
             DeltaPos = DeltaPos*DeltaPos / (A*A + B*B);
             
             //std::cout << "del: " << DeltaPos << " mx:" << MouseImg.x << "," << MouseImg.y << "\n";
@@ -109,24 +102,16 @@ void CurveDetect::UpdateHoveredItemIndex(ImVec2 im_pos, int mode)
     {
         for (size_t kp = 0; kp < YTicks.size(); kp++)
         {
-            ImVec2 Direction;
-            Direction.x = CoordOriginTargetX.x - CoordOriginImg.x;
-            Direction.y = CoordOriginTargetX.y - CoordOriginImg.y;
+            Vec2D Direction = horizon.HorizontalDirection();
+
+            Vec2D Point=YTicks[kp].imagePosition;
             
-            
-            
-            ImVec2 Point;
-            Point.x = YTicks[kp].x;
-            Point.y = YTicks[kp].y;
-            
-            float A = Direction.y;
-            float B = -Direction.x;
-            float C = -A*Point.x - B*Point.y;
-    
-    
-            ImVec2 MouseImg = im_pos;
-            
-            float DeltaPos = (A*MouseImg.x + B*MouseImg.y + C);
+            double A = Direction.y;
+            double B = -Direction.x;
+            double C = -A*Point.x - B*Point.y;
+
+
+            double DeltaPos = (A*im_pos.x + B*im_pos.y + C);
             DeltaPos = DeltaPos*DeltaPos / (A*A + B*B);
             
             
@@ -150,18 +135,18 @@ bool CurveDetect::IsReadyForExport(int& out_Result)
     {
         out_Result |= ExportReadyStatus::ExportReadyStatus_NoPoints;
     }
+    auto dir1=horizon.targetPosition-horizon.imagePosition;
+    double norm = std::sqrt(dir1.x*dir1.x + dir1.y*dir1.y);
     if (XTicks.size() < 2)
     {
         out_Result |= ExportReadyStatus::ExportReadyStatus_NoXTicks;
     }
     else
     {
-        float norm = std::sqrt((CoordOriginTargetX.x - CoordOriginImg.x)*(CoordOriginTargetX.x - CoordOriginImg.x) +
-                               (CoordOriginTargetX.y - CoordOriginImg.y)*(CoordOriginTargetX.y - CoordOriginImg.y));
-        
+        auto dxtick=XTicks[0].imagePosition-XTicks[1].imagePosition;
+
         //for deriving a and b
-        float det1 = ((XTicks[0].x - XTicks[1].x)*(CoordOriginTargetX.x - CoordOriginImg.x)
-                      + (XTicks[0].y - XTicks[1].y)*(CoordOriginTargetX.y - CoordOriginImg.y))/norm;
+        double det1 = (dxtick.x*dir1.x + dxtick.y*dir1.y)/norm;
         
         //std::cout << "det1: "<< det1 << "\n";
         
@@ -171,7 +156,7 @@ bool CurveDetect::IsReadyForExport(int& out_Result)
         {
             out_Result |= ExportReadyStatus::ExportReadyStatus_XTicksSimilarPositions;
         }
-        else if (std::abs(XTicks[0].z - XTicks[1].z) < MinTickRealDistance)
+        else if (std::abs(XTicks[0].tickValue - XTicks[1].tickValue) < MinTickRealDistance)
         {
             out_Result |= ExportReadyStatus::ExportReadyStatus_XTicksSimilarValues;
         }
@@ -183,12 +168,10 @@ bool CurveDetect::IsReadyForExport(int& out_Result)
     }
     else
     {
-        float norm = std::sqrt((CoordOriginTargetX.x - CoordOriginImg.x)*(CoordOriginTargetX.x - CoordOriginImg.x) +
-                               (CoordOriginTargetX.y - CoordOriginImg.y)*(CoordOriginTargetX.y - CoordOriginImg.y));
-        
+        auto dytick=YTicks[0].imagePosition-YTicks[1].imagePosition;
+
         //for deriving c and d
-        float det2 = ((YTicks[0].x - YTicks[1].x)*(CoordOriginImg.y - CoordOriginTargetX.y)
-                      - (YTicks[0].y - YTicks[1].y)*(CoordOriginImg.x - CoordOriginTargetX.x))/norm;
+        double det2 = (-dytick.x*dir1.y + dytick.y*dir1.x)/norm;
         
         //std::cout << "det2: " << det2 << "\n";
         
@@ -196,7 +179,7 @@ bool CurveDetect::IsReadyForExport(int& out_Result)
         {
             out_Result |= ExportReadyStatus::ExportReadyStatus_YTicksSimilarPositions;
         }
-        else if (std::abs(YTicks[0].z - YTicks[1].z)<MinTickRealDistance)
+        else if (std::abs(YTicks[0].tickValue - YTicks[1].tickValue)<MinTickRealDistance)
         {
             out_Result |= ExportReadyStatus::ExportReadyStatus_YTicksSimilarValues;
         }
@@ -217,7 +200,7 @@ void CurveDetect::ExportToClipboard(std::string columnSeparator,
     UpdateSubdivision(true);
     SortArray(SubdividedPoints);
     
-    ImVec2 RealPoint;
+    Vec2D RealPoint;
     std::stringstream sstr;
     //std::stringstream sstr;
     
@@ -250,7 +233,7 @@ void CurveDetect::ExportToClipboard(std::string columnSeparator,
     
     for (size_t kp = 0; kp < SubdividedPoints.size(); kp++)
     {
-        RealPoint = ConvertImageToReal(SubdividedPoints[kp]);
+        RealPoint = ConvertImageToReal(SubdividedPoints[kp].imagePosition);
         
         numToStr(RealPoint.x, decimalSeparator, nums);
         
@@ -267,7 +250,7 @@ void CurveDetect::ExportToClipboard(std::string columnSeparator,
     MainApp::getInstance().copy_to_clipboard(sstr.str().c_str());
 }
 
-void CurveDetect::numToStr(float num, char decimalSeparator, std::string& out_String)
+void CurveDetect::numToStr(double num, char decimalSeparator, std::string& out_String)
 {
     out_String = std::to_string(num);
     
@@ -285,10 +268,10 @@ void CurveDetect::ExportPoints(const char* path, bool asText)
     UpdateSubdivision(true);
     SortArray(SubdividedPoints);
     
-    ImVec2 RealPoint;
+    Vec2D RealPoint;
     
-    std::vector<ImVec2> RealUserPoints = SortedUserPoints;
-    std::vector<ImVec2> RealSubdividedPoints = SubdividedPoints;
+    std::vector<Vec2D> RealUserPoints(SortedUserPoints.size());
+    std::vector<Vec2D> RealSubdividedPoints(SubdividedPoints.size());
     
     
     std::ofstream ofs;
@@ -301,7 +284,7 @@ void CurveDetect::ExportPoints(const char* path, bool asText)
     
     for (size_t kp = 0; kp < SubdividedPoints.size(); kp++)
     {
-        RealPoint = ConvertImageToReal(SubdividedPoints[kp]);
+        RealPoint = ConvertImageToReal(SubdividedPoints[kp].imagePosition);
         RealSubdividedPoints[kp] = RealPoint;
         
         if (asText)
@@ -319,7 +302,7 @@ void CurveDetect::ExportPoints(const char* path, bool asText)
     
     for (size_t kp = 0; kp < SortedUserPoints.size(); kp++)
     {
-        RealPoint = ConvertImageToReal(SortedUserPoints[kp]);
+        RealPoint = ConvertImageToReal(SortedUserPoints[kp].imagePosition);
         RealUserPoints[kp] = RealPoint;
     }
     
@@ -329,8 +312,8 @@ void CurveDetect::ExportPoints(const char* path, bool asText)
     if (fp != nullptr)
     {
         writeHeader(fp);
-        writeMatrixToMatFile(fp, "UserPointsPixels", &(SortedUserPoints[0].x), SortedUserPoints.size(), 2);
-        writeMatrixToMatFile(fp, "SubdividedPointsPixels", &(SubdividedPoints[0].x), SubdividedPoints.size(), 2);
+        writeMatrixToMatFile(fp, "UserPointsPixels", &(SortedUserPoints[0].imagePosition.x), SortedUserPoints.size(), 2);
+        writeMatrixToMatFile(fp, "SubdividedPointsPixels", &(SubdividedPoints[0].imagePosition.x), SubdividedPoints.size(), 2);
         writeMatrixToMatFile(fp, "UserPointsReal", &(RealUserPoints[0].x), RealUserPoints.size(), 2);
         writeMatrixToMatFile(fp, "SubdividedPointsReal", &(RealSubdividedPoints[0].x), RealSubdividedPoints.size(), 2);
     }
@@ -347,27 +330,35 @@ void CurveDetect::SortPoints()
 }
 
 
-void CurveDetect::SortArray(std::vector<ImVec2>& Array)
+void CurveDetect::SortArray(std::vector<ImagePoint>& Array)
 {
-    struct sort_class_x
+//    struct sort_class_x
+//    {
+//        ImVec2 origin;
+//        ImVec2 target;
+//
+//        bool operator() (ImVec2 i, ImVec2 j)
+//        {
+//            float proj_i = (target.x - origin.x)*(i.x - origin.x) + (target.y - origin.y)*(i.y - origin.y);
+//            float proj_j = (target.x - origin.x)*(j.x - origin.x) + (target.y - origin.y)*(j.y - origin.y);
+//
+//            return proj_i<proj_j;
+//            //return (i.x<j.x);
+//        }
+//    } sort_objectX;
+    
+    auto origin = horizon.imagePosition;
+    auto target = horizon.targetPosition;
+
+    std::sort(Array.begin(), Array.end(), [&origin, &target](const ImagePoint &lhs, const ImagePoint &rhs)
     {
-        ImVec2 origin;
-        ImVec2 target;
-        
-        bool operator() (ImVec2 i, ImVec2 j)
-        {
-            float proj_i = (target.x - origin.x)*(i.x - origin.x) + (target.y - origin.y)*(i.y - origin.y);
-            float proj_j = (target.x - origin.x)*(j.x - origin.x) + (target.y - origin.y)*(j.y - origin.y);
-            
-            return proj_i<proj_j;
-            //return (i.x<j.x);
-        }
-    } sort_objectX;
-    
-    sort_objectX.origin = CoordOriginImg;
-    sort_objectX.target = CoordOriginTargetX;
-    
-    sort(Array.begin(), Array.end(), sort_objectX);
+        double proj_i = (target.x - origin.x)*(lhs.imagePosition.x - origin.x) + (target.y - origin.y)*(lhs.imagePosition.y - origin.y);
+        double proj_j = (target.x - origin.x)*(rhs.imagePosition.x - origin.x) + (target.y - origin.y)*(rhs.imagePosition.y - origin.y);
+
+        return proj_i<proj_j;
+    });
+
+//    sort(Array.begin(), Array.end(), sort_objectX);
 }
 
 void CurveDetect::UpdateSubdivision(bool bUpdateAll)
@@ -390,7 +381,7 @@ void CurveDetect::UpdateSubdivision(bool bUpdateAll)
     int SubPointNum = (ExtraPoints + 1)*(PointsNum - 1) + 1;
     
     
-    static std::vector<ImVec2> LastUserPoints;
+    static std::vector<ImagePoint> LastUserPoints;
     
     
     if (SubdividedPoints.size() != SubPointNum)
@@ -412,16 +403,16 @@ void CurveDetect::UpdateSubdivision(bool bUpdateAll)
         if (SortedUserPoints.size() == LastUserPoints.size())
         {
             if (!bUpdateAll
-                && SortedUserPoints[k].x == LastUserPoints[k].x
-                && SortedUserPoints[k].y == LastUserPoints[k].y
-                && SortedUserPoints[k+1].x == LastUserPoints[k+1].x
-                && SortedUserPoints[k+1].y == LastUserPoints[k+1].y)
+                && SortedUserPoints[k].X() == LastUserPoints[k].X()
+                && SortedUserPoints[k].Y() == LastUserPoints[k].Y()
+                && SortedUserPoints[k+1].X() == LastUserPoints[k+1].X()
+                && SortedUserPoints[k+1].Y() == LastUserPoints[k+1].Y())
             {
                 continue;
             }
         }
         
-        ImVec2 MidPoint = SortedUserPoints[k];
+        Vec2D MidPoint = SortedUserPoints[k].imagePosition;
         for (int k_it = 0; k_it < SubdivideIterations; k_it++)
         {
             //k*(ExtraPoints + 1) - left, (k+1)*(ExtraPoints+1) - right
@@ -432,62 +423,28 @@ void CurveDetect::UpdateSubdivision(bool bUpdateAll)
             {
                 int n0 = k*(ExtraPoints + 1) + k_p;
                 
-                MidPoint = (SubdividedPoints[n0] + SubdividedPoints[n0 + step]) * 0.5f;
+                MidPoint = (SubdividedPoints[n0].imagePosition + SubdividedPoints[n0 + step].imagePosition) * 0.5f;
                 
                 SnapToCurve(MidPoint);
                 SnapToBary(MidPoint);
-                SubdividedPoints[n0 + step / 2] = MidPoint;
+                SubdividedPoints[n0 + step / 2].imagePosition = MidPoint;
+                SubdividedPoints[n0 + step / 2].isSubdivisionPoint = true;
             }
         }
-        
-        
-        //if(!bSmoothPoints)
-        continue;
-        
-        //std::cout << "---------\n";
-        
-        PrevPoints = SubdividedPoints;
-        
-        for (int k_p = 0; k_p < ExtraPoints; k_p++)
-        {
-            //float a = 1.0f - float(k_p + 1) / float(ExtraPoints + 1);
-            //float a = 1.0f - 1.0f / float(ExtraPoints - k_p + 1);
-            
-            //std::cout << "a: " << a << "\n";
-            
-            MidPoint = (PrevPoints[k*(ExtraPoints + 1) + k_p] + PrevPoints[k*(ExtraPoints + 1) + k_p + 1]
-                        + PrevPoints[k*(ExtraPoints + 1) + k_p + 2])/3.0f;
-            
-            //SnapToCurve(MidPoint);
-            //SnapToBary(MidPoint);
-            SubdividedPoints[k*(ExtraPoints + 1) + k_p + 1] = MidPoint;
-        }
-        //SubdividedPoints = PrevPoints;
     }
-    
-    
-    //SortArray(SubdividedPoints);
 
-
-// 	std::cout << "------------\n";
-// 	for (auto it = SubdividedPoints.rbegin(); it != SubdividedPoints.rend(); ++it)
-// 	{
-// 		std::cout << "point (" << (*it).x << "," << (*it).y << ")\n";
-// 	}
-// 	std::cout << "------------\n";
-    
     LastUserPoints = SortedUserPoints;
 }
 
-void CurveDetect::SnapToCurve(ImVec2& ImagePoint)
+void CurveDetect::SnapToCurve(Vec2D& point)
 {
     
     int localX, localY;//to this vars local coords will be written
     
     int hside = (int)SnapDistance;
     
-    localX = int(ImagePoint.x);
-    localY = int(ImagePoint.y);
+    localX = int(point.x);
+    localY = int(point.y);
     
     if (!image->getClosestBlack(localX, localY, hside, BinarizationLevel))
     {
@@ -495,18 +452,18 @@ void CurveDetect::SnapToCurve(ImVec2& ImagePoint)
         return;
     }
     
-    if (localX != int(ImagePoint.x))
+    if (localX != int(point.x))
     {
-        ImagePoint.x = float(localX);
+        point.x = float(localX);
     }
-    if (localY != int(ImagePoint.y))
+    if (localY != int(point.y))
     {
-        ImagePoint.y = float(localY);
+        point.y = float(localY);
     }
     //std::cout << "loc snap: (" << snapX << "," << snapY << ")\n";
 }
 
-void CurveDetect::SnapToBary(ImVec2& ImagePoint)
+void CurveDetect::SnapToBary(Vec2D& point)
 {
     int localX, localY;//to this vars local coords will be written
     
@@ -514,8 +471,8 @@ void CurveDetect::SnapToBary(ImVec2& ImagePoint)
     
     int hside = 3;// ZoomPixelHSide;
     
-    localX = int(ImagePoint.x);
-    localY = int(ImagePoint.y);
+    localX = int(point.x);
+    localY = int(point.y);
     
     MatrixXi PointRegion;
     
@@ -533,7 +490,7 @@ void CurveDetect::SnapToBary(ImVec2& ImagePoint)
     
     int baryMass = 0;
     
-    ImVec2 BaryOffset;
+    Vec2D BaryOffset;
     
     for (int kx = 0; kx <= 2 * hside; kx++)
     {
@@ -543,7 +500,7 @@ void CurveDetect::SnapToBary(ImVec2& ImagePoint)
             {
                 baryMass += BinarizationLevel - PointRegion(ky, kx);
                 
-                BaryOffset += ImVec2(float(kx - localX), float(ky - localY))*float(BinarizationLevel - PointRegion(ky, kx));
+                BaryOffset += Vec2D(double(kx - localX), double(ky - localY))*double(BinarizationLevel - PointRegion(ky, kx));
                 
             }
             
@@ -552,58 +509,60 @@ void CurveDetect::SnapToBary(ImVec2& ImagePoint)
     
     if (baryMass > 0)
     {
-        BaryOffset /= float(baryMass);
-        
-        ImagePoint += BaryOffset;
+        BaryOffset /= double(baryMass);
+
+        point += BaryOffset;
     }
     
     //ImagePoint.x += (baryX - localX);
     //ImagePoint.y += (baryY - localY);
 }
 
-ImVec2 CurveDetect::ConvertImageToReal(const ImVec2& ImagePoint)
+Vec2D CurveDetect::ConvertImageToReal(const Vec2D& point)
 {
-    ImVec2 RealPoint;
+    Vec2D RealPoint;
     
     //this function should be called after check that
     //we can really calculate real points
     //so all x and y ticks are defined
     
-    ImVec2 Scale, Offset;
+    Vec2D Scale, Offset;
+
+    auto dir1=horizon.targetPosition-horizon.imagePosition;
+    auto dxtick=XTicks[0].imagePosition-XTicks[1].imagePosition;
+    auto dytick=YTicks[0].imagePosition-YTicks[1].imagePosition;
     
-    Scale.x = (XTicks[0].z - XTicks[1].z) / (XTicks[0].x - XTicks[1].x);
-    Scale.y = (YTicks[0].z - YTicks[1].z) / (YTicks[0].y - YTicks[1].y);
+    Scale.x = (XTicks[0].tickValue - XTicks[1].tickValue) / dxtick.x;
+    Scale.y = (YTicks[0].tickValue - YTicks[1].tickValue) / dytick.y;
     
     
-    Offset.x = XTicks[1].z - XTicks[1].x*Scale.x;
-    Offset.y = YTicks[1].z - YTicks[1].y*Scale.y;
+    Offset.x = XTicks[1].tickValue - XTicks[1].X()*Scale.x;
+    Offset.y = YTicks[1].tickValue - YTicks[1].Y()*Scale.y;
     
     //XTicks[1].z + (ImagePoint.x- XTicks[1].x)*Scale.x
     
-    RealPoint.x = Offset.x + ImagePoint.x*Scale.x;
-    RealPoint.y = Offset.y + ImagePoint.y*Scale.y;
+    RealPoint.x = Offset.x + point.x*Scale.x;
+    RealPoint.y = Offset.y + point.y*Scale.y;
     
     //for deriving a and b
-    float det1 = (XTicks[0].x - XTicks[1].x)*(CoordOriginTargetX.x - CoordOriginImg.x)
-                 + (XTicks[0].y - XTicks[1].y)*(CoordOriginTargetX.y - CoordOriginImg.y);
-    
+    double det1 = dxtick.x*dir1.x + dxtick.y*dir1.y;
+
     //for deriving c and d
-    float det2 = (YTicks[0].x - YTicks[1].x)*(CoordOriginImg.y - CoordOriginTargetX.y)
-                 - (YTicks[0].y - YTicks[1].y)*(CoordOriginImg.x - CoordOriginTargetX.x);
+    double det2 = -dytick.x*dir1.y + dytick.y*dir1.x;
+
+    double a, b, c, d, e, f;
     
-    float a, b, c, d, e, f;
+    a =  (XTicks[0].tickValue - XTicks[1].tickValue)*dir1.x / det1;
+    b =  (XTicks[0].tickValue - XTicks[1].tickValue)*dir1.y / det1;
     
-    a = (XTicks[0].z - XTicks[1].z)*(CoordOriginTargetX.x - CoordOriginImg.x) / det1;
-    b = (XTicks[0].z - XTicks[1].z)*(CoordOriginTargetX.y - CoordOriginImg.y) / det1;
+    c = -(YTicks[0].tickValue - YTicks[1].tickValue)*dir1.y / det2;
+    d =  (YTicks[0].tickValue - YTicks[1].tickValue)*dir1.x / det2;
     
-    c = (YTicks[0].z - YTicks[1].z)*(CoordOriginImg.y - CoordOriginTargetX.y) / det2;
-    d = -(YTicks[0].z - YTicks[1].z)*(CoordOriginImg.x - CoordOriginTargetX.x) / det2;
+    e = XTicks[0].tickValue - a*XTicks[0].X() - b*XTicks[0].Y();
+    f = YTicks[0].tickValue - c*YTicks[0].X() - d*YTicks[0].Y();
     
-    e = XTicks[0].z - a*XTicks[0].x - b*XTicks[0].y;
-    f = YTicks[0].z - c*YTicks[0].x - d*YTicks[0].y;
-    
-    RealPoint.x = a*ImagePoint.x + b*ImagePoint.y + e;
-    RealPoint.y = c*ImagePoint.x + d*ImagePoint.y + f;
+    RealPoint.x = a*point.x + b*point.y + e;
+    RealPoint.y = c*point.x + d*point.y + f;
     
     
     return RealPoint;
@@ -618,24 +577,25 @@ void CurveDetect::ResetAll()
     
     XTicks.clear();
     YTicks.clear();
-    
-    CoordOriginTargetX = CoordOriginImg + ImVec2(100.0f, 0.0f);
+
+    horizon.targetPosition=horizon.imagePosition + Vec2D(100.0, 0.0);
     
     
     if (image)
     {
-        
-        CoordOriginImg = ImVec2((float)image->get_width(), (float)image->get_height())*0.5f;
-        CoordOriginTargetX = CoordOriginImg + ImVec2((float)image->get_width()*0.3f, 0.0f);
+        horizon.imagePosition.x=image->get_width()*0.1;
+        horizon.imagePosition.y=image->get_height()*0.5;
+        horizon.targetPosition.x=image->get_width()*0.9;
+        horizon.targetPosition.y=image->get_height()*0.5;
     }
     
 }
 
-void CurveDetect::AddPoint(ImVec2 pos)
+void CurveDetect::AddPoint(Vec2D pos)
 {
-    UserPoints.push_back(pos);
-    SnapToCurve(UserPoints.back());
-    SnapToBary(UserPoints.back());
+    SnapToCurve(pos);
+    SnapToBary(pos);
+    UserPoints.emplace_back(pos);
     SortPoints();
     UpdateSubdivision();
     SelectedItem = UserPoints.size() - 1;
@@ -663,43 +623,38 @@ void CurveDetect::SelectHovered()
     SelectedItem = HoveredItem;
 }
 
-void CurveDetect::SetOrigin(ImVec2 pos, bool snap)
-{
-//    CoordOriginTargetX += pos - CoordOriginImg;
-    CoordOriginImg = pos;
-    
-//    SnappedPoint = CoordOriginImg;
-    if (snap)
-    {
-        SnapToCurve(CoordOriginImg);
-        SnapToBary(CoordOriginImg);
-//        CoordOriginTargetX += SnappedPoint - CoordOriginImg;
-        CoordOriginImg = CoordOriginImg;
-    }
-    
-    SortPoints();
-    UpdateSubdivision();
-}
-
-void CurveDetect::SetTarget(ImVec2 pos, bool snap)
+void CurveDetect::SetOrigin(Vec2D pos, bool snap)
 {
     if (snap)
     {
         SnapToCurve(pos);
         SnapToBary(pos);
     }
+    horizon.imagePosition = pos;
     
-    CoordOriginTargetX = pos;
     SortPoints();
     UpdateSubdivision();
 }
 
-bool CurveDetect::AddXTick(ImVec2 pos)
+void CurveDetect::SetTarget(Vec2D pos, bool snap)
+{
+    if (snap)
+    {
+        SnapToCurve(pos);
+        SnapToBary(pos);
+    }
+
+    horizon.targetPosition = pos;
+    SortPoints();
+    UpdateSubdivision();
+}
+
+bool CurveDetect::AddXTick(Vec2D pos)
 {
     if(XTicks.size()==2)
         return false;
     
-    XTicks.push_back(ImVec4(pos.x, pos.y, 0.f, 0.f));
+    XTicks.emplace_back(pos);
     SelectedItem = XTicks.size() - 1;
     
     return true;
@@ -720,12 +675,12 @@ void CurveDetect::DeleteHoveredXTick()
     SelectedItem = -1;
 }
 
-bool CurveDetect::AddYTick(ImVec2 pos)
+bool CurveDetect::AddYTick(Vec2D pos)
 {
     if(YTicks.size()==2)
         return false;
-    
-    YTicks.push_back(ImVec4(pos.x, pos.y, 0.f, 0.f));
+
+    YTicks.emplace_back(pos);
     SelectedItem = YTicks.size() - 1;
     
     return true;
@@ -756,77 +711,66 @@ int CurveDetect::GetHovered()
     return HoveredItem;
 }
 
-void CurveDetect::MoveSelectedPoint(ImVec2 pos, bool snap)
+void CurveDetect::MoveSelectedPoint(Vec2D pos, bool snap)
 {
-    UserPoints[SelectedItem] = pos;
     if (snap)
     {
-        SnapToCurve(UserPoints[SelectedItem]);
-        SnapToBary(UserPoints[SelectedItem]);
+        SnapToCurve(pos);
+        SnapToBary(pos);
     }
+    UserPoints[SelectedItem].imagePosition = pos;
     SortPoints();
     UpdateSubdivision();
 }
 
-void CurveDetect::MoveSelectedXTick(ImVec2 pos, bool snap)
+void CurveDetect::MoveSelectedXTick(Vec2D pos, bool snap)
 {
     if (snap)
     {
         SnapToCurve(pos);
         SnapToBary(pos);
     }
-    XTicks[SelectedItem].x = pos.x;
-    XTicks[SelectedItem].y = pos.y;
+    XTicks[SelectedItem].imagePosition = pos;
 }
 
-void CurveDetect::MoveSelectedYTick(ImVec2 pos, bool snap)
+void CurveDetect::MoveSelectedYTick(Vec2D pos, bool snap)
 {
     if (snap)
     {
         SnapToCurve(pos);
         SnapToBary(pos);
     }
-    YTicks[SelectedItem].x = pos.x;
-    YTicks[SelectedItem].y = pos.y;
+    YTicks[SelectedItem].imagePosition = pos;
 }
 
 void CurveDetect::CheckTarget()
 {
-    if (std::abs(CoordOriginTargetX.x - CoordOriginImg.x) < 2.0f &&
-        std::abs(CoordOriginTargetX.y - CoordOriginImg.y) < 2.0f)
+    //TODO maybe dont allow to set position too close in the first place
+    auto dh=horizon.targetPosition-horizon.imagePosition;
+    if (std::abs(dh.x) < 2.0f && std::abs(dh.y) < 2.0f)
     {
-        CoordOriginTargetX = CoordOriginImg + ImVec2(10.0f, 0.0f);
+        horizon.targetPosition = horizon.imagePosition + Vec2D(10.0, 0.0);
     }
 }
 
-const std::vector<ImVec2> CurveDetect::GetAllPoints()
+const std::vector<ImagePoint> CurveDetect::GetAllPoints()
 {
     return SubdividedPoints;
 }
 
-const std::vector<ImVec2> CurveDetect::GetUserPoints()
+const std::vector<ImagePoint> CurveDetect::GetUserPoints()
 {
     return UserPoints;
 }
 
-std::vector<ImVec4>& CurveDetect::GetXTicks()
+std::vector<ImageTickLine>& CurveDetect::GetXTicks()
 {
     return XTicks;
 }
 
-std::vector<ImVec4>& CurveDetect::GetYTicks()
+std::vector<ImageTickLine>& CurveDetect::GetYTicks()
 {
     return YTicks;
-}
-
-ImVec2 CurveDetect::GetOrigin()
-{
-    return CoordOriginImg;
-}
-
-ImVec2 CurveDetect::GetTarget()
-{
-    return CoordOriginTargetX;
 }
 
 void CurveDetect::SetBinarizationLevel(int level)
@@ -844,5 +788,9 @@ void CurveDetect::SetSubdivIterations(int subdiv)
         return;
     SubdivideIterations=subdiv;
     UpdateSubdivision(true);
+}
+
+ImageHorizon CurveDetect::GetHorizon() {
+    return horizon;
 }
 

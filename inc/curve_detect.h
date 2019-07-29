@@ -7,6 +7,7 @@
 #include <imgui.h>
 #include <memory>
 #include <image.h>
+#include <image_elements.h>
 
 
 enum ExportReadyStatus //: int
@@ -30,42 +31,41 @@ public:
     CurveDetect(std::shared_ptr<Image> image);
     
     void ResetAll();
-    void UpdateHoveredItemIndex(ImVec2 im_pos, int mode);
+    void UpdateHoveredItemIndex(Vec2D im_pos, int mode);
     
-    void AddPoint(ImVec2 pos);
+    void AddPoint(Vec2D pos);
     int GetHoveredPoint();
     void DeleteHoveredPoint();
     void SelectHovered();
     
-    void SetOrigin(ImVec2 pos, bool snap);
-    void SetTarget(ImVec2 pos, bool snap);
+    void SetOrigin(Vec2D pos, bool snap);
+    void SetTarget(Vec2D pos, bool snap);
 
-    bool AddXTick(ImVec2 pos);
+    bool AddXTick(Vec2D pos);
     int GetHoveredXTick();
     void DeleteHoveredXTick();
     
-    bool AddYTick(ImVec2 pos);
+    bool AddYTick(Vec2D pos);
     int GetHoveredYTick();
     void DeleteHoveredYTick();
     
     int GetSelected();
     int GetHovered();
     
-    void MoveSelectedPoint(ImVec2 pos, bool snap);
-    void MoveSelectedXTick(ImVec2 pos, bool snap);
-    void MoveSelectedYTick(ImVec2 pos, bool snap);
+    void MoveSelectedPoint(Vec2D pos, bool snap);
+    void MoveSelectedXTick(Vec2D pos, bool snap);
+    void MoveSelectedYTick(Vec2D pos, bool snap);
 
     void Deselect(){SelectedItem=-1;}
     
     void CheckTarget();
     
-    const std::vector<ImVec2> GetAllPoints();
-    const std::vector<ImVec2> GetUserPoints();
-    std::vector<ImVec4>& GetXTicks();
-    std::vector<ImVec4>& GetYTicks();
-    
-    ImVec2 GetOrigin();
-    ImVec2 GetTarget();
+    const std::vector<ImagePoint> GetAllPoints();
+    const std::vector<ImagePoint> GetUserPoints();
+    std::vector<ImageTickLine>& GetXTicks();
+    std::vector<ImageTickLine>& GetYTicks();
+
+    ImageHorizon GetHorizon();
     
     void SetBinarizationLevel(int level);
     void SetSubdivIterations(int subdiv);
@@ -90,21 +90,18 @@ private:
     int SelectedItem;
     int HoveredItem;
     
-    std::vector<ImVec2> UserPoints; //position of user points (pixels)
-    std::vector<ImVec2> SortedUserPoints; //position of user points (pixels)
-    std::vector<ImVec2> SubdividedPoints; //position of all points (pixels) both user and generated
-    
-    
-    std::vector<ImVec4> XTicks;	//first two - image coordinates, third - real X value, fourth - not used
-    std::vector<ImVec4> YTicks;	//first two - image coordinates, third - real X value, fourth - not used
-    
-    ImVec2 CoordOriginImg; // position of origin in image (pixels)
-    ImVec2 CoordOriginTargetX; // position of target in image (pixels) where X is pointed
-    
-    
+    std::vector<ImagePoint> UserPoints; //position of user points (pixels)
+    std::vector<ImagePoint> SortedUserPoints; //position of user points (pixels)
+    std::vector<ImagePoint> SubdividedPoints; //position of all points (pixels) both user and generated
+
+    std::vector<ImageTickLine> XTicks;
+    std::vector<ImageTickLine> YTicks;
+
+    ImageHorizon horizon;
+
     void SortPoints();
     
-    void SortArray(std::vector<ImVec2>& Array);
+    void SortArray(std::vector<ImagePoint>& Array);
     
     
     void UpdateSubdivision(bool bUpdateAll = false);
@@ -114,7 +111,7 @@ private:
      * so for more precision use with SnapToBary
      * @param ImagePoint
      */
-    void SnapToCurve(ImVec2& ImagePoint);
+    void SnapToCurve(Vec2D& point);
     
     /**
      * will snap point to barycenter of current zoom region
@@ -122,17 +119,17 @@ private:
      * so make sure that in zoom region only curve points are shown
      * @param ImagePoint
      */
-    void SnapToBary(ImVec2& ImagePoint);
+    void SnapToBary(Vec2D& point);
     
     /**
      * converts pixel coordinates to real data
      * @param ImagePoint
      * @return
      */
-    ImVec2 ConvertImageToReal(const ImVec2& ImagePoint);
+    Vec2D ConvertImageToReal(const Vec2D& point);
     
     
-    void numToStr(float num, char decimalSeparator, std::string& out_String);
+    void numToStr(double num, char decimalSeparator, std::string& out_String);
 };
 
 
