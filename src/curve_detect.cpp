@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include <cstdlib>
 #include <algorithm>
 #include "mat_file_writer.h"
 
@@ -16,16 +15,8 @@
 
 #include "imgui_helpers.h"
 
-#include <Eigen/Dense>
-#include <filesystem>
 #include <curve_detect.h>
 #include <main_app.h>
-
-
-using Eigen::MatrixXd;
-using Eigen::MatrixXi;
-using Eigen::Vector2d;
-
 
 
 

@@ -10,7 +10,7 @@
 
 
 
-class GLFWwindow;
+struct GLFWwindow;
 
 class MainApp
 {

@@ -1,13 +1,7 @@
 
 #include <iostream>
-#include <sstream>
-#include <fstream>
-#include <filesystem>
 #include <string>
 #include <vector>
-
-#include <cstdlib>
-#include <algorithm>
 
 #include "main_window.h"
 #include "main_app.h"
@@ -19,13 +13,8 @@
 #include "glad/glad.h"
 
 #include <GLFW/glfw3.h>
-#include <filesystem>
 
 #include "tinyfiledialogs.h"
-
-#include <Eigen/Dense>
-using Eigen::MatrixXd;
-using Eigen::MatrixXi;
 
 MainWindow::MainWindow()
 {
@@ -1400,20 +1389,7 @@ void MainWindow::ExportPoints()
     
     char const * lFilterPatterns[2] = { "*.txt", "*.mat" };
     
-    std::string path;
-    
-    auto full_path=std::filesystem::current_path();
-    
-    path = full_path.string();
-    
-    path.append("\\");
-    
-    std::cout << "default path: " << path << "\n";
-    
-    path = "";
-    
-    
-    path.append("data.txt");
+    std::string path="data.txt";
     
     const char* lTheSaveFileName = tinyfd_saveFileDialog(
             "Choose a save file",
@@ -1498,17 +1474,6 @@ void MainWindow::OpenImage()
     char const * lFilterPatterns[3] = { "*.png", "*.jpg", "*.bmp" };
     
     std::string path;
-    
-    auto full_path=std::filesystem::current_path();
-    //std::cout << "Current path is : " << full_path << std::endl;
-    
-    path = full_path.string();
-    
-    path.append("\\");
-    
-    std::cout << "default path: " << path << "\n";
-    
-    path = "";
     
     filename = tinyfd_openFileDialog(
             "Choose an Image",
