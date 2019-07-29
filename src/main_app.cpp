@@ -9,6 +9,10 @@
 #include "glad/glad.h"
 
 #include <GLFW/glfw3.h>
+#include <stb_image.h>
+
+extern stbi_uc _binary_icon_png_start;
+extern stbi_uc _binary_icon_png_end;
 
 MainApp::MainApp()
 {
@@ -34,6 +38,22 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
     glad_glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     
     window = wnd;
+
+    //load app icon
+    GLFWimage images[1];
+    stbi_uc* p=&_binary_icon_png_start;
+    size_t len = &_binary_icon_png_end - &_binary_icon_png_start;
+    size_t i=0;
+
+    auto* data=new stbi_uc[len];
+
+    while (p != &_binary_icon_png_end)
+        data[i++]=*p++;
+
+    images[0].pixels = stbi_load_from_memory(data, len, &images[0].width, &images[0].height, nullptr, 4);
+    glfwSetWindowIcon(window, 1, images);
+    delete[](data);
+
     
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
