@@ -3,6 +3,26 @@ project(curvedetect)
 
 set(CMAKE_CXX_STANDARD 11)
 
+# works with both linux and mingw shell, but doesn't work with jetbrains clion since it's launching cmake from windows
+# shell (as it seems to be doing).
+# so if you're launching cmake on windows not from mingw shell you will need to rebuild resources manually
+# by executing ./build-res.sh in mingw shell (work dir is {project_root}/res)
+
+## On Windows we have another file for generating resources
+if( WIN32 )
+    set(RES_GEN_COMMAND bash -l -c "cd ${PROJECT_SOURCE_DIR}/res && bash ./build-res.bat" )
+
+    execute_process(COMMAND ${RES_GEN_COMMAND}
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+else()
+    set(RES_GEN_COMMAND bash -l -c "cd ${PROJECT_SOURCE_DIR}/res && bash ./build-res.sh" )
+
+    execute_process(COMMAND ${RES_GEN_COMMAND}
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+endif()
+
+
+
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -29,19 +49,13 @@ file(GLOB all_SRCS
         )
 
 file(GLOB all_RES
-        ${PROJECT_SOURCE_DIR}/res/*.o
+        ${PROJECT_SOURCE_DIR}/res/gen/*.o
         )
-
-# works with both linux and mingw shell, but doesn't work with jetbrains clion since it's launching cmake from windows
-# shell (as it seems to be doing).
-# so if you're launching cmake on windows not from mingw shell you will need to rebuild resources manually
-# by executing ./res/build-res.sh in mingw shell (work dir is project root)
-set(RES_GEN_COMMAND bash -l -c "cd ${PROJECT_SOURCE_DIR} && bash ./res/build-res.sh" )
-
-execute_process(COMMAND ${RES_GEN_COMMAND}
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
 
 add_executable(${PROJECT_NAME} ${all_SRCS})
 target_link_libraries(${PROJECT_NAME} glfw)
 target_link_libraries(${PROJECT_NAME} ${all_RES})
+if( WIN32 )
+    target_link_libraries(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/res/gen/win-res.res)
+endif()

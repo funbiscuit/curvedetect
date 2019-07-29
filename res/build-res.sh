@@ -1,4 +1,3 @@
 #!/bin/bash
 
-cd res
-objcopy --input binary --output elf64-x86-64 --binary-architecture i386:x86-64 icon.png icon.o
+objcopy -I binary -O elf64-x86-64 -B i386:x86-64 icon.png gen/icon.o
