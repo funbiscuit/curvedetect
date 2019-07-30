@@ -13,8 +13,7 @@ Image::Image(std::string path)
 {
     texture=0;
 
-    int c;
-    image = stbi_load(path.c_str(), &width, &height, &c, 3);
+    image = stbi_load(path.c_str(), &width, &height, nullptr, 3);
 
     if(image)
     {
@@ -26,9 +25,9 @@ Image::Image(std::string path)
         {
             for (int ky = 0; ky < height; ky++)
             {
-                float r = *(image + c*(ky * width + kx));
-                float g = *(image + c*(ky * width + kx + 1));
-                float b = *(image + c*(ky * width + kx + 2));
+                float r = *(image + 3*(ky * width + kx));
+                float g = *(image + 3*(ky * width + kx + 1));
+                float b = *(image + 3*(ky * width + kx + 2));
             
                 ImageMatrix(ky, kx) =int(0.2126f * r + 0.7152f * g + 0.0722f * b);
             }
