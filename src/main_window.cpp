@@ -22,7 +22,7 @@ MainWindow::MainWindow()
     height=720;
     toolbar_width=280;
     
-    CurrentMode = ActionMode0_None;
+    CurrentMode = MODE_NONE;
     
     
     MinImageScale = 1.0f;
@@ -129,7 +129,7 @@ void MainWindow::ShowMainWindow()
     HoveredPixel = (MousePos - WinPos - CurrentImPos)/CurrentImageScale;
 
     if(curve)
-        curve->UpdateHoveredItemIndex(Vec2D(HoveredPixel), CurrentMode);
+        curve->UpdateHoveredItem(Vec2D(HoveredPixel));
     
     ProcessInput();
     
@@ -170,12 +170,12 @@ void MainWindow::ShowMainWindow()
         ImGui::Text("Choose work mode");
         ImGui::Separator();
         
-        const char* items[]={"[0] None","[1] Point (Add/Move/Delete)","[2] Origin (Move)",
-                             "[3] X Target (Move)","[4] X Tick (Add/Move/Delete)","[5] Y Tick (Add/Move/Delete)"};
-        ActionMode modes[]={ActionMode0_None,ActionMode1_AddPoints,ActionMode2_MoveOrigin,
-                            ActionMode3_MoveXTarget,ActionMode4_AddXTick,ActionMode5_AddYTick};
+        const char* items[]={"[0] None","[1] Point (Add/Move/Delete)","[2] Horizon (Move)",
+                             "[3] X Ticks (Add/Move/Delete)","[4] Y Ticks (Add/Move/Delete)"};
+        ActionMode modes[]={MODE_NONE,MODE_POINTS,MODE_HORIZON,
+                            MODE_XTICKS,MODE_YTICKS};
         
-        for(int j=0;j<6;++j)
+        for(int j=0;j<5;++j)
         {
             if (ImGui::MenuItem(items[j], nullptr, CurrentMode == modes[j], true))
             {
@@ -286,26 +286,133 @@ void MainWindow::ShowImage(ImVec2 canvasSize)
     }
 }
 
+void MainWindow::OnMouseDown(int btn)
+{
+    auto& app=MainApp::getInstance();
+    if (btn == 0)
+    {
+        switch (CurrentMode)
+        {
+            case MODE_POINTS:
+                if (app.isCtrlPressed())
+                {
+                    curve->AddPoint(Vec2D(HoveredPixel));
+                }
+                else if (curve->SelectHovered(ImageElement::POINT))
+                {
+                    curve->MoveSelected(Vec2D(HoveredPixel));
+                    curve->SortPoints();
+                    curve->UpdateSubdivision();
+                }
+                break;
+            case MODE_HORIZON:
+                if (curve->SelectHovered(ImageElement::HORIZON))
+                {
+                    curve->MoveSelected(Vec2D(HoveredPixel));
+                    curve->SortPoints();
+                    curve->UpdateSubdivision();
+                }
+                break;
+            case MODE_XTICKS:
+                if (app.isCtrlPressed())
+                {
+                    curve->AddXTick(Vec2D(HoveredPixel));
+                }
+                else if (curve->SelectHovered(ImageElement::X_TICK | ImageElement::Y_TICK))
+                {
+                    //TODO process double click and show input window
+                    curve->BackupSelectedTick();
+                }
+                break;
+            case MODE_YTICKS:
+                if (app.isCtrlPressed())
+                {
+                    curve->AddYTick(Vec2D(HoveredPixel));
+                }
+                else if (curve->SelectHovered(ImageElement::X_TICK | ImageElement::Y_TICK))
+                {
+                    //TODO process double click and show input window
+                    curve->BackupSelectedTick();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+void MainWindow::OnMouseUp(int btn)
+{
+    auto& app=MainApp::getInstance();
+    if (btn == 0)
+    {
+        switch (CurrentMode)
+        {
+            case MODE_POINTS:
+            case MODE_HORIZON:
+                if (deleteOnRelease)
+                    curve->DeleteSelected();
+                else
+                    curve->DeselectAll();
+                break;
+            case MODE_XTICKS:
+            case MODE_YTICKS:
+                if (deleteOnRelease)
+                    curve->DeleteSelected();
+                else if(curve->GetSelectedId())
+                    ImGui::OpenPopup("TickConfig");
+                //TODO for non new ticks - deselect
+//                    curve->DeselectAll();
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+void MainWindow::OnMouseDrag(int btn)
+{
+    auto& app=MainApp::getInstance();
+    if (btn == 0 && curve)
+    {
+        deleteOnRelease = false;
+
+        if(curve->MoveSelected(Vec2D(HoveredPixel)))
+        {
+            if(app.isCtrlPressed())
+                curve->SnapSelected();
+
+            if(CurrentMode == MODE_POINTS || CurrentMode == MODE_HORIZON)
+            {
+                curve->SortPoints();
+                curve->UpdateSubdivision();
+            }
+        }
+    }
+}
+
 void MainWindow::ProcessInput()
 {
     static bool bIsMouseDownFirst = true;
+    auto& app=MainApp::getInstance();
 
     if (ImGui::IsWindowFocused())
     {
         ImGuiIO& io = ImGui::GetIO();
-        ActionMode modes[]={ActionMode0_None,ActionMode1_AddPoints,ActionMode2_MoveOrigin,
-                            ActionMode3_MoveXTarget,ActionMode4_AddXTick,ActionMode5_AddYTick};
+        ActionMode modes[]={MODE_NONE,MODE_POINTS,MODE_HORIZON,
+                            MODE_XTICKS,MODE_YTICKS};
 
-        for(int j=0;j<6;++j)
+        for(int j=0;j<5;++j)
         {
             if (io.KeysDown[GLFW_KEY_0+j] || io.KeysDown[GLFW_KEY_KP_0+j])
             {
                 CurrentMode = modes[j];
             }
         }
+
+        if(curve && curve->GetSelectedId()==0)
+            deleteOnRelease = app.isShiftPressed();
     }
-    
-    auto& app=MainApp::getInstance();
 
     if (curve && ImGui::IsMouseHoveringWindow() && !bIsContextMenuOpened && bIsReadyForAction)
     {
@@ -313,127 +420,17 @@ void MainWindow::ProcessInput()
         {
             if (bIsMouseDownFirst) //first press
             {
-                switch (CurrentMode)
-                {
-                    case ActionMode0_None:
-                        break;
-                    case ActionMode1_AddPoints:
-                        if (app.isCtrlPressed())
-                        {
-                            curve->AddPoint(Vec2D(HoveredPixel));
-                        }
-                        else if (curve->GetHoveredPoint()!=-1)
-                        {
-                            if (app.isShiftPressed())
-                            {
-                                curve->DeleteHoveredPoint();
-                            }
-                            else
-                            {
-                                curve->SelectHovered();
-                            }
-                        }
-                        break;
-                    case ActionMode2_MoveOrigin:
-                        curve->SetOrigin(Vec2D(HoveredPixel), app.isCtrlPressed());
-                        break;
-                    case ActionMode3_MoveXTarget:
-                        curve->SetTarget(Vec2D(HoveredPixel), app.isCtrlPressed());
-                        break;
-                    case ActionMode4_AddXTick:
-                        if (app.isCtrlPressed() && curve->AddXTick(Vec2D(HoveredPixel)))
-                        {
-                        }
-                        else if (curve->GetHoveredXTick()!=-1)
-                        {
-                            if (app.isShiftPressed())
-                            {
-                                curve->DeleteHoveredXTick();
-                            }
-                            else
-                            {
-                                curve->SelectHovered();
-                            }
-                        }
-                        break;
-                    case ActionMode5_AddYTick:
-                        if (app.isCtrlPressed() && curve->AddYTick(Vec2D(HoveredPixel)))
-                        {
-                        }
-                        else if (curve->GetHoveredYTick()!=-1)
-                        {
-                            if (app.isShiftPressed())
-                            {
-                                curve->DeleteHoveredYTick();
-                            }
-                            else
-                            {
-                                curve->SelectHovered();
-                            }
-                        }
-                        break;
-                    default:
-                        break;
-                }
+                OnMouseDown(0);
             }
             else//continued press
             {
-                switch (CurrentMode)
-                {
-                    case ActionMode0_None:
-                        break;
-                    case ActionMode1_AddPoints:
-                        if (curve->GetSelected()>=0)
-                        {
-                            curve->MoveSelectedPoint(Vec2D(HoveredPixel), app.isCtrlPressed());
-                        }
-                        break;
-                    case ActionMode2_MoveOrigin:
-                        curve->SetOrigin(Vec2D(HoveredPixel), app.isCtrlPressed());
-                        break;
-                    case ActionMode3_MoveXTarget:
-                        curve->SetTarget(Vec2D(HoveredPixel), app.isCtrlPressed());
-                        break;
-                    case ActionMode4_AddXTick:
-                        if (curve->GetSelected()>=0)
-                            curve->MoveSelectedXTick(Vec2D(HoveredPixel), app.isCtrlPressed());
-                        break;
-                    case ActionMode5_AddYTick:
-                        if (curve->GetSelected()>=0)
-                            curve->MoveSelectedYTick(Vec2D(HoveredPixel), app.isCtrlPressed());
-                        break;
-                    default:
-                        break;
-                }
+                OnMouseDrag(0);
             }
             bIsMouseDownFirst = false;
         }
         if (ImGui::IsMouseReleased(0))
         {
-            switch (CurrentMode)
-            {
-                case ActionMode0_None:
-                    break;
-                case ActionMode1_AddPoints:
-                    if (curve->GetSelected()>=0)
-                    {
-                        curve->MoveSelectedPoint(Vec2D(HoveredPixel), app.isCtrlPressed());
-                        curve->Deselect();
-                    }
-                    break;
-                case ActionMode2_MoveOrigin:
-                    break;
-                case ActionMode4_AddXTick:
-                case ActionMode5_AddYTick:
-                    if (curve->GetSelected()>=0)
-                        ImGui::OpenPopup("TickConfig");
-                    break;
-                default:
-                    break;
-            }
-            
-            
-            
+            OnMouseUp(0);
             
             bIsMouseDownFirst = true;
         }
@@ -467,8 +464,8 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     
-    int SelectedItem=curve->GetSelected();
-    int HoveredItem=curve->GetHovered();
+    uint64_t selectedId=curve->GetSelectedId();
+    uint64_t hoveredId=curve->GetHoveredId(ImageElement::POINT);
     auto& allPoints=curve->GetAllPoints();
     auto& userPoints=curve->GetUserPoints();
     
@@ -504,15 +501,14 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
 //    }
     
     auto& app=MainApp::getInstance();
-    for (size_t kp = 0; kp < userPoints.size(); kp++)
-    {
-        ImVec2 PointPos = userPoints[kp].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
+    for (const auto &point : userPoints) {
+        ImVec2 PointPos = point.imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
         
         ImU32 CircleFill = ImColor(150, 150, 150, 255);
         
-        if (CurrentMode == ActionMode1_AddPoints)
+        if (CurrentMode == MODE_POINTS)
         {
-            if (kp == SelectedItem || (SelectedItem == -1 && kp == HoveredItem))
+            if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
             {
                 
                 CircleFill = ImColor(255, 255, 255, 255);
@@ -556,20 +552,13 @@ void MainWindow::ShowTickConfigPopup()
         static int TickPrecision = 3; //X
         static double TickValue = 0;
     
-        int SelectedItem=curve->GetSelected();
+        auto selected=(ImageTickLine*) curve->GetSelected();
         auto& XTicks=curve->GetXTicks();
         auto& YTicks=curve->GetYTicks();
     
-        if (bTickConfigInit)
+        if (bTickConfigInit && selected)
         {
-            if (CurrentMode == ActionMode4_AddXTick)//X
-            {
-                TickValue = XTicks[SelectedItem].tickValue;
-            }
-            else if (CurrentMode == ActionMode5_AddYTick)//Y
-            {
-                TickValue = YTicks[SelectedItem].tickValue;
-            }
+            TickValue = selected->tickValue;
             
             bTickConfigInit = false;
         }
@@ -595,17 +584,15 @@ void MainWindow::ShowTickConfigPopup()
         if (ImGui::Button("OK", ImVec2(120, 0)) || app.isEnterReleased())
         {
             //std::cout << TickValue << ", " << SelectedItem << '\n';
-            
-            if (CurrentMode == ActionMode4_AddXTick)//X
+
+            if(selected)
             {
-                XTicks[SelectedItem].tickValue = TickValue;
+                selected->tickValue = TickValue;
+                selected->isNew = false;
             }
-            else if (CurrentMode == ActionMode5_AddYTick)//Y
-            {
-                YTicks[SelectedItem].tickValue = TickValue;
-            }
-            
-            SelectedItem = -1;
+
+            curve->DeselectAll();
+
             bTickConfigInit = true;
             ImGui::CloseCurrentPopup();
         }
@@ -613,17 +600,16 @@ void MainWindow::ShowTickConfigPopup()
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2(120, 0)))
         {
-            //TODO restore from backup
-            if (CurrentMode == ActionMode4_AddXTick)//X
+
+            if(selected)
             {
-                //XTicks.pop_back();
+                if(selected->isNew)
+                    curve->DeleteSelected();
+                else
+                    selected->RestoreBackup();
             }
-            else if (CurrentMode == ActionMode5_AddYTick)//Y
-            {
-                //YTicks.pop_back();
-            }
-            
-            SelectedItem = -1;
+
+            curve->DeselectAll();
             
             bTickConfigInit = true;
             ImGui::CloseCurrentPopup();
@@ -632,18 +618,8 @@ void MainWindow::ShowTickConfigPopup()
         
         if (ImGui::Button("Delete tick line", ImVec2(248, 0)))
         {
-            
-            if (CurrentMode == ActionMode4_AddXTick)//X
-            {
-                XTicks.erase(XTicks.begin() + SelectedItem);
-            }
-            else if (CurrentMode == ActionMode5_AddYTick)//Y
-            {
-                YTicks.erase(YTicks.begin() + SelectedItem);
-                //YTicks.pop_back();
-            }
-            
-            SelectedItem = -1;
+            if(selected)
+                curve->DeleteSelected();
             
             bTickConfigInit = true;
             ImGui::CloseCurrentPopup();
@@ -707,7 +683,7 @@ bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, ImVec2& out_ZoomOrigin)
     ZoomUV1 = ZoomUV0 + ImVec2(ZoomUVsideU, ZoomUVsideU / im_aspect);
     
     //draw zoom window
-    if (ImGui::IsMouseHoveringWindow() && CurrentMode != ActionMode0_None)
+    if (ImGui::IsMouseHoveringWindow() && CurrentMode != MODE_NONE)
     {
         ImU32 ZoomBgColor = ImColor(120, 120, 120, 220);
         draw_list->AddRectFilled(ZoomPos - ImVec2(ZoomRectBorder, ZoomRectBorder),
@@ -744,8 +720,8 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
     
     auto horizon=curve->GetHorizon();
     auto CoordOriginImg=horizon.imagePosition.ToImVec2();
-    auto CoordOriginTargetX=horizon.targetPosition.ToImVec2();
-    int HoveredItem=curve->GetHovered();
+    auto CoordOriginTargetX=horizon.target.imagePosition.ToImVec2();
+    uint64_t hoveredId=curve->GetHoveredId(ImageElement::TICKS);
     auto& XTicks=curve->GetXTicks();
     auto& YTicks=curve->GetYTicks();
     
@@ -760,18 +736,15 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
     ImVec2 LineMargin = ImVec2(10.0f, 10.0f);
     
     //draw tick lines
-    for (size_t kp = 0; kp < XTicks.size(); kp++)
-    {
-        //float TickPos = (XTicks[kp]).x * im_scale + im_pos.x;
-        
+    for (auto &tick : XTicks) {
         ImU32 col = TickColor;
         
-        if (kp == HoveredItem && CurrentMode == ActionMode4_AddXTick)
+        if (tick.id == hoveredId && (CurrentMode & MODE_TICKS))
         {
             col = ImColor(255, 20, 20, 255);
         }
         
-        ImVec2 XTickPosition=XTicks[kp].imagePosition.ToImVec2();
+        ImVec2 XTickPosition= tick.imagePosition.ToImVec2();
         
         if (!MakeFullLine(XTickPosition, TargetDirY, LineStart, LineEnd,
                           ImVec2((float)image->get_width(), (float)image->get_height()) - LineMargin * 2, LineMargin))
@@ -799,21 +772,18 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
         ImGui::SetCursorPos(LabelPos);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
         //TODO better format (maybe store users input string)
-        ImGui::Text("%0.2f", XTicks[kp].tickValue);
+        ImGui::Text("%0.2f", tick.tickValue);
         ImGui::PopStyleColor();
     }
-    for (size_t kp = 0; kp < YTicks.size(); kp++)
-    {
-        //float TickPos = (YTicks[kp]).y * im_scale + im_pos.y;
-        
+    for (auto &tick : YTicks) {
         ImU32 col = TickColor;
-        
-        if (kp == HoveredItem && CurrentMode == ActionMode5_AddYTick)
+
+        if (tick.id == hoveredId && (CurrentMode & MODE_TICKS))
         {
             col = ImColor(255, 20, 20, 255);
         }
 
-        ImVec2 YTickPosition=YTicks[kp].imagePosition.ToImVec2();
+        ImVec2 YTickPosition= tick.imagePosition.ToImVec2();
         
         if (!MakeFullLine(YTickPosition, TargetDirX, LineStart, LineEnd,
                           ImVec2((float)image->get_width(), (float)image->get_height()) - LineMargin * 2, LineMargin))
@@ -841,7 +811,7 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
         ImGui::SetCursorPos(LabelPos);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
         //TODO better format (maybe store users input string)
-        ImGui::Text("%0.2f", YTicks[kp].tickValue);
+        ImGui::Text("%0.2f", tick.tickValue);
         ImGui::PopStyleColor();
         
         //draw_list->AddLine(ImVec2(0.0f, TickPos) + WinPos, ImVec2(canvas_sz.x, TickPos) + WinPos, col, 1.0f);
@@ -854,104 +824,48 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
 
 void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
 {
-    if(!curve)
+    if(!curve || CurrentMode != MODE_HORIZON)
         return;
     
     ImVec2 WinPos = ImGui::GetWindowPos();
     
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    
-    float im_width = float(image->get_width())*CurrentImageScale;
 
     auto horizon=curve->GetHorizon();
+    auto selectedId=curve->GetSelectedId();
+    auto hoveredId=curve->GetHoveredId(ImageElement::HORIZON);
+
     auto CoordOriginImg=horizon.imagePosition.ToImVec2();
-    auto CoordOriginTargetX=horizon.targetPosition.ToImVec2();
-    auto& XTicks=curve->GetXTicks();
-    auto& YTicks=curve->GetYTicks();
+    auto CoordOriginTargetX=horizon.target.imagePosition.ToImVec2();
     
     ImVec2 CoordOriginScreen = CoordOriginImg*CurrentImageScale + im_pos + WinPos;
-    
+    ImVec2 CoordTargetScreen = CoordOriginTargetX*CurrentImageScale + im_pos + WinPos;
+
     //draw axis
     ImU32 AxisColor = ImColor(120, 120, 120, 220);
-    
-    //x axis
-    ImVec2 LineStart = ImVec2(WinPos.x + im_pos.x + 10.0f, CoordOriginScreen.y);
-    ImVec2 LineEnd = ImVec2(WinPos.x + im_pos.x + im_width - 10.0f, CoordOriginScreen.y);
-    
-    ImVec2 TargetDirX = CoordOriginTargetX - CoordOriginImg;
-    
-    ImVec2 LineMargin = ImVec2(10.0f, 10.0f);
-    
-    if (!MakeFullLine(CoordOriginImg, TargetDirX, LineStart, LineEnd,
-                      ImVec2((float)image->get_width(), (float)image->get_height()) - LineMargin * 2, LineMargin))
+
+    draw_list->AddLine(CoordOriginScreen, CoordTargetScreen, AxisColor, 3.0f);
+
+    ImU32 CircleFill = ImColor(150, 150, 150, 255);
+
+    if (ImageHorizon::ORIGIN == selectedId || (selectedId == 0 && ImageHorizon::ORIGIN == hoveredId))
     {
-        LineStart = ImVec2(LineMargin.x, CoordOriginImg.y);
-        LineEnd = ImVec2(image->get_width() - LineMargin.x, CoordOriginImg.y);
-        //std::cout << "force horizontal\n";
+        CircleFill = ImColor(255, 255, 255, 255);
     }
-    
-    LineStart = WinPos + im_pos + LineStart*CurrentImageScale;
-    LineEnd = WinPos + im_pos + LineEnd*CurrentImageScale;
-    
-    draw_list->AddLine(LineStart, LineEnd, AxisColor, 3.0f);
-    draw_list->AddCircleFilled(LineEnd, 6.0f, AxisColor);
-    
-    //draw arrow
-    //LineStart = LineEnd - ImVec2(20.0f, 8.0f);
-    //draw_list->AddLine(LineStart, LineEnd, AxisColor, 2.0f);
-    //LineStart = LineEnd - ImVec2(20.0f, -8.0f);
-    //draw_list->AddLine(LineStart, LineEnd, AxisColor, 2.0f);
-    
-    ImVec2 LabelPos = LineEnd + ImVec2(-10.0f, 25.0f);
-    
-    ImVec2 LabelSize = ImVec2(10.0f, 20.0f);
-    
-    //draw X
-    draw_list->AddLine(LabelPos - LabelSize*0.5f, LabelPos + LabelSize*0.5f, AxisColor, 2.0f);
-    draw_list->AddLine(LabelPos - LabelSize * ImVec2(1.0f, -1.0f) * 0.5f, LabelPos + LabelSize * ImVec2(1.0f, -1.0f) * 0.5f, AxisColor, 2.0f);
-    
-    
-    
-    
-    //y axis
-    
-    ImVec2 TargetDirY;
-    TargetDirY.x = TargetDirX.y;
-    TargetDirY.y = -TargetDirX.x;
-    
-    if (!MakeFullLine(CoordOriginImg, TargetDirY, LineStart, LineEnd,
-                      ImVec2((float)image->get_width(), (float)image->get_height()) - LineMargin * 2, LineMargin))
+
+    draw_list->AddCircleFilled(CoordOriginScreen, 4.0f, CircleFill);
+    draw_list->AddCircle(CoordOriginScreen, 5.0f, ImColor(0, 0, 0, 200), 12, 2.0f);
+
+    CircleFill = ImColor(150, 150, 150, 255);
+
+    if (ImageHorizon::TARGET == selectedId || (selectedId == 0 && ImageHorizon::TARGET == hoveredId))
     {
-        LineEnd = ImVec2(CoordOriginImg.x, LineMargin.y);
-        LineStart = ImVec2(CoordOriginImg.x, image->get_height() - LineMargin.y);
+        CircleFill = ImColor(255, 255, 255, 255);
     }
-    
-    LineStart = WinPos + im_pos + LineStart*CurrentImageScale;
-    LineEnd = WinPos + im_pos + LineEnd*CurrentImageScale;
-    draw_list->AddLine(LineStart, LineEnd, AxisColor, 3.0f);
-    draw_list->AddCircleFilled(LineEnd, 6.0f, AxisColor);
-    
-    //draw arrow
-    //draw_list->AddLine(LineStart, LineEnd, AxisColor, 2.0f);
-    //LineStart = LineEnd + ImVec2(8.0f, 20.0f);
-    //draw_list->AddLine(LineStart, LineEnd, AxisColor, 2.0f);
-    //LineStart = LineEnd + ImVec2(-8.0f, 20.0f);
-    //draw_list->AddLine(LineStart, LineEnd, AxisColor, 2.0f);
-    
-    LabelPos = LineEnd + ImVec2(-25.0f, 10.0f);
-    
-    //draw Y
-    draw_list->AddLine(LabelPos - LabelSize*0.5f, LabelPos + ImVec2(0.0f, 2.0f), AxisColor, 2.0f);
-    draw_list->AddLine(LabelPos - LabelSize * ImVec2(-1.0f, 1.0f) * 0.5f, LabelPos + ImVec2(0.0f, 2.0f), AxisColor, 2.0f);
-    draw_list->AddLine(LabelPos + ImVec2(0.0f, 2.0f), LabelPos + LabelSize * ImVec2(0.0f, 0.5f), AxisColor, 2.0f);
-    
-    
-    
-    //draw arrow
-    //LineStart = LineEnd - ImVec2(20.0f, 8.0f);
-    //draw_list->AddLine(LineStart, LineEnd, AxisColor, 2.0f);
-    //LineStart = LineEnd - ImVec2(20.0f, -8.0f);
-    //draw_list->AddLine(LineStart, LineEnd, AxisColor, 2.0f);
+
+    draw_list->AddCircleFilled(CoordTargetScreen, 4.0f, CircleFill);
+    draw_list->AddCircle(CoordTargetScreen, 5.0f, ImColor(0, 0, 0, 200), 12, 2.0f);
+
 }
 
 void MainWindow::ShowSidePanel()
@@ -1248,30 +1162,25 @@ void MainWindow::ShowSidePanel()
     
     switch (CurrentMode)
     {
-        case ActionMode0_None:
+        case MODE_NONE:
             modeStr = "None";
             modifierStr = "";
             helpStr = "Press right mouse button\nto choose work mode";
             break;
-        case ActionMode1_AddPoints:
+        case MODE_POINTS:
             modeStr = "Point";
             helpStr = "Drag (or use arrow keys)\nto move a point\nHold Ctrl to add a new point\nHold Shift to delete a point\nHold Ctrl to enable snapping";
             break;
-        case ActionMode2_MoveOrigin:
+        case MODE_HORIZON:
             modeStr = "Origin";
             modifierStr = "(move)";
-            helpStr = "Drag (or use arrow keys) to move\norigin of the coordinate system\nHold Ctrl to enable snapping";
+            helpStr = "Drag (or use arrow keys) to change\nhorizon of image\nHold Ctrl to enable snapping";
             break;
-        case ActionMode3_MoveXTarget:
-            modeStr = "X Target";
-            modifierStr = "(move)";
-            helpStr = "Drag (or use arrow keys)\nto choose direction for the\nX axis of the coordinate system\nHold Ctrl to enable snapping";
-            break;
-        case ActionMode4_AddXTick:
+        case MODE_XTICKS:
             modeStr = "X Tick";
             helpStr = "Drag (or use arrow keys)\nto move X tick line\nHold Ctrl to add new X tick\nHold Shift to delete X tick\nHold Ctrl to enable snapping";
             break;
-        case ActionMode5_AddYTick:
+        case MODE_YTICKS:
             modeStr = "Y Tick";
             helpStr = "Drag (or use arrow keys)\nto move Y tick line\nHold Ctrl to add new Y tick\nHold Shift to delete Y tick\nHold Ctrl to enable snapping";
             break;

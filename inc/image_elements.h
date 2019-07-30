@@ -29,6 +29,10 @@ public:
     {
         return ImVec2((float)x, (float)y);
     }
+    inline double norm2()
+    {
+        return x*x + y*y;
+    }
 };
 static inline Vec2D operator*(const Vec2D& lhs, const float rhs)   { return Vec2D(lhs.x*rhs, lhs.y*rhs); }
 static inline Vec2D operator/(const Vec2D& lhs, const float rhs)   { return Vec2D(lhs.x/rhs, lhs.y/rhs); }
@@ -47,7 +51,18 @@ class ImageElement
 private:
     static uint64_t nextId;
 public:
-    uint64_t id=0;
+    enum Type
+    {
+        POINT   = 1 << 0,
+        X_TICK  = 1 << 1,
+        Y_TICK  = 1 << 2,
+        HORIZON = 1 << 3,
+
+        TICKS = X_TICK | Y_TICK,
+        ALL = POINT | TICKS | HORIZON
+    };
+
+    uint64_t id=nextId++;
     bool isSnapped=false;
     Vec2D imagePosition=Vec2D(0.0,0.0);
 
@@ -62,7 +77,6 @@ public:
     inline double X(){ return imagePosition.x; }
     inline double Y(){ return imagePosition.y; }
 };
-
 
 class ImagePoint : public ImageElement
 {
@@ -106,16 +120,15 @@ public:
         NONE = 0,
         ORIGIN = 1,
         TARGET = 2,
-
     };
 
-    Vec2D targetPosition=Vec2D(0.0,0.0);
+    ImageElement target;
 
 
     explicit ImageHorizon(const Vec2D& position) : ImageElement(position)
     {
-        targetPosition=position;
-        targetPosition.x+=100.0;
+        target.imagePosition=position;
+        target.imagePosition.x+=100.0;
     }
 
     Vec2D VerticalDirection();

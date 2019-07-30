@@ -29,92 +29,98 @@ CurveDetect::CurveDetect(std::shared_ptr<Image> image) : horizon(Vec2D(100,100))
     SnapDistance=30.f;
     
     SubdivideIterations = 3;
-    
-    SelectedItem = -1;
-    HoveredItem = -1;
-
-//    CoordOriginImg = ImVec2(200, 200);
-//    CoordOriginTargetX = ImVec2(400, 200);
 }
 
-
-void CurveDetect::UpdateHoveredItemIndex(Vec2D im_pos, int mode)
+uint64_t CurveDetect::GetHoveredId(int selectionFilter)
 {
-//    ImVec2 WinPos = ImGui::GetWindowPos();
-//    ImVec2 MousePos = ImGui::GetMousePos();
-    
-    HoveredItem = -1;
-    double MinDist = SnapDistance;
-    double MinDist2 = MinDist*MinDist;
-    
-    if (mode == ActionMode1_AddPoints)
-    {
-        for (size_t kp = 0; kp < UserPoints.size(); kp++)
-        {
-            Vec2D DeltaPos = UserPoints[kp].imagePosition - im_pos;
+    if( (selectionFilter & ImageElement::POINT) && hoveredPoint )
+        return hoveredPoint;
+    if( (selectionFilter & ImageElement::X_TICK) && hoveredXtick )
+        return hoveredXtick;
+    if( (selectionFilter & ImageElement::Y_TICK) && hoveredYtick )
+        return hoveredYtick;
+    if( (selectionFilter & ImageElement::HORIZON) && hoveredOrigin )
+        return hoveredOrigin;
+    return 0;
+}
 
-            double dist2 = DeltaPos.x*DeltaPos.x + DeltaPos.y*DeltaPos.y;
-            
-            if (dist2 < MinDist2)
-            {
-                MinDist2 = dist2;
-                HoveredItem = kp;
-            }
+void CurveDetect::UpdateHoveredItem(Vec2D imagePos)
+{
+//    auto prevHovered=GetHoveredId(ImageElement::ALL);
+
+    UpdateHoveredPoint(imagePos);
+    UpdateHoveredTickX(imagePos);
+    UpdateHoveredTickY(imagePos);
+    UpdateHoveredHorizon(imagePos);
+
+//    auto newHovered = GetHoveredId(ImageElement::ALL);
+}
+
+void CurveDetect::UpdateHoveredPoint(Vec2D imagePos)
+{
+    hoveredPoint = 0;
+    double minDist = hoverZone * hoverZone;
+
+    for (auto& point : UserPoints)
+    {
+        double dist = (point.imagePosition - imagePos).norm2();
+
+        if(dist<minDist)
+        {
+            minDist = dist;
+            hoveredPoint = point.id;
         }
     }
-    else if (mode == ActionMode4_AddXTick)
+}
+
+void CurveDetect::UpdateHoveredHorizon(Vec2D imagePos)
+{
+    hoveredOrigin = ImageHorizon::NONE;
+    double minDist = hoverZone * hoverZone;
+
+    double dist1 = (horizon.imagePosition - imagePos).norm2();
+    double dist2 = (horizon.target.imagePosition - imagePos).norm2();
+
+    if (dist1 < dist2 && dist1 < minDist)
+        hoveredOrigin = ImageHorizon::ORIGIN;
+    else if (dist2 < minDist)
+        hoveredOrigin = ImageHorizon::TARGET;
+}
+
+void CurveDetect::UpdateHoveredTickX(Vec2D imagePos)
+{
+    hoveredXtick = 0;
+    double minDist = hoverZone;
+    Vec2D tickDir = horizon.VerticalDirection();
+
+    for (auto& tick : XTicks)
     {
-        for (size_t kp = 0; kp < XTicks.size(); kp++)
+        double dist = tick.DistTo(imagePos, tickDir);
+
+        if(dist<minDist)
         {
-            //float DeltaPos = std::abs(XTicks[kp].x * im_scale + im_pos.x + WinPos.x - MousePos.x);
-            
-            Vec2D Direction = horizon.VerticalDirection();
-            
-            Vec2D Point=XTicks[kp].imagePosition;
-            
-            double A = Direction.y;
-            double B = -Direction.x;
-            double C = -A*Point.x - B*Point.y;
-            //	float C2 = B*Point.x - A*Point.y;
-            
-            double DeltaPos = (A*im_pos.x + B*im_pos.y + C);
-            DeltaPos = DeltaPos*DeltaPos / (A*A + B*B);
-            
-            //std::cout << "del: " << DeltaPos << " mx:" << MouseImg.x << "," << MouseImg.y << "\n";
-            
-            if (DeltaPos < MinDist2)
-            {
-                MinDist2 = DeltaPos;
-                HoveredItem = kp;
-            }
+            minDist = dist;
+            hoveredXtick = tick.id;
         }
     }
-    else if (mode == ActionMode5_AddYTick)
+}
+
+void CurveDetect::UpdateHoveredTickY(Vec2D imagePos)
+{
+    hoveredYtick = 0;
+    double minDist = hoverZone;
+    Vec2D tickDir = horizon.HorizontalDirection();
+
+    for (auto& tick : YTicks)
     {
-        for (size_t kp = 0; kp < YTicks.size(); kp++)
+        double dist = tick.DistTo(imagePos, tickDir);
+
+        if(dist<minDist)
         {
-            Vec2D Direction = horizon.HorizontalDirection();
-
-            Vec2D Point=YTicks[kp].imagePosition;
-            
-            double A = Direction.y;
-            double B = -Direction.x;
-            double C = -A*Point.x - B*Point.y;
-
-
-            double DeltaPos = (A*im_pos.x + B*im_pos.y + C);
-            DeltaPos = DeltaPos*DeltaPos / (A*A + B*B);
-            
-            
-            if (DeltaPos < MinDist)
-            {
-                MinDist = DeltaPos;
-                HoveredItem = kp;
-            }
+            minDist = dist;
+            hoveredYtick = tick.id;
         }
     }
-    
-    
 }
 
 bool CurveDetect::IsReadyForExport(int& out_Result)
@@ -126,7 +132,7 @@ bool CurveDetect::IsReadyForExport(int& out_Result)
     {
         out_Result |= ExportReadyStatus::ExportReadyStatus_NoPoints;
     }
-    auto dir1=horizon.targetPosition-horizon.imagePosition;
+    auto dir1=horizon.target.imagePosition-horizon.imagePosition;
     double norm = std::sqrt(dir1.x*dir1.x + dir1.y*dir1.y);
     if (XTicks.size() < 2)
     {
@@ -323,23 +329,8 @@ void CurveDetect::SortPoints()
 
 void CurveDetect::SortArray(std::vector<ImagePoint>& Array)
 {
-//    struct sort_class_x
-//    {
-//        ImVec2 origin;
-//        ImVec2 target;
-//
-//        bool operator() (ImVec2 i, ImVec2 j)
-//        {
-//            float proj_i = (target.x - origin.x)*(i.x - origin.x) + (target.y - origin.y)*(i.y - origin.y);
-//            float proj_j = (target.x - origin.x)*(j.x - origin.x) + (target.y - origin.y)*(j.y - origin.y);
-//
-//            return proj_i<proj_j;
-//            //return (i.x<j.x);
-//        }
-//    } sort_objectX;
-    
     auto origin = horizon.imagePosition;
-    auto target = horizon.targetPosition;
+    auto target = horizon.target.imagePosition;
 
     std::sort(Array.begin(), Array.end(), [&origin, &target](const ImagePoint &lhs, const ImagePoint &rhs)
     {
@@ -427,7 +418,7 @@ void CurveDetect::UpdateSubdivision(bool bUpdateAll)
     LastUserPoints = SortedUserPoints;
 }
 
-void CurveDetect::SnapToCurve(Vec2D& point)
+bool CurveDetect::SnapToCurve(Vec2D& point)
 {
     
     int localX, localY;//to this vars local coords will be written
@@ -440,7 +431,7 @@ void CurveDetect::SnapToCurve(Vec2D& point)
     if (!image->getClosestBlack(localX, localY, hside, BinarizationLevel))
     {
         //std::cout << "Bad point!\n";
-        return;
+        return false;
     }
     
     if (localX != int(point.x))
@@ -451,10 +442,11 @@ void CurveDetect::SnapToCurve(Vec2D& point)
     {
         point.y = float(localY);
     }
+    return true;
     //std::cout << "loc snap: (" << snapX << "," << snapY << ")\n";
 }
 
-void CurveDetect::SnapToBary(Vec2D& point)
+bool CurveDetect::SnapToBary(Vec2D& point)
 {
     int localX, localY;//to this vars local coords will be written
     
@@ -470,7 +462,7 @@ void CurveDetect::SnapToBary(Vec2D& point)
     if (!image->getNearbyPoints(localX, localY, hside, PointRegion))
     {
         std::cout << "Bad point!\n";
-        return;
+        return false;
     }
     
     //by default just leave point where it was
@@ -503,7 +495,9 @@ void CurveDetect::SnapToBary(Vec2D& point)
         BaryOffset /= double(baryMass);
 
         point += BaryOffset;
-    }
+        return true;
+    } else
+        return false;
     
     //ImagePoint.x += (baryX - localX);
     //ImagePoint.y += (baryY - localY);
@@ -519,7 +513,7 @@ Vec2D CurveDetect::ConvertImageToReal(const Vec2D& point)
     
     Vec2D Scale, Offset;
 
-    auto dir1=horizon.targetPosition-horizon.imagePosition;
+    auto dir1=horizon.target.imagePosition-horizon.imagePosition;
     auto dxtick=XTicks[0].imagePosition-XTicks[1].imagePosition;
     auto dytick=YTicks[0].imagePosition-YTicks[1].imagePosition;
     
@@ -569,101 +563,179 @@ void CurveDetect::ResetAll()
     XTicks.clear();
     YTicks.clear();
 
-    horizon.targetPosition=horizon.imagePosition + Vec2D(100.0, 0.0);
+    DeselectAll();
+
+    horizon.target.imagePosition=horizon.imagePosition + Vec2D(100.0, 0.0);
     
     
     if (image)
     {
         horizon.imagePosition.x=image->get_width()*0.1;
         horizon.imagePosition.y=image->get_height()*0.5;
-        horizon.targetPosition.x=image->get_width()*0.9;
-        horizon.targetPosition.y=image->get_height()*0.5;
+        horizon.target.imagePosition.x=image->get_width()*0.9;
+        horizon.target.imagePosition.y=image->get_height()*0.5;
     }
     
+}
+void CurveDetect::ResetHorizon()
+{
+    selectedOrigin = ImageHorizon::NONE;
+    hoveredOrigin = ImageHorizon::NONE;
+    horizon.target.imagePosition=horizon.imagePosition + Vec2D(100.0, 0.0);
+
+    if (image)
+    {
+        horizon.imagePosition.x=image->get_width()*0.1;
+        horizon.imagePosition.y=image->get_height()*0.5;
+        horizon.target.imagePosition.x=image->get_width()*0.9;
+        horizon.target.imagePosition.y=image->get_height()*0.5;
+    }
+}
+
+void CurveDetect::SnapSelected()
+{
+    auto sel = GetSelected();
+
+    if(sel && image)
+        sel->isSnapped = SnapToCurve(sel->imagePosition) && SnapToBary(sel->imagePosition);
+}
+
+void CurveDetect::BackupSelectedTick()
+{
+    auto sel = (ImageTickLine*) GetSelected();
+    if(sel != nullptr)
+        sel->MakeBackup();
 }
 
 void CurveDetect::AddPoint(Vec2D pos)
 {
-    SnapToCurve(pos);
-    SnapToBary(pos);
     UserPoints.emplace_back(pos);
-    SortPoints();
-    UpdateSubdivision();
-    SelectedItem = UserPoints.size() - 1;
-}
-
-int CurveDetect::GetHoveredPoint()
-{
-    if(HoveredItem >= 0 && HoveredItem < int(UserPoints.size()))
-        return HoveredItem;
-    else
-        return -1;
-}
-
-void CurveDetect::DeleteHoveredPoint()
-{
-    UserPoints.erase(UserPoints.begin() + HoveredItem);
-    HoveredItem = -1;
-    SelectedItem = -1;
+    selectedPoint = UserPoints.back().id;
+    SnapSelected();
     SortPoints();
     UpdateSubdivision();
 }
 
-void CurveDetect::SelectHovered()
+bool CurveDetect::SelectHovered(int selectionFilter)
 {
-    SelectedItem = HoveredItem;
-}
-
-void CurveDetect::SetOrigin(Vec2D pos, bool snap)
-{
-    if (snap)
+    if( (selectionFilter & ImageElement::POINT) && hoveredPoint )
     {
-        SnapToCurve(pos);
-        SnapToBary(pos);
+        DeselectAll();
+        selectedPoint = hoveredPoint;
+        return true;
     }
-    horizon.imagePosition = pos;
-    
-    SortPoints();
-    UpdateSubdivision();
-}
-
-void CurveDetect::SetTarget(Vec2D pos, bool snap)
-{
-    if (snap)
+    if( (selectionFilter & ImageElement::X_TICK) && hoveredXtick )
     {
-        SnapToCurve(pos);
-        SnapToBary(pos);
+        DeselectAll();
+        selectedXtick = hoveredXtick;
+        return true;
+    }
+    if( (selectionFilter & ImageElement::Y_TICK) && hoveredYtick )
+    {
+        DeselectAll();
+        selectedYtick = hoveredYtick;
+        return true;
+    }
+    if( (selectionFilter & ImageElement::HORIZON) && hoveredOrigin )
+    {
+        DeselectAll();
+        selectedOrigin = hoveredOrigin;
+        return true;
     }
 
-    horizon.targetPosition = pos;
-    SortPoints();
-    UpdateSubdivision();
+    return false;
+}
+
+ImageElement* CurveDetect::GetSelected()
+{
+    if(selectedPoint)
+    {
+        for (auto &point : UserPoints)
+            if (point.id == selectedPoint)
+                return &point;
+    }
+    else if(selectedXtick)
+    {
+        for (auto &tick : XTicks)
+            if(tick.id == selectedXtick)
+                return &tick;
+    }
+    else if(selectedYtick)
+    {
+        for (auto &tick : YTicks)
+            if(tick.id == selectedYtick)
+                return &tick;
+    }
+    else if(selectedOrigin)
+    {
+        if(selectedOrigin == ImageHorizon::ORIGIN)
+            return &horizon;
+        else
+            return &horizon.target;
+    }
+    return nullptr;
+}
+
+void CurveDetect::DeleteSelected()
+{
+    if(selectedPoint)
+    {
+        for(auto it=UserPoints.begin();it!=UserPoints.end();++it)
+        {
+            if(it->id == selectedPoint)
+            {
+                UserPoints.erase(it);
+                break;
+            }
+        }
+        selectedPoint = 0;
+        hoveredPoint = 0;
+        UpdateSubdivision(true);
+    }
+    else if(selectedXtick)
+    {
+        for(auto it=XTicks.begin();it!=XTicks.end();++it)
+        {
+            if(it->id == selectedXtick)
+            {
+                XTicks.erase(it);
+                break;
+            }
+        }
+        selectedXtick = 0;
+        hoveredXtick = 0;
+    }
+    else if(selectedYtick)
+    {
+        for(auto it=YTicks.begin();it!=YTicks.end();++it)
+        {
+            if(it->id == selectedYtick)
+            {
+                YTicks.erase(it);
+                break;
+            }
+        }
+        selectedYtick = 0;
+        hoveredYtick = 0;
+    }
+    else if(selectedOrigin)
+    {
+        ResetHorizon();
+        UpdateSubdivision(true);
+    }
 }
 
 bool CurveDetect::AddXTick(Vec2D pos)
 {
     if(XTicks.size()==2)
         return false;
-    
+
     XTicks.emplace_back(pos);
-    SelectedItem = XTicks.size() - 1;
-    
+    XTicks.back().isNew = true;
+    selectedXtick = XTicks.back().id;
+    SnapSelected();
+
     return true;
-}
-
-int CurveDetect::GetHoveredXTick()
-{
-    if(HoveredItem >= 0 && HoveredItem < int(XTicks.size()))
-        return HoveredItem;
-    else
-        return -1;
-}
-
-void CurveDetect::DeleteHoveredXTick()
-{
-    XTicks.erase(XTicks.begin() + HoveredItem);
-    HoveredItem = -1;
-    SelectedItem = -1;
 }
 
 bool CurveDetect::AddYTick(Vec2D pos)
@@ -672,75 +744,51 @@ bool CurveDetect::AddYTick(Vec2D pos)
         return false;
 
     YTicks.emplace_back(pos);
-    SelectedItem = YTicks.size() - 1;
+    YTicks.back().isNew = true;
+    selectedYtick = YTicks.back().id;
+    SnapSelected();
     
     return true;
 }
 
-int CurveDetect::GetHoveredYTick()
+uint64_t CurveDetect::GetSelectedId()
 {
-    if(HoveredItem >= 0 && HoveredItem < int(YTicks.size()))
-        return HoveredItem;
-    else
-        return -1;
+    if(selectedPoint)
+        return selectedPoint;
+    if(selectedXtick)
+        return selectedXtick;
+    if(selectedYtick)
+        return selectedYtick;
+    if(selectedOrigin)
+        return selectedOrigin;
+    return 0;
 }
 
-void CurveDetect::DeleteHoveredYTick()
+void CurveDetect::DeselectAll()
 {
-    YTicks.erase(YTicks.begin() + HoveredItem);
-    HoveredItem = -1;
-    SelectedItem = -1;
+    selectedPoint=0;
+    selectedXtick=0;
+    selectedYtick=0;
+    selectedOrigin=ImageHorizon::NONE;
 }
 
-int CurveDetect::GetSelected()
+bool CurveDetect::MoveSelected(Vec2D pos)
 {
-    return SelectedItem;
-}
+    auto sel = GetSelected();
 
-int CurveDetect::GetHovered()
-{
-    return HoveredItem;
-}
+    if(sel)
+        sel->imagePosition = pos;
 
-void CurveDetect::MoveSelectedPoint(Vec2D pos, bool snap)
-{
-    if (snap)
-    {
-        SnapToCurve(pos);
-        SnapToBary(pos);
-    }
-    UserPoints[SelectedItem].imagePosition = pos;
-    SortPoints();
-    UpdateSubdivision();
-}
-
-void CurveDetect::MoveSelectedXTick(Vec2D pos, bool snap)
-{
-    if (snap)
-    {
-        SnapToCurve(pos);
-        SnapToBary(pos);
-    }
-    XTicks[SelectedItem].imagePosition = pos;
-}
-
-void CurveDetect::MoveSelectedYTick(Vec2D pos, bool snap)
-{
-    if (snap)
-    {
-        SnapToCurve(pos);
-        SnapToBary(pos);
-    }
-    YTicks[SelectedItem].imagePosition = pos;
+    return sel!= nullptr;
 }
 
 void CurveDetect::CheckTarget()
 {
     //TODO maybe dont allow to set position too close in the first place
-    auto dh=horizon.targetPosition-horizon.imagePosition;
+    auto dh=horizon.target.imagePosition-horizon.imagePosition;
     if (std::abs(dh.x) < 2.0f && std::abs(dh.y) < 2.0f)
     {
-        horizon.targetPosition = horizon.imagePosition + Vec2D(10.0, 0.0);
+        horizon.target.imagePosition = horizon.imagePosition + Vec2D(10.0, 0.0);
     }
 }
 

@@ -5,7 +5,8 @@
 #include "image_elements.h"
 
 
-uint64_t ImageElement::nextId=0;
+//id 1 and 2 are reserved for horizon and 0 is none
+uint64_t ImageElement::nextId=3;
 
 double ImageTickLine::DistTo(const Vec2D& imagePosition, const Vec2D& tickDirection)
 {
@@ -51,7 +52,7 @@ void ImageTickLine::RestoreBackup()
 
 Vec2D ImageHorizon::VerticalDirection()
 {
-    Vec2D dir = Vec2D(targetPosition.y - imagePosition.y, -targetPosition.x + imagePosition.x);
+    Vec2D dir = Vec2D(target.imagePosition.y - imagePosition.y, -target.imagePosition.x + imagePosition.x);
     double norm = std::sqrt(dir.x * dir.x + dir.y * dir.y);
 
     if (norm > 2.0)
@@ -70,7 +71,7 @@ Vec2D ImageHorizon::VerticalDirection()
 
 Vec2D ImageHorizon::HorizontalDirection()
 {
-    Vec2D dir = Vec2D(targetPosition.x - imagePosition.x, targetPosition.y - imagePosition.x);
+    Vec2D dir = Vec2D(target.imagePosition.x - imagePosition.x, target.imagePosition.y - imagePosition.y);
     double norm = std::sqrt(dir.x * dir.x + dir.y * dir.y);
 
     if (norm > 2.0)

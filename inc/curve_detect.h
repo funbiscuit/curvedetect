@@ -31,33 +31,24 @@ public:
     CurveDetect(std::shared_ptr<Image> image);
     
     void ResetAll();
-    void UpdateHoveredItemIndex(Vec2D im_pos, int mode);
-    
+    void ResetHorizon();
+    void UpdateHoveredItem(Vec2D imagePos);
+
     void AddPoint(Vec2D pos);
-    int GetHoveredPoint();
-    void DeleteHoveredPoint();
-    void SelectHovered();
-    
-    void SetOrigin(Vec2D pos, bool snap);
-    void SetTarget(Vec2D pos, bool snap);
-
     bool AddXTick(Vec2D pos);
-    int GetHoveredXTick();
-    void DeleteHoveredXTick();
-    
     bool AddYTick(Vec2D pos);
-    int GetHoveredYTick();
-    void DeleteHoveredYTick();
     
-    int GetSelected();
-    int GetHovered();
-    
-    void MoveSelectedPoint(Vec2D pos, bool snap);
-    void MoveSelectedXTick(Vec2D pos, bool snap);
-    void MoveSelectedYTick(Vec2D pos, bool snap);
+    uint64_t GetSelectedId();
+    ImageElement* GetSelected();
+    uint64_t GetHoveredId(int selectionFilter);
 
-    void Deselect(){SelectedItem=-1;}
-    
+    bool SelectHovered(int selectionFilter);
+    void DeleteSelected();
+    bool MoveSelected(Vec2D pos);
+    void DeselectAll();
+    void SnapSelected();
+    void BackupSelectedTick();
+
     void CheckTarget();
     
     const std::vector<ImagePoint> GetAllPoints();
@@ -74,7 +65,11 @@ public:
     
     void ExportPoints(const char* path, bool asText);
     void ExportToClipboard(std::string columnSeparator, std::string lineEnding, char decimalSeparator);
-    
+
+
+    void SortPoints();
+    void UpdateSubdivision(bool bUpdateAll = false);
+
     static const int MaxSubdivideIterations=6;
     int SubdivideIterations;
     int BinarizationLevel;
@@ -83,12 +78,21 @@ private:
     std::shared_ptr<Image> image;
     
     float SnapDistance;
+    float hoverZone = 14.f;
     float MinTickPixelDistance = 5.0f;
     float MinTickRealDistance = 0.001f;
-    
-    
-    int SelectedItem;
-    int HoveredItem;
+
+    uint64_t hoveredPoint = 0;
+    uint64_t selectedPoint = 0;
+
+    uint64_t hoveredXtick = 0;
+    uint64_t selectedXtick = 0;
+
+    uint64_t hoveredYtick = 0;
+    uint64_t selectedYtick = 0;
+
+    ImageHorizon::HorizonPoint hoveredOrigin = ImageHorizon::NONE;
+    ImageHorizon::HorizonPoint selectedOrigin = ImageHorizon::NONE;
     
     std::vector<ImagePoint> UserPoints; //position of user points (pixels)
     std::vector<ImagePoint> SortedUserPoints; //position of user points (pixels)
@@ -99,19 +103,22 @@ private:
 
     ImageHorizon horizon;
 
-    void SortPoints();
+    void UpdateHoveredPoint(Vec2D imagePos);
+    void UpdateHoveredTickX(Vec2D imagePos);
+    void UpdateHoveredTickY(Vec2D imagePos);
+    void UpdateHoveredHorizon(Vec2D imagePos);
+
     
     void SortArray(std::vector<ImagePoint>& Array);
-    
-    
-    void UpdateSubdivision(bool bUpdateAll = false);
+
+
     
     /**
      * will snap point to closest black (0) point
      * so for more precision use with SnapToBary
      * @param ImagePoint
      */
-    void SnapToCurve(Vec2D& point);
+    bool SnapToCurve(Vec2D& point);
     
     /**
      * will snap point to barycenter of current zoom region
@@ -119,7 +126,7 @@ private:
      * so make sure that in zoom region only curve points are shown
      * @param ImagePoint
      */
-    void SnapToBary(Vec2D& point);
+    bool SnapToBary(Vec2D& point);
     
     /**
      * converts pixel coordinates to real data

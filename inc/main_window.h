@@ -10,13 +10,14 @@
 
 enum ActionMode
 {
-    ActionMode0_None,
-    ActionMode1_AddPoints,
-    ActionMode2_MoveOrigin,
-    ActionMode3_MoveXTarget,
-    ActionMode4_AddXTick,
-    ActionMode5_AddYTick,
-    
+    MODE_NONE    = 1 << 0,
+    MODE_POINTS  = 1 << 1,
+    MODE_HORIZON = 1 << 2,
+    MODE_XTICKS  = 1 << 3,
+    MODE_YTICKS  = 1 << 4,
+
+    MODE_TICKS  = MODE_XTICKS | MODE_YTICKS
+
 };
 
 
@@ -71,6 +72,8 @@ private:
 
     bool bIsContextMenuOpened = false;
     bool bIsReadyForAction = true;
+
+    bool deleteOnRelease = false;
     
     std::shared_ptr<CurveDetect> curve;
     
@@ -78,7 +81,10 @@ private:
     void ShowImage(ImVec2 canvasSize);
 
     void ProcessInput();
-    
+    void OnMouseDown(int btn);
+    void OnMouseUp(int btn);
+    void OnMouseDrag(int btn);
+
     void ShowPoints(float ImageScale, ImVec2 im_pos, ImVec2 MousePos);
     
     void ShowTickConfigPopup();
