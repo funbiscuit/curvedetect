@@ -126,38 +126,31 @@ void MainWindow::ShowMainWindow()
 
     ImVec2 WinPos = ImGui::GetWindowPos();
     ImVec2 MousePos = ImGui::GetMousePos();
-    HoveredPixel = MousePos - WinPos - CurrentImPos;
+    HoveredPixel = (MousePos - WinPos - CurrentImPos)/CurrentImageScale;
 
-    HoveredPixel.x /= CurrentImageScale;
-    HoveredPixel.y /= CurrentImageScale;
-    
     if(curve)
         curve->UpdateHoveredItemIndex(Vec2D(HoveredPixel), CurrentMode);
     
-    ProcessInput(HoveredPixel);
+    ProcessInput();
     
     
     ShowCoordSystem(CurrentImPos);
-    
-    
-    
     ShowTickLines(CurrentImPos);
-    
-    
     ShowPoints(CurrentImageScale, CurrentImPos, MousePos);
     
     ImVec2 ZoomOrigin;
-
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
     
-    if (image && ShowZoomWindow(canvas_sz, HoveredPixel, ZoomOrigin))
+    if (image && ShowZoomWindow(canvas_sz, ZoomOrigin))
     {
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
         float zoomedScale = ZoomWndSize/ float(2 * ZoomPixelHSide + 1);
         
         ImVec2 zoomedImPos = ZoomOrigin -HoveredPixel*zoomedScale-WinPos;
         
         ImVec2 ZoomWnd = ImVec2(ZoomWndSize, ZoomWndSize);
-        
+
+        //TODO add ticks and horizon
+        //draw zoomed curve in zoom window
         draw_list->PushClipRect(ZoomOrigin- ZoomWnd*0.5f, ZoomOrigin+ ZoomWnd*0.5f, true);
         ShowPoints(zoomedScale, zoomedImPos, ZoomOrigin);
         draw_list->PopClipRect();
@@ -293,160 +286,126 @@ void MainWindow::ShowImage(ImVec2 canvasSize)
     }
 }
 
-void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
+void MainWindow::ProcessInput()
 {
     static bool bIsMouseDownFirst = true;
-    
-    
-    //std::cout << ImGui::IsWindowFocused() << "\n";
-    
+
     if (ImGui::IsWindowFocused())
     {
-        
         ImGuiIO& io = ImGui::GetIO();
-        
-        if (io.KeysDown[GLFW_KEY_0] || io.KeysDown[GLFW_KEY_KP_0])
+        ActionMode modes[]={ActionMode0_None,ActionMode1_AddPoints,ActionMode2_MoveOrigin,
+                            ActionMode3_MoveXTarget,ActionMode4_AddXTick,ActionMode5_AddYTick};
+
+        for(int j=0;j<6;++j)
         {
-            CurrentMode = ActionMode0_None;
-        }
-        else if (io.KeysDown[GLFW_KEY_1] || io.KeysDown[GLFW_KEY_KP_1])
-        {
-            CurrentMode = ActionMode1_AddPoints;
-        }
-        else if (io.KeysDown[GLFW_KEY_2] || io.KeysDown[GLFW_KEY_KP_2])
-        {
-            CurrentMode = ActionMode2_MoveOrigin;
-        }
-        else if (io.KeysDown[GLFW_KEY_3] || io.KeysDown[GLFW_KEY_KP_3])
-        {
-            CurrentMode = ActionMode3_MoveXTarget;
-        }
-        else if (io.KeysDown[GLFW_KEY_4] || io.KeysDown[GLFW_KEY_KP_4])
-        {
-            CurrentMode = ActionMode4_AddXTick;
-        }
-        else if (io.KeysDown[GLFW_KEY_5] || io.KeysDown[GLFW_KEY_KP_5])
-        {
-            CurrentMode = ActionMode5_AddYTick;
+            if (io.KeysDown[GLFW_KEY_0+j] || io.KeysDown[GLFW_KEY_KP_0+j])
+            {
+                CurrentMode = modes[j];
+            }
         }
     }
     
     auto& app=MainApp::getInstance();
-    
+
     if (curve && ImGui::IsMouseHoveringWindow() && !bIsContextMenuOpened && bIsReadyForAction)
     {
-        if (ImGui::IsMouseDown(0))
+        if (ImGui::IsMouseDown(0) && image->isPixelInside((int)HoveredPixel.x, (int)HoveredPixel.y))
         {
             if (bIsMouseDownFirst) //first press
             {
-                if (image->isPixelInside((int)HoveredPixel.x, (int)HoveredPixel.y))
+                switch (CurrentMode)
                 {
-                    switch (CurrentMode)
-                    {
-                        case ActionMode0_None:
-                            break;
-                        case ActionMode1_AddPoints:
-                            if (app.isCtrlPressed())
+                    case ActionMode0_None:
+                        break;
+                    case ActionMode1_AddPoints:
+                        if (app.isCtrlPressed())
+                        {
+                            curve->AddPoint(Vec2D(HoveredPixel));
+                        }
+                        else if (curve->GetHoveredPoint()!=-1)
+                        {
+                            if (app.isShiftPressed())
                             {
-                                curve->AddPoint(Vec2D(HoveredPixel));
+                                curve->DeleteHoveredPoint();
                             }
-                            else if (curve->GetHoveredPoint()!=-1)
+                            else
                             {
-                                if (app.isShiftPressed())
-                                {
-                                    curve->DeleteHoveredPoint();
-                                }
-                                else
-                                {
-                                    curve->SelectHovered();
-                                }
+                                curve->SelectHovered();
                             }
-                            break;
-                        case ActionMode2_MoveOrigin:
-                            curve->SetOrigin(Vec2D(HoveredPixel), app.isCtrlPressed());
-                            break;
-                        case ActionMode3_MoveXTarget:
-                            curve->SetTarget(Vec2D(HoveredPixel), app.isCtrlPressed());
-                            break;
-                        case ActionMode4_AddXTick:
-                            if (app.isCtrlPressed() && curve->AddXTick(Vec2D(HoveredPixel)))
+                        }
+                        break;
+                    case ActionMode2_MoveOrigin:
+                        curve->SetOrigin(Vec2D(HoveredPixel), app.isCtrlPressed());
+                        break;
+                    case ActionMode3_MoveXTarget:
+                        curve->SetTarget(Vec2D(HoveredPixel), app.isCtrlPressed());
+                        break;
+                    case ActionMode4_AddXTick:
+                        if (app.isCtrlPressed() && curve->AddXTick(Vec2D(HoveredPixel)))
+                        {
+                        }
+                        else if (curve->GetHoveredXTick()!=-1)
+                        {
+                            if (app.isShiftPressed())
                             {
+                                curve->DeleteHoveredXTick();
                             }
-                            else if (curve->GetHoveredXTick()!=-1)
+                            else
                             {
-                                if (app.isShiftPressed())
-                                {
-                                    curve->DeleteHoveredXTick();
-                                }
-                                else
-                                {
-                                    curve->SelectHovered();
-                                }
+                                curve->SelectHovered();
                             }
-                            break;
-                        case ActionMode5_AddYTick:
-                            if (app.isCtrlPressed() && curve->AddYTick(Vec2D(HoveredPixel)))
+                        }
+                        break;
+                    case ActionMode5_AddYTick:
+                        if (app.isCtrlPressed() && curve->AddYTick(Vec2D(HoveredPixel)))
+                        {
+                        }
+                        else if (curve->GetHoveredYTick()!=-1)
+                        {
+                            if (app.isShiftPressed())
                             {
+                                curve->DeleteHoveredYTick();
                             }
-                            else if (curve->GetHoveredYTick()!=-1)
+                            else
                             {
-                                if (app.isShiftPressed())
-                                {
-                                    curve->DeleteHoveredYTick();
-                                }
-                                else
-                                {
-                                    curve->SelectHovered();
-                                }
+                                curve->SelectHovered();
                             }
-                            break;
-                        default:
-                            break;
-                    }
+                        }
+                        break;
+                    default:
+                        break;
                 }
             }
             else//continued press
             {
-                if (image->isPixelInside((int)HoveredPixel.x, (int)HoveredPixel.y))
+                switch (CurrentMode)
                 {
-                    ImVec2 SnappedPoint;
-                    
-                    switch (CurrentMode)
-                    {
-                        case ActionMode0_None:
-                            break;
-                        case ActionMode1_AddPoints:
-                            if (curve->GetSelected()>=0)
-                            {
-                                curve->MoveSelectedPoint(Vec2D(HoveredPixel), app.isCtrlPressed());
-                            }
-                            break;
-                        case ActionMode2_MoveOrigin:
-                            curve->SetOrigin(Vec2D(HoveredPixel), app.isCtrlPressed());
-                            break;
-                        case ActionMode3_MoveXTarget:
-                            curve->SetTarget(Vec2D(HoveredPixel), app.isCtrlPressed());
-                            break;
-                        case ActionMode4_AddXTick:
-                            if (curve->GetSelected()>=0)
-                            {
-                                curve->MoveSelectedXTick(Vec2D(HoveredPixel), app.isCtrlPressed());
-                            }
-                            break;
-                        case ActionMode5_AddYTick:
-                            if (curve->GetSelected()>=0)
-                            {
-                                curve->MoveSelectedYTick(Vec2D(HoveredPixel), app.isCtrlPressed());
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                    
+                    case ActionMode0_None:
+                        break;
+                    case ActionMode1_AddPoints:
+                        if (curve->GetSelected()>=0)
+                        {
+                            curve->MoveSelectedPoint(Vec2D(HoveredPixel), app.isCtrlPressed());
+                        }
+                        break;
+                    case ActionMode2_MoveOrigin:
+                        curve->SetOrigin(Vec2D(HoveredPixel), app.isCtrlPressed());
+                        break;
+                    case ActionMode3_MoveXTarget:
+                        curve->SetTarget(Vec2D(HoveredPixel), app.isCtrlPressed());
+                        break;
+                    case ActionMode4_AddXTick:
+                        if (curve->GetSelected()>=0)
+                            curve->MoveSelectedXTick(Vec2D(HoveredPixel), app.isCtrlPressed());
+                        break;
+                    case ActionMode5_AddYTick:
+                        if (curve->GetSelected()>=0)
+                            curve->MoveSelectedYTick(Vec2D(HoveredPixel), app.isCtrlPressed());
+                        break;
+                    default:
+                        break;
                 }
             }
-            
-            
             bIsMouseDownFirst = false;
         }
         if (ImGui::IsMouseReleased(0))
@@ -458,29 +417,16 @@ void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
                 case ActionMode1_AddPoints:
                     if (curve->GetSelected()>=0)
                     {
-                        
-                        if (image->isPixelInside((int)HoveredPixel.x, (int)HoveredPixel.y))
-                        {
-                            curve->MoveSelectedPoint(Vec2D(HoveredPixel), app.isCtrlPressed());
-                        }
-                        
-                        
+                        curve->MoveSelectedPoint(Vec2D(HoveredPixel), app.isCtrlPressed());
                         curve->Deselect();
                     }
                     break;
                 case ActionMode2_MoveOrigin:
                     break;
                 case ActionMode4_AddXTick:
-                    if (curve->GetSelected()>=0)
-                    {
-                        ImGui::OpenPopup("TickConfig");
-                    }
-                    break;
                 case ActionMode5_AddYTick:
                     if (curve->GetSelected()>=0)
-                    {
                         ImGui::OpenPopup("TickConfig");
-                    }
                     break;
                 default:
                     break;
@@ -714,8 +660,11 @@ void MainWindow::ShowTickConfigPopup()
     ImGui::PopStyleVar(2);
 }
 
-bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, const ImVec2 &HoveredPixel, ImVec2& out_ZoomOrigin)
+bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, ImVec2& out_ZoomOrigin)
 {
+    if(!image)
+        return false;
+
     ImVec2 WinPos = ImGui::GetWindowPos();
     ImVec2 MousePos = ImGui::GetMousePos();
     
@@ -731,29 +680,25 @@ bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, const ImVec2 &HoveredPi
     float ZoomRectBorder = 5.0f;
     
     ZoomWndOffset = ImVec2(15.f, 15.f);
-    ZoomPos = MousePos;
+    ZoomPos = MousePos+ZoomWndOffset;
     
-    if (ZoomPos.x + ZoomWndOffset.x + ZoomWndSize + ZoomRectBorder * 2 - WinPos.x > canvas_sz.x)
-        ZoomPos.x = canvas_sz.x - (ZoomWndOffset.x + ZoomWndSize + ZoomRectBorder * 2 - WinPos.x);
+    if (ZoomPos.x + ZoomWndSize + ZoomRectBorder * 2 - WinPos.x > canvas_sz.x)
+        ZoomPos.x = MousePos.x - (ZoomWndSize + ZoomRectBorder * 2);
+
+    if (ZoomPos.y + ZoomWndSize + ZoomRectBorder * 2 - WinPos.y > canvas_sz.y)
+        ZoomPos.y = MousePos.y - (ZoomWndSize + ZoomRectBorder * 2);
     
-    if (ZoomPos.y + ZoomWndOffset.y + ZoomWndSize + ZoomRectBorder * 2 - WinPos.y > canvas_sz.y)
-        ZoomPos.y = canvas_sz.y - (ZoomWndOffset.y + ZoomWndSize + ZoomRectBorder * 2 - WinPos.y);
+    if (ZoomPos.x - ZoomRectBorder * 2 - WinPos.x < 0)
+        ZoomPos.x = ZoomRectBorder * 2 + WinPos.x;
     
+    if (ZoomPos.y - ZoomRectBorder * 2 - WinPos.y < 0)
+        ZoomPos.y = ZoomRectBorder * 2 + WinPos.y;
+
+    ZoomUV0 = HoveredPixel;
+    ZoomUV0.x /= image->get_width();
+    ZoomUV0.y /= image->get_height();
     
-    if (ZoomPos.x + ZoomWndOffset.x - ZoomRectBorder * 2 - WinPos.x < 0)
-        ZoomPos.x = -(ZoomWndOffset.x - ZoomRectBorder * 2 - WinPos.x);
-    
-    if (ZoomPos.y + ZoomWndOffset.y - ZoomRectBorder * 2 - WinPos.y < 0)
-        ZoomPos.y = -(ZoomWndOffset.y - ZoomRectBorder * 2 - WinPos.y);
-    
-    
-    
-    
-    ZoomUV0.x = HoveredPixel.x / image->get_width();
-    ZoomUV0.y = HoveredPixel.y / image->get_height();
-    
-    
-    out_ZoomOrigin = ZoomPos + ZoomWndOffset + ImVec2(ZoomWndSize*0.5f,ZoomWndSize*0.5f);
+    out_ZoomOrigin = ZoomPos + ImVec2(ZoomWndSize*0.5f,ZoomWndSize*0.5f);
     
     float ZoomUVsideU = float(2 * ZoomPixelHSide + 1) / float(image->get_width());
     
@@ -765,19 +710,19 @@ bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, const ImVec2 &HoveredPi
     if (ImGui::IsMouseHoveringWindow() && CurrentMode != ActionMode0_None)
     {
         ImU32 ZoomBgColor = ImColor(120, 120, 120, 220);
-        draw_list->AddRectFilled(ZoomPos + ZoomWndOffset - ImVec2(ZoomRectBorder, ZoomRectBorder),
-                                 ZoomPos + ZoomWndOffset + ImVec2(ZoomRectBorder+ ZoomWndSize, ZoomRectBorder+ ZoomWndSize),
+        draw_list->AddRectFilled(ZoomPos - ImVec2(ZoomRectBorder, ZoomRectBorder),
+                                 ZoomPos + ImVec2(ZoomRectBorder+ ZoomWndSize, ZoomRectBorder+ ZoomWndSize),
                                  ZoomBgColor, 5.0f);
         
         GLuint texID = image->get_texture();
-        draw_list->AddImage((void *)(intptr_t)(texID), ZoomPos + ZoomWndOffset,
-                            ZoomPos + ZoomWndOffset + ImVec2(ZoomWndSize,ZoomWndSize), ZoomUV0, ZoomUV1);
+        draw_list->AddImage((void *)(intptr_t)(texID), ZoomPos,
+                            ZoomPos + ImVec2(ZoomWndSize,ZoomWndSize), ZoomUV0, ZoomUV1);
         
         ImU32 CrossColor = ImColor(120, 120, 120, 220);
-        draw_list->AddLine(ImVec2(ZoomWndOffset.x + ZoomWndSize*0.5f, ZoomWndOffset.y) + ZoomPos,
-                           ImVec2(ZoomWndOffset.x + ZoomWndSize*0.5f, ZoomWndSize + ZoomWndOffset.y) + ZoomPos, CrossColor);
-        draw_list->AddLine(ImVec2(ZoomWndOffset.x, ZoomWndSize*0.5f + ZoomWndOffset.y) + ZoomPos,
-                           ImVec2(ZoomWndOffset.x + ZoomWndSize, ZoomWndSize*0.5f + ZoomWndOffset.y) + ZoomPos, CrossColor);
+        draw_list->AddLine(ImVec2(ZoomWndSize*0.5f, 0.f) + ZoomPos,
+                           ImVec2(ZoomWndSize*0.5f, ZoomWndSize) + ZoomPos, CrossColor);
+        draw_list->AddLine(ImVec2(0.f, ZoomWndSize*0.5f) + ZoomPos,
+                           ImVec2(ZoomWndSize, ZoomWndSize*0.5f) + ZoomPos, CrossColor);
         
         return true;
     }

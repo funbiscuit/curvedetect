@@ -77,13 +77,13 @@ private:
     void ShowMainWindow();
     void ShowImage(ImVec2 canvasSize);
 
-    void ProcessInput(ImVec2 &HoveredPixel);
+    void ProcessInput();
     
     void ShowPoints(float ImageScale, ImVec2 im_pos, ImVec2 MousePos);
     
     void ShowTickConfigPopup();
     
-    bool ShowZoomWindow(const ImVec2 &canvas_sz, const ImVec2 &HoveredPixel, ImVec2& out_ZoomOrigin);
+    bool ShowZoomWindow(const ImVec2 &canvas_sz, ImVec2& out_ZoomOrigin);
     
     void ShowTickLines(ImVec2 im_pos);
     
