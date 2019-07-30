@@ -67,14 +67,16 @@ private:
     
     
     ImVec2 CurrentImPos;
-    
+    ImVec2 HoveredPixel;
+
     bool bIsContextMenuOpened = false;
     bool bIsReadyForAction = true;
     
     std::shared_ptr<CurveDetect> curve;
     
     void ShowMainWindow();
-    
+    void ShowImage(ImVec2 canvasSize);
+
     void ProcessInput(ImVec2 &HoveredPixel);
     
     void ShowPoints(float ImageScale, ImVec2 im_pos, ImVec2 MousePos);

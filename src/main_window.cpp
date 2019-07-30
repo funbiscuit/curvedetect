@@ -100,8 +100,6 @@ void MainWindow::on_resize(int w, int h)
 
 void MainWindow::ShowMainWindow()
 {
-    static ImVec2 HoveredPixel = ImVec2(0.0f, 0.0f);
-    
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     
     ShowSidePanel();
@@ -116,136 +114,20 @@ void MainWindow::ShowMainWindow()
     if(image)
         ImGui::Text("Hovered pixel (%d,%d) value: %d", (int)HoveredPixel.x, (int)HoveredPixel.y,
                     image->getPixelValue((int)HoveredPixel.x, (int)HoveredPixel.y));
-    
-    //ImGui::SameLine(ImGui::GetWindowWidth() - 100);
-    
-    //ImGui::Checkbox("Show grid", &show_grid);
+
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImVec4(30, 30, 30, 255));
     ImGui::BeginChild("image_region", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
-    
-    
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    //draw_list->ChannelsSplit(2);
-    
-    
+
     ImVec2 canvas_sz = ImGui::GetWindowSize();
+
+    ShowImage(canvas_sz);
+
     ImVec2 WinPos = ImGui::GetWindowPos();
     ImVec2 MousePos = ImGui::GetMousePos();
-    
-    if(image)
-    {
-        int im_width = image->get_width();
-        int im_height = image->get_height();
-        
-        float im_aspect = float(im_height) / float(im_width);
-        
-        GLuint texID = image->get_texture();
-        
-        float scaleX, scaleY;
-        
-        scaleX = canvas_sz.x / float(image->get_width());
-        scaleY = canvas_sz.y / float(image->get_height());
-        
-        MinImageScale = scaleX < scaleY ? scaleX : scaleY;
-        
-        
-        ImVec2 PrevHoveredPixel = (MousePos - WinPos - CurrentImPos) / CurrentImageScale;
-        
-        bool bScaleChanged = false;
-        
-        if (ImGui::IsMouseHoveringWindow())
-        {
-            ImGuiIO& imIO = ImGui::GetIO();
-            
-            if (imIO.MouseWheel < 0)
-            {
-                float mul = std::pow(1.1f, imIO.MouseWheel);
-                CurrentImageScale *= mul;
-                bScaleChanged = true;
-                //std::cout << mul << "\n";
-            }
-            else if (imIO.MouseWheel > 0)
-            {
-                float mul = std::pow(1.1f, imIO.MouseWheel);
-                CurrentImageScale *= std::pow(1.1f, imIO.MouseWheel);
-                bScaleChanged = true;
-                //std::cout << mul << "\n";
-            }
-        }
-        
-        //std::cout <<imIO.MouseWheel << "\n";
-        
-        //MinImageScale = float(im_width) / float(image->GetWidth());
-        if (CurrentImageScale < MinImageScale)
-            CurrentImageScale = MinImageScale;
-        if (CurrentImageScale > MaxImageScale)
-            CurrentImageScale = MaxImageScale;
-        
-        
-        //ImVec2 PrevHoveredPixel = (MousePos - WinPos - CurrentImPos) / CurrentImageScale;
-        if(bScaleChanged)
-            CurrentImPos = MousePos - HoveredPixel*CurrentImageScale - WinPos;
-        
-        ImVec2 MinImPos, MaxImPos;
-        MinImPos.x = canvas_sz.x - im_width*CurrentImageScale;
-        MinImPos.y = canvas_sz.y - im_height*CurrentImageScale;
-        
-        MaxImPos = ImVec2(0.0f, 0.0f);
-        
-        
-        if (MinImPos.x > MaxImPos.x)
-        {
-            MinImPos.x /= 2.0f;
-            MaxImPos.x = MinImPos.x;
-        }
-        if (MinImPos.y > MaxImPos.y)
-        {
-            MinImPos.y /= 2.0f;
-            MaxImPos.y = MinImPos.y;
-        }
-        
-        if(ImGui::IsMouseDragging(2))
-        {
-            CurrentImPos += ImGui::GetMouseDragDelta(2);
-            ImGui::ResetMouseDragDelta(2);
-        }
-        
-        CurrentImPos.x = CurrentImPos.x < MinImPos.x ? MinImPos.x : (CurrentImPos.x > MaxImPos.x ? MaxImPos.x : CurrentImPos.x);
-        CurrentImPos.y = CurrentImPos.y < MinImPos.y ? MinImPos.y : (CurrentImPos.y > MaxImPos.y ? MaxImPos.y : CurrentImPos.y);
-        
-        //if(CurrentImPos.x<MinImPos.x)
-        
-        //CurrentImPos = MinImPos;
-        
-        im_width = int(float(im_width)*CurrentImageScale);
-        im_height = int(float(im_height)*CurrentImageScale);
-        
-        //CurrentImageScale = float(im_width )/ float(image->GetWidth());
-        
-        
-        ImVec2 cur_pos = ImGui::GetCursorScreenPos();
-        if (bShowImage)
-        {
-            
-            //ImDrawCallback cb = &testFunc;
-            //draw_list->AddCallback(cb, 0);
-            
-            draw_list->AddImage((void *)(intptr_t)(texID), cur_pos + CurrentImPos, cur_pos + CurrentImPos + ImVec2((float)im_width, (float)im_height));
-        }
-        
-        //this is used to distinguish in shader
-        //between our image (that should be binarized)
-        //and all other textures (that should be rendered without changes)
-        ImGui_ImplOpenGL3_SetImageTexID(bShowBinarization ? texID : -1);
-        
-    }
-    
-    
-    
     HoveredPixel = MousePos - WinPos - CurrentImPos;
-    
+
     HoveredPixel.x /= CurrentImageScale;
     HoveredPixel.y /= CurrentImageScale;
     
@@ -265,12 +147,12 @@ void MainWindow::ShowMainWindow()
     ShowPoints(CurrentImageScale, CurrentImPos, MousePos);
     
     ImVec2 ZoomOrigin;
-    
-    
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
     
     if (image && ShowZoomWindow(canvas_sz, HoveredPixel, ZoomOrigin))
     {
-        float zoomedScale = float(ZoomWndSize)/ float(2 * ZoomPixelHSide + 1);
+        float zoomedScale = ZoomWndSize/ float(2 * ZoomPixelHSide + 1);
         
         ImVec2 zoomedImPos = ZoomOrigin -HoveredPixel*zoomedScale-WinPos;
         
@@ -289,7 +171,6 @@ void MainWindow::ShowMainWindow()
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
     if (ImGui::BeginPopup("context_menu"))
     {
-        ImVec2 scene_pos = ImGui::GetMousePosOnOpeningCurrentPopup();
         bIsContextMenuOpened = true;
         bIsReadyForAction = false;
         
@@ -330,6 +211,87 @@ void MainWindow::ShowMainWindow()
     ImGui::EndGroup();
 }
 
+void MainWindow::ShowImage(ImVec2 canvasSize)
+{
+    if(image)
+    {
+        float im_width = image->get_width();
+        float im_height = image->get_height();
+
+        GLuint texID = image->get_texture();
+
+        float scaleX, scaleY;
+
+        scaleX = canvasSize.x / im_width;
+        scaleY = canvasSize.y / im_height;
+
+        MinImageScale = scaleX < scaleY ? scaleX : scaleY;
+
+        bool bScaleChanged = false;
+
+        if (ImGui::IsMouseHoveringWindow())
+        {
+            ImGuiIO& imIO = ImGui::GetIO();
+
+            if (imIO.MouseWheel != 0)
+            {
+                CurrentImageScale *= std::pow(1.1f, imIO.MouseWheel);
+                bScaleChanged = true;
+            }
+        }
+
+        if (CurrentImageScale < MinImageScale)
+            CurrentImageScale = MinImageScale;
+        if (CurrentImageScale > MaxImageScale)
+            CurrentImageScale = MaxImageScale;
+
+        ImVec2 WinPos = ImGui::GetWindowPos();
+        ImVec2 MousePos = ImGui::GetMousePos();
+        if(bScaleChanged)
+            CurrentImPos = MousePos - HoveredPixel*CurrentImageScale - WinPos;
+
+        ImVec2 MinImPos, MaxImPos;
+        MinImPos.x = canvasSize.x - im_width*CurrentImageScale;
+        MinImPos.y = canvasSize.y - im_height*CurrentImageScale;
+
+        MaxImPos = ImVec2(0.0f, 0.0f);
+
+        if (MinImPos.x > MaxImPos.x)
+        {
+            MinImPos.x /= 2.0f;
+            MaxImPos.x = MinImPos.x;
+        }
+        if (MinImPos.y > MaxImPos.y)
+        {
+            MinImPos.y /= 2.0f;
+            MaxImPos.y = MinImPos.y;
+        }
+
+        if(ImGui::IsMouseDragging(2))
+        {
+            CurrentImPos += ImGui::GetMouseDragDelta(2);
+            ImGui::ResetMouseDragDelta(2);
+        }
+
+        CurrentImPos.x = CurrentImPos.x < MinImPos.x ? MinImPos.x : (CurrentImPos.x > MaxImPos.x ? MaxImPos.x : CurrentImPos.x);
+        CurrentImPos.y = CurrentImPos.y < MinImPos.y ? MinImPos.y : (CurrentImPos.y > MaxImPos.y ? MaxImPos.y : CurrentImPos.y);
+
+        im_width*=CurrentImageScale;
+        im_height*=CurrentImageScale;
+
+        if (bShowImage)
+        {
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+            ImVec2 cur_pos = ImGui::GetCursorScreenPos()+CurrentImPos;
+            draw_list->AddImage((void *)(intptr_t)(texID), cur_pos, cur_pos + ImVec2(im_width, im_height));
+        }
+
+        //this is used to distinguish in shader
+        //between our image (that should be binarized)
+        //and all other textures (that should be rendered without changes)
+        ImGui_ImplOpenGL3_SetImageTexID(bShowBinarization ? texID : -1);
+    }
+}
 
 void MainWindow::ProcessInput(ImVec2 &HoveredPixel)
 {
