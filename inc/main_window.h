@@ -13,10 +13,7 @@ enum ActionMode
     MODE_NONE    = 1 << 0,
     MODE_POINTS  = 1 << 1,
     MODE_HORIZON = 1 << 2,
-    MODE_XTICKS  = 1 << 3,
-    MODE_YTICKS  = 1 << 4,
-
-    MODE_TICKS  = MODE_XTICKS | MODE_YTICKS
+    MODE_TICKS  = 1 << 3,
 
 };
 

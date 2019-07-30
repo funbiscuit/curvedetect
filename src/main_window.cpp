@@ -170,12 +170,11 @@ void MainWindow::ShowMainWindow()
         ImGui::Text("Choose work mode");
         ImGui::Separator();
         
-        const char* items[]={"[0] None","[1] Point (Add/Move/Delete)","[2] Horizon (Move)",
-                             "[3] X Ticks (Add/Move/Delete)","[4] Y Ticks (Add/Move/Delete)"};
-        ActionMode modes[]={MODE_NONE,MODE_POINTS,MODE_HORIZON,
-                            MODE_XTICKS,MODE_YTICKS};
+        const char* items[]={"[1] Points","[2] Horizon",
+                             "[3] Ticks"};
+        ActionMode modes[]={MODE_POINTS,MODE_HORIZON,MODE_TICKS};
         
-        for(int j=0;j<5;++j)
+        for(int j=0;j<3;++j)
         {
             if (ImGui::MenuItem(items[j], nullptr, CurrentMode == modes[j], true))
             {
@@ -313,23 +312,8 @@ void MainWindow::OnMouseDown(int btn)
                     curve->UpdateSubdivision();
                 }
                 break;
-            case MODE_XTICKS:
-                if (app.isCtrlPressed())
-                {
-                    curve->AddXTick(Vec2D(HoveredPixel));
-                }
-                else if (curve->SelectHovered(ImageElement::X_TICK | ImageElement::Y_TICK))
-                {
-                    //TODO process double click and show input window
-                    curve->BackupSelectedTick();
-                }
-                break;
-            case MODE_YTICKS:
-                if (app.isCtrlPressed())
-                {
-                    curve->AddYTick(Vec2D(HoveredPixel));
-                }
-                else if (curve->SelectHovered(ImageElement::X_TICK | ImageElement::Y_TICK))
+            case MODE_TICKS:
+                if (curve->SelectHovered(ImageElement::TICKS))
                 {
                     //TODO process double click and show input window
                     curve->BackupSelectedTick();
@@ -355,11 +339,8 @@ void MainWindow::OnMouseUp(int btn)
                 else
                     curve->DeselectAll();
                 break;
-            case MODE_XTICKS:
-            case MODE_YTICKS:
-                if (deleteOnRelease)
-                    curve->DeleteSelected();
-                else if(curve->GetSelectedId())
+            case MODE_TICKS:
+                if(curve->GetSelectedId())
                     ImGui::OpenPopup("TickConfig");
                 //TODO for non new ticks - deselect
 //                    curve->DeselectAll();
@@ -399,12 +380,11 @@ void MainWindow::ProcessInput()
     if (ImGui::IsWindowFocused())
     {
         ImGuiIO& io = ImGui::GetIO();
-        ActionMode modes[]={MODE_NONE,MODE_POINTS,MODE_HORIZON,
-                            MODE_XTICKS,MODE_YTICKS};
+        ActionMode modes[]={MODE_POINTS,MODE_HORIZON,MODE_TICKS};
 
-        for(int j=0;j<5;++j)
+        for(int j=0;j<3;++j)
         {
-            if (io.KeysDown[GLFW_KEY_0+j] || io.KeysDown[GLFW_KEY_KP_0+j])
+            if (io.KeysDown[GLFW_KEY_1+j] || io.KeysDown[GLFW_KEY_KP_1+j])
             {
                 CurrentMode = modes[j];
             }
@@ -548,8 +528,6 @@ void MainWindow::ShowTickConfigPopup()
         ImGui::Text("Enter value for this tick line");
         ImGui::Separator();
         
-        static int TickType = 0; //X
-        static int TickPrecision = 3; //X
         static double TickValue = 0;
     
         auto selected=(ImageTickLine*) curve->GetSelected();
@@ -565,11 +543,6 @@ void MainWindow::ShowTickConfigPopup()
         
         //ImGui::RadioButton("X (vertical)", &TickType, 0);
         //ImGui::RadioButton("Y (horizontal)", &TickType, 1);
-        
-        ImGui::InputInt("Precision", &TickPrecision);
-        
-        TickPrecision = TickPrecision < 0 ? 0 : (TickPrecision > 8 ? 8 : TickPrecision);
-        
         //if (bTickInputAutoFocus)//set focus to float only when we just opened the window
         //	ImGui::SetKeyboardFocusHere(0);
         
@@ -610,16 +583,6 @@ void MainWindow::ShowTickConfigPopup()
             }
 
             curve->DeselectAll();
-            
-            bTickConfigInit = true;
-            ImGui::CloseCurrentPopup();
-        }
-        
-        
-        if (ImGui::Button("Delete tick line", ImVec2(248, 0)))
-        {
-            if(selected)
-                curve->DeleteSelected();
             
             bTickConfigInit = true;
             ImGui::CloseCurrentPopup();
@@ -1172,17 +1135,14 @@ void MainWindow::ShowSidePanel()
             helpStr = "Drag (or use arrow keys)\nto move a point\nHold Ctrl to add a new point\nHold Shift to delete a point\nHold Ctrl to enable snapping";
             break;
         case MODE_HORIZON:
-            modeStr = "Origin";
-            modifierStr = "(move)";
+            modeStr = "Horizon";
+            modifierStr = "";
             helpStr = "Drag (or use arrow keys) to change\nhorizon of image\nHold Ctrl to enable snapping";
             break;
-        case MODE_XTICKS:
-            modeStr = "X Tick";
-            helpStr = "Drag (or use arrow keys)\nto move X tick line\nHold Ctrl to add new X tick\nHold Shift to delete X tick\nHold Ctrl to enable snapping";
-            break;
-        case MODE_YTICKS:
-            modeStr = "Y Tick";
-            helpStr = "Drag (or use arrow keys)\nto move Y tick line\nHold Ctrl to add new Y tick\nHold Shift to delete Y tick\nHold Ctrl to enable snapping";
+        case MODE_TICKS:
+            modeStr = "Ticks";
+            modifierStr = "";
+            helpStr = "Drag (or use arrow keys)\nto move tick lines\nHold Ctrl to enable snapping";
             break;
         
     }
@@ -1315,7 +1275,10 @@ void MainWindow::OpenImage()
         image= nullptr;
     }
     else
+    {
         curve=std::make_shared<CurveDetect>(image);
+        CurrentMode = ActionMode::MODE_POINTS;
+    }
     
     ResetAll();
 }

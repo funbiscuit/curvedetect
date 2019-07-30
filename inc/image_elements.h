@@ -99,6 +99,9 @@ public:
     bool isNew=false;
     ImageTickLine* backup=nullptr;
 
+    ImageTickLine()
+    = default;
+
     explicit ImageTickLine(const Vec2D& position) : ImageElement(position)
     {
 

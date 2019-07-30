@@ -35,8 +35,6 @@ public:
     void UpdateHoveredItem(Vec2D imagePos);
 
     void AddPoint(Vec2D pos);
-    bool AddXTick(Vec2D pos);
-    bool AddYTick(Vec2D pos);
     
     uint64_t GetSelectedId();
     ImageElement* GetSelected();

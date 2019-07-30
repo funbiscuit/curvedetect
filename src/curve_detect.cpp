@@ -560,21 +560,30 @@ void CurveDetect::ResetAll()
     SortedUserPoints.clear();
     SubdividedPoints.clear();
     
-    XTicks.clear();
-    YTicks.clear();
-
-    DeselectAll();
-
-    horizon.target.imagePosition=horizon.imagePosition + Vec2D(100.0, 0.0);
+    XTicks.resize(2);
+    YTicks.resize(2);
     
+    XTicks[0].tickValue = 0.0;
+    XTicks[1].tickValue = 1.0;
+    YTicks[0].tickValue = 0.0;
+    YTicks[1].tickValue = 1.0;
     
     if (image)
     {
-        horizon.imagePosition.x=image->get_width()*0.1;
-        horizon.imagePosition.y=image->get_height()*0.5;
-        horizon.target.imagePosition.x=image->get_width()*0.9;
-        horizon.target.imagePosition.y=image->get_height()*0.5;
+        XTicks[0].imagePosition.x = image->get_width()*0.2;
+        XTicks[0].imagePosition.y = image->get_height()*0.5;
+        XTicks[1].imagePosition.x = image->get_width()*0.8;
+        XTicks[1].imagePosition.y = image->get_height()*0.5;
+    
+        YTicks[0].imagePosition.x = image->get_width()*0.5;
+        YTicks[0].imagePosition.y = image->get_height()*0.8;
+        YTicks[1].imagePosition.x = image->get_width()*0.5;
+        YTicks[1].imagePosition.y = image->get_height()*0.2;
     }
+
+    DeselectAll();
+
+    ResetHorizon();
     
 }
 void CurveDetect::ResetHorizon()
@@ -692,63 +701,11 @@ void CurveDetect::DeleteSelected()
         hoveredPoint = 0;
         UpdateSubdivision(true);
     }
-    else if(selectedXtick)
-    {
-        for(auto it=XTicks.begin();it!=XTicks.end();++it)
-        {
-            if(it->id == selectedXtick)
-            {
-                XTicks.erase(it);
-                break;
-            }
-        }
-        selectedXtick = 0;
-        hoveredXtick = 0;
-    }
-    else if(selectedYtick)
-    {
-        for(auto it=YTicks.begin();it!=YTicks.end();++it)
-        {
-            if(it->id == selectedYtick)
-            {
-                YTicks.erase(it);
-                break;
-            }
-        }
-        selectedYtick = 0;
-        hoveredYtick = 0;
-    }
     else if(selectedOrigin)
     {
         ResetHorizon();
         UpdateSubdivision(true);
     }
-}
-
-bool CurveDetect::AddXTick(Vec2D pos)
-{
-    if(XTicks.size()==2)
-        return false;
-
-    XTicks.emplace_back(pos);
-    XTicks.back().isNew = true;
-    selectedXtick = XTicks.back().id;
-    SnapSelected();
-
-    return true;
-}
-
-bool CurveDetect::AddYTick(Vec2D pos)
-{
-    if(YTicks.size()==2)
-        return false;
-
-    YTicks.emplace_back(pos);
-    YTicks.back().isNew = true;
-    selectedYtick = YTicks.back().id;
-    SnapSelected();
-    
-    return true;
 }
 
 uint64_t CurveDetect::GetSelectedId()
