@@ -522,6 +522,18 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     }
 }
 
+int onTickInput(ImGuiInputTextCallbackData *data)
+{
+    std::string tickVal = data->Buf;
+    ImageTickLine::filterValueStr(tickVal, false);
+    strcpy(data->Buf,tickVal.c_str());
+    data->BufTextLen=tickVal.length();
+    if(data->CursorPos>tickVal.length())
+        data->CursorPos=tickVal.length();
+    data->BufDirty=true;
+    return 0;
+}
+
 void MainWindow::ShowTickConfigPopup()
 {
     if(!curve)
@@ -545,7 +557,8 @@ void MainWindow::ShowTickConfigPopup()
         ImGui::Text("Enter value for this tick line");
         ImGui::Separator();
         
-        static double TickValue = 0;
+        static std::string tickVal = "0";
+        char buf[65];
     
         auto selected=(ImageTickLine*) curve->GetSelected();
         auto& XTicks=curve->GetXTicks();
@@ -553,7 +566,8 @@ void MainWindow::ShowTickConfigPopup()
     
         if (bTickConfigInit && selected)
         {
-            TickValue = selected->tickValue;
+            tickVal = selected->tickValueStr;
+            ImageTickLine::filterValueStr(tickVal, false);
             
             bTickConfigInit = false;
         }
@@ -566,17 +580,18 @@ void MainWindow::ShowTickConfigPopup()
         if (!ImGui::IsAnyItemActive())
             ImGui::SetKeyboardFocusHere();
 
-        //TODO use filtered text input
-        ImGui::InputDouble("Value", &TickValue, 0.0, 0.0);
+        strcpy(buf,tickVal.c_str());
+        ImGui::InputText("Value", buf, 30, ImGuiInputTextFlags_CallbackAlways, &onTickInput);
+        tickVal=buf;
         
         auto& app=MainApp::getInstance();
         
         if (ImGui::Button("OK", ImVec2(120, 0)) || app.isEnterReleased())
         {
-            //std::cout << TickValue << ", " << SelectedItem << '\n';
+            ImageTickLine::filterValueStr(tickVal, true);
 
             if(selected)
-                selected->tickValue = TickValue;
+                selected->setValueStr(tickVal.c_str());
 
             curve->DeselectAll();
 
@@ -732,26 +747,22 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
             LineEnd = ImVec2(image->get_width() - LineMargin.x, CoordOriginImg.y);
             //std::cout << "force horizontal\n";
         }
-        
-        
-        float beta = (LineEnd.x - LineStart.x)*(CoordOriginImg.y - LineStart.y)
-                     - (LineEnd.y - LineStart.y)*(CoordOriginImg.x - LineStart.x);
-        
-        beta /= TargetDirX.x*(LineEnd.y - LineStart.y) - TargetDirX.y*(LineEnd.x - LineStart.x);
-        
-        LabelPos = CoordOriginImg + TargetDirX*beta;
-        
         LineStart = WinPos + im_pos + LineStart*CurrentImageScale;
         LineEnd = WinPos + im_pos + LineEnd*CurrentImageScale;
-        LabelPos = im_pos + LabelPos*CurrentImageScale;
-        
+        LabelPos = WinPos + im_pos+(tick.imagePosition*CurrentImageScale + Vec2D(10.f,0.f)).ToImVec2();
+
         //draw_list->AddLine(ImVec2(TickPos, 0.0f)+WinPos, ImVec2(TickPos, canvas_sz.y)+WinPos, col, 1.0f);
         draw_list->AddLine(LineStart, LineEnd, col, 2.0f);
+
+        ImVec2 padding(5.f, 5.f);
+
+        ImVec2 sz = ImGui::CalcTextSize(tick.tickValueStr.c_str());
+        draw_list->AddRectFilled(LabelPos-padding, LabelPos+sz+padding, ImColor(255,255,255));
+
         //ImGui::SetCursorPos(ImVec2(TickPos+2.0f, CoordOriginScreen.y - WinPos.y+2.0f));
-        ImGui::SetCursorPos(LabelPos);
+        ImGui::SetCursorScreenPos(LabelPos);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
-        //TODO better format (maybe store users input string)
-        ImGui::Text("%0.2f", tick.tickValue);
+        ImGui::TextUnformatted(tick.tickValueStr.c_str());
         ImGui::PopStyleColor();
     }
     for (auto &tick : YTicks) {
@@ -774,26 +785,21 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
             LineEnd = ImVec2(image->get_width() - LineMargin.x, CoordOriginImg.y);
             //std::cout << "force horizontal\n";
         }
-        
-        
-        float beta = (LineEnd.x - LineStart.x)*(CoordOriginImg.y - LineStart.y)
-                     - (LineEnd.y - LineStart.y)*(CoordOriginImg.x - LineStart.x);
-        
-        beta /= TargetDirY.x*(LineEnd.y - LineStart.y) - TargetDirY.y*(LineEnd.x - LineStart.x);
-        
-        LabelPos = CoordOriginImg + TargetDirY*beta;
-        
         LineStart = WinPos + im_pos + LineStart*CurrentImageScale;
         LineEnd = WinPos + im_pos + LineEnd*CurrentImageScale;
-        LabelPos = im_pos + LabelPos*CurrentImageScale;
-        
+        LabelPos = WinPos + im_pos+(tick.imagePosition*CurrentImageScale + Vec2D(0.f,10.f)).ToImVec2();
+
         //draw_list->AddLine(ImVec2(TickPos, 0.0f)+WinPos, ImVec2(TickPos, canvas_sz.y)+WinPos, col, 1.0f);
         draw_list->AddLine(LineStart, LineEnd, col, 2.0f);
-        //ImGui::SetCursorPos(ImVec2(TickPos+2.0f, CoordOriginScreen.y - WinPos.y+2.0f));
-        ImGui::SetCursorPos(LabelPos);
+
+        ImVec2 padding(5.f, 5.f);
+
+        ImVec2 sz = ImGui::CalcTextSize(tick.tickValueStr.c_str());
+        draw_list->AddRectFilled(LabelPos-padding, LabelPos+sz+padding, ImColor(255,255,255));
+
+        ImGui::SetCursorScreenPos(LabelPos);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
-        //TODO better format (maybe store users input string)
-        ImGui::Text("%0.2f", tick.tickValue);
+        ImGui::TextUnformatted(tick.tickValueStr.c_str());
         ImGui::PopStyleColor();
         
         //draw_list->AddLine(ImVec2(0.0f, TickPos) + WinPos, ImVec2(canvas_sz.x, TickPos) + WinPos, col, 1.0f);

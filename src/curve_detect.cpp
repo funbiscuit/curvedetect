@@ -561,11 +561,11 @@ void CurveDetect::ResetAll()
     
     XTicks.resize(2);
     YTicks.resize(2);
-    
-    XTicks[0].tickValue = 0.0;
-    XTicks[1].tickValue = 1.0;
-    YTicks[0].tickValue = 0.0;
-    YTicks[1].tickValue = 1.0;
+
+    XTicks[0].setValueStr("0");
+    XTicks[1].setValueStr("1");
+    YTicks[1].setValueStr("0");
+    YTicks[0].setValueStr("1");
     
     if (image)
     {

@@ -2,11 +2,68 @@
 
 
 #include <cmath>
+#include <cstdlib>
+#include <iostream>
+#include <image_elements.h>
+#include <regex>
+
 #include "image_elements.h"
 
 
 //id 1 and 2 are reserved for horizon and 0 is none
 uint64_t ImageElement::nextId=3;
+
+
+void ImageTickLine::setValueStr(const char* str)
+{
+    char* end;
+    auto val = strtod(str, &end);
+    if(! *end)
+    {
+        tickValueStr = str;
+        tickValue=val;
+    }
+}
+
+void ImageTickLine::filterValueStr(std::string& str, bool finalFilter)
+{
+    std::regex regInvalidChar("[^,.0-9-]");
+    str=std::regex_replace(str, regInvalidChar, "");
+    std::replace(str.begin(), str.end(), ',', '.');
+
+    bool dot=false;
+    bool min=str.empty() ? true : str[0]!='-';
+
+    auto it=str.begin();
+    while(it!=str.end())
+    {
+        if(*it=='-' && min)
+            it=str.erase(it);
+        else if(*it=='.')
+        {
+            if(dot)
+                it=str.erase(it);
+            else
+            {
+                dot = true;
+                ++it;
+            }
+        }
+        else
+            ++it;
+        min=true;
+    }
+    while(finalFilter && !str.empty() &&
+    (str.back()=='.' || str.back()=='-' || (dot && str.back()=='0')))
+    {
+        if(str.back()=='.')
+            dot=false;
+        str.pop_back();
+    }
+    while(str.length()>1 && str.front()=='0')
+        str.erase(str.begin());
+}
+
 
 double ImageTickLine::DistTo(const Vec2D& imagePosition, const Vec2D& tickDirection)
 {

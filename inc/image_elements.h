@@ -96,6 +96,7 @@ class ImageTickLine : public ImageElement
 {
 public:
     double tickValue=0.0;
+    std::string tickValueStr="0";
     ImageTickLine* backup=nullptr;
 
     ImageTickLine()
@@ -105,6 +106,9 @@ public:
     {
 
     }
+
+    void setValueStr(const char* str);
+    static void filterValueStr(std::string& str, bool finalFilter);
 
     double DistTo(const Vec2D& imagePosition, const Vec2D& tickDirection);
 
