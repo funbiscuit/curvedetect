@@ -167,9 +167,6 @@ void MainWindow::ShowMainWindow()
         bIsContextMenuOpened = true;
         bIsReadyForAction = false;
         
-        ImGui::Text("Choose work mode");
-        ImGui::Separator();
-        
         const char* items[]={"[1] Points","[2] Horizon",
                              "[3] Ticks"};
         ActionMode modes[]={MODE_POINTS,MODE_HORIZON,MODE_TICKS};
@@ -340,10 +337,24 @@ void MainWindow::OnMouseUp(int btn)
                     curve->DeselectAll();
                 break;
             case MODE_TICKS:
+                curve->DeselectAll();
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+void MainWindow::OnMouseDoubleClick(int btn)
+{
+    auto& app=MainApp::getInstance();
+    if (btn == 0)
+    {
+        switch (CurrentMode)
+        {
+            case MODE_TICKS:
                 if(curve->GetSelectedId())
                     ImGui::OpenPopup("TickConfig");
-                //TODO for non new ticks - deselect
-//                    curve->DeselectAll();
                 break;
             default:
                 break;
@@ -375,7 +386,11 @@ void MainWindow::OnMouseDrag(int btn)
 void MainWindow::ProcessInput()
 {
     static bool bIsMouseDownFirst = true;
+    static ImVec2 lastMousePos = ImGui::GetMousePos();
+    ImVec2 delta = ImGui::GetMousePos()-lastMousePos;
+    bool moving = (std::abs(delta.x)+std::abs(delta.y))>0.f;
     auto& app=MainApp::getInstance();
+
 
     if (ImGui::IsWindowFocused())
     {
@@ -402,7 +417,7 @@ void MainWindow::ProcessInput()
             {
                 OnMouseDown(0);
             }
-            else//continued press
+            else if(moving)
             {
                 OnMouseDrag(0);
             }
@@ -414,6 +429,8 @@ void MainWindow::ProcessInput()
             
             bIsMouseDownFirst = true;
         }
+        if(ImGui::IsMouseDoubleClicked(0))
+            OnMouseDoubleClick(0);
         
         // Open context menu
         if (ImGui::IsMouseClicked(1))
@@ -430,7 +447,7 @@ void MainWindow::ProcessInput()
     {
         bIsReadyForAction = true;
     }
-    
+    lastMousePos+=delta;
     
 }
 
@@ -559,10 +576,7 @@ void MainWindow::ShowTickConfigPopup()
             //std::cout << TickValue << ", " << SelectedItem << '\n';
 
             if(selected)
-            {
                 selected->tickValue = TickValue;
-                selected->isNew = false;
-            }
 
             curve->DeselectAll();
 
@@ -575,12 +589,7 @@ void MainWindow::ShowTickConfigPopup()
         {
 
             if(selected)
-            {
-                if(selected->isNew)
-                    curve->DeleteSelected();
-                else
-                    selected->RestoreBackup();
-            }
+                selected->RestoreBackup();
 
             curve->DeselectAll();
             
@@ -1155,7 +1164,7 @@ void MainWindow::ShowSidePanel()
         case MODE_TICKS:
             modeStr = "Ticks";
             modifierStr = "";
-            helpStr = "Drag (or use arrow keys)\nto move tick lines\nHold Ctrl to enable snapping";
+            helpStr = "Drag (or use arrow keys)\nto move tick lines\nDouble click to change value\nHold Ctrl to enable snapping";
             break;
         
     }

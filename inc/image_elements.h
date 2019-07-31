@@ -96,7 +96,6 @@ class ImageTickLine : public ImageElement
 {
 public:
     double tickValue=0.0;
-    bool isNew=false;
     ImageTickLine* backup=nullptr;
 
     ImageTickLine()

@@ -80,6 +80,7 @@ private:
     void ProcessInput();
     void OnMouseDown(int btn);
     void OnMouseUp(int btn);
+    void OnMouseDoubleClick(int btn);
     void OnMouseDrag(int btn);
 
     void ShowPoints(float ImageScale, ImVec2 im_pos, ImVec2 MousePos);
