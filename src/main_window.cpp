@@ -719,7 +719,7 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
         {
             if (tick.id == selectedId)
                 col = tickSel;
-            else if (tick.id == hoveredId)
+            else if (tick.id == hoveredId && !selectedId)
                 col = tickHover;
         }
         
@@ -761,7 +761,7 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
         {
             if (tick.id == selectedId)
                 col = tickSel;
-            else if (tick.id == hoveredId)
+            else if (tick.id == hoveredId && !selectedId)
                 col = tickHover;
         }
 
