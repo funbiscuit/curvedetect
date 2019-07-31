@@ -96,6 +96,7 @@
 
 // Data
 static int			g_ImageTexID = -1;
+static bool			g_ImageMakeBin = false;
 static int			g_BinarizationLevel = 127;
 
 // OpenGL Data
@@ -104,6 +105,7 @@ static GLuint       g_FontTexture = 0;
 static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 
 static int			g_AttribLocationMakeBin = 0;
+static int			g_AttribLocationMakeGray = 0;
 static int			g_AttribLocationBinLevel = 0;
 
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
@@ -111,9 +113,10 @@ static int          g_AttribLocationVtxPos = 0, g_AttribLocationVtxUV = 0, g_Att
 static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 
 
-void ImGui_ImplOpenGL3_SetImageTexID(int ID)
+void ImGui_ImplOpenGL3_SetImageBin(int ID, bool makeBin)
 {
     g_ImageTexID = ID;
+    g_ImageMakeBin = makeBin;
 }
 
 void ImGui_ImplOpenGL3_SetBinarizationLevel(int Level)
@@ -315,11 +318,13 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     
                     if (g_ImageTexID == (intptr_t)pcmd->TextureId)
                     {
-                        glUniform1i(g_AttribLocationMakeBin, 1);
+                        glUniform1i(g_AttribLocationMakeGray, 1);
+                        glUniform1i(g_AttribLocationMakeBin, g_ImageMakeBin);
                         glUniform1f(g_AttribLocationBinLevel, float(g_BinarizationLevel) / 255.0f);
                     }
                     else
                     {
+                        glUniform1i(g_AttribLocationMakeGray, 0);
                         glUniform1i(g_AttribLocationMakeBin, 0);
                     }
                     
@@ -489,6 +494,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     const GLchar* fragment_shader =
         "uniform sampler2D Texture;\n"
         "uniform bool bMakeBin;\n"
+        "uniform bool bMakeGray;\n"
         "uniform float ColorLevel;\n"
         "in vec2 Frag_UV;\n"
         "in vec4 Frag_Color;\n"
@@ -496,9 +502,10 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "void main()\n"
         "{\n"
         "	vec4 TexColor = texture( Texture, Frag_UV.st);\n"
+        "	float gray = 0.216f*TexColor.x+0.7152f*TexColor.y+0.0722*TexColor.z;\n"
         "	if(bMakeBin)\n"
         "	{\n"
-        "		if(0.216f*TexColor.x+0.7152f*TexColor.y+0.0722*TexColor.z < ColorLevel)\n"
+        "		if(gray < ColorLevel)\n"
         "		{\n"
         "			TexColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
         "		}\n"
@@ -507,6 +514,8 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "			TexColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
         "		}\n"
         "	}\n"
+        "	else if (bMakeGray)\n"
+        "	    TexColor = vec4(gray, gray, gray, 1.0f);\n"
         "	Out_Color = Frag_Color * TexColor;\n"
         "}\n";
 
@@ -531,6 +540,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     CheckProgram(g_ShaderHandle, "shader program");
     
     g_AttribLocationMakeBin = glad_glGetUniformLocation(g_ShaderHandle, "bMakeBin");
+    g_AttribLocationMakeGray = glad_glGetUniformLocation(g_ShaderHandle, "bMakeGray");
     g_AttribLocationBinLevel = glad_glGetUniformLocation(g_ShaderHandle, "ColorLevel");
     
     g_AttribLocationTex = glad_glGetUniformLocation(g_ShaderHandle, "Texture");

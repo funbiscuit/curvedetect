@@ -281,7 +281,7 @@ void MainWindow::ShowImage(ImVec2 canvasSize)
         //this is used to distinguish in shader
         //between our image (that should be binarized)
         //and all other textures (that should be rendered without changes)
-        ImGui_ImplOpenGL3_SetImageTexID(bShowBinarization ? texID : -1);
+        ImGui_ImplOpenGL3_SetImageBin(texID, bShowBinarization);
     }
 }
 

@@ -50,5 +50,5 @@ IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 IMGUI_IMPL_API unsigned int ImGui_ImplOpenGL3_CreateTexture(unsigned char* pixels, int width, int height, bool withAlpha, bool smooth=true);
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyTexture(unsigned int id);
 
-IMGUI_API void          ImGui_ImplOpenGL3_SetImageTexID(int ID);
+IMGUI_API void          ImGui_ImplOpenGL3_SetImageBin(int ID, bool makeBin);
 IMGUI_API void          ImGui_ImplOpenGL3_SetBinarizationLevel(int Level);

@@ -26,8 +26,8 @@ Image::Image(std::string path)
             for (int ky = 0; ky < height; ky++)
             {
                 float r = *(image + 3*(ky * width + kx));
-                float g = *(image + 3*(ky * width + kx + 1));
-                float b = *(image + 3*(ky * width + kx + 2));
+                float g = *(image + 3*(ky * width + kx)+1);
+                float b = *(image + 3*(ky * width + kx)+2);
             
                 ImageMatrix(ky, kx) =int(0.2126f * r + 0.7152f * g + 0.0722f * b);
             }
