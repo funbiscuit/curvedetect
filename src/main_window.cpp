@@ -448,7 +448,16 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     uint64_t hoveredId=curve->GetHoveredId(ImageElement::POINT);
     auto& allPoints=curve->GetAllPoints();
     auto& userPoints=curve->GetUserPoints();
-    
+
+    float subdivSize = 8.f;
+    float userSize = 12.f;
+    auto lineColor = ImColor(128, 128, 128, 255);
+    auto pointStroke = ImColor(64, 64, 64, 255);
+    auto userHover = ImColor(255, 255, 255, 255);
+    auto userFill = ImColor(124, 252, 0, 255);
+    auto subdivFill = ImColor(128, 128, 128, 255);
+    auto subdivBadFill = ImColor(205, 92, 92, 255);
+
     //draw lines between subdivided points
     if (allPoints.size() > 1)
     {
@@ -456,14 +465,15 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
         {
             ImVec2 PointPos0 = allPoints[kp].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
             ImVec2 PointPos1 = allPoints[kp + 1].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
-            
-            ImU32 LineColor = ImColor(80, 255, 80, 200);
-            draw_list->AddLine(PointPos0, PointPos1, LineColor, 2.0f);
+
+            draw_list->AddLine(PointPos0, PointPos1, lineColor, 1.5f);
+
+            ImU32 fill = allPoints[kp].isSnapped ? subdivFill : subdivBadFill;
             
             if (bDrawSubdivideMarkers)
             {
-                draw_list->AddCircleFilled(PointPos0, 4.0f, ImColor(80, 255, 80, 200), 8);
-                draw_list->AddCircle(PointPos0, 5.0f, ImColor(0, 0, 0, 200), 8, 2.0f);
+                draw_list->AddCircleFilled(PointPos0, subdivSize*0.5f, pointStroke);
+                draw_list->AddCircleFilled(PointPos0, subdivSize*0.5f-1.f, fill);
             }
         }
     }
@@ -479,29 +489,19 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
 //        ImU32 LineColor = ImColor(80, 220, 80, 220);
 //        draw_list->AddLine(PointPos0, MousePos, LineColor, 2.0f);
 //    }
-    
+
     auto& app=MainApp::getInstance();
     for (const auto &point : userPoints) {
         ImVec2 PointPos = point.imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
-        
-        ImU32 CircleFill = ImColor(150, 150, 150, 255);
-        
+
+        ImU32 fill = userFill;
+
         if (CurrentMode == MODE_POINTS)
-        {
             if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
-            {
-                
-                CircleFill = ImColor(255, 255, 255, 255);
-                if (!app.isCtrlPressed() && app.isShiftPressed() && !ImGui::IsMouseDown(0))
-                {
-                    CircleFill = ImColor(255, 20, 20, 255);
-                    
-                }
-            }
-        }
-        
-        draw_list->AddCircleFilled(PointPos, 4.0f, CircleFill);
-        draw_list->AddCircle(PointPos, 5.0f, ImColor(0, 0, 0, 200), 12, 2.0f);
+                fill = userHover;
+
+        draw_list->AddCircleFilled(PointPos, userSize*0.5f, pointStroke);
+        draw_list->AddCircleFilled(PointPos, userSize*0.5f-1.f, fill);
     }
 }
 
@@ -678,13 +678,17 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
     
     
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    
-    ImU32 TickColor = ImColor(120, 120, 120, 255);
+
+    const auto tickColor = ImColor(128, 128, 128, 255);
+    const auto tickHover = ImColor(152, 248, 59, 255);
+    const auto tickSel = ImColor(59, 155, 59, 255);
+
     
     auto horizon=curve->GetHorizon();
     auto CoordOriginImg=horizon.imagePosition.ToImVec2();
     auto CoordOriginTargetX=horizon.target.imagePosition.ToImVec2();
     uint64_t hoveredId=curve->GetHoveredId(ImageElement::TICKS);
+    uint64_t selectedId=curve->GetSelectedId();
     auto& XTicks=curve->GetXTicks();
     auto& YTicks=curve->GetYTicks();
     
@@ -700,11 +704,14 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
     
     //draw tick lines
     for (auto &tick : XTicks) {
-        ImU32 col = TickColor;
-        
-        if (tick.id == hoveredId && (CurrentMode & MODE_TICKS))
+        ImU32 col = tickColor;
+
+        if (CurrentMode & MODE_TICKS)
         {
-            col = ImColor(255, 20, 20, 255);
+            if (tick.id == selectedId)
+                col = tickSel;
+            else if (tick.id == hoveredId)
+                col = tickHover;
         }
         
         ImVec2 XTickPosition= tick.imagePosition.ToImVec2();
@@ -739,11 +746,14 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
         ImGui::PopStyleColor();
     }
     for (auto &tick : YTicks) {
-        ImU32 col = TickColor;
+        ImU32 col = tickColor;
 
-        if (tick.id == hoveredId && (CurrentMode & MODE_TICKS))
+        if (CurrentMode & MODE_TICKS)
         {
-            col = ImColor(255, 20, 20, 255);
+            if (tick.id == selectedId)
+                col = tickSel;
+            else if (tick.id == hoveredId)
+                col = tickHover;
         }
 
         ImVec2 YTickPosition= tick.imagePosition.ToImVec2();
@@ -798,36 +808,39 @@ void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
     auto selectedId=curve->GetSelectedId();
     auto hoveredId=curve->GetHoveredId(ImageElement::HORIZON);
 
+    float pointSize = 12.f;
+    auto lineColor = ImColor(128, 128, 128, 255);
+    auto pointStroke = ImColor(64, 64, 64, 255);
+    auto pointHover = ImColor(255, 255, 255, 255);
+    auto pointFill = ImColor(255, 200, 60, 255);
+
     auto CoordOriginImg=horizon.imagePosition.ToImVec2();
     auto CoordOriginTargetX=horizon.target.imagePosition.ToImVec2();
     
     ImVec2 CoordOriginScreen = CoordOriginImg*CurrentImageScale + im_pos + WinPos;
     ImVec2 CoordTargetScreen = CoordOriginTargetX*CurrentImageScale + im_pos + WinPos;
 
-    //draw axis
-    ImU32 AxisColor = ImColor(120, 120, 120, 220);
+    //draw horizon
+    draw_list->AddLine(CoordOriginScreen, CoordTargetScreen, lineColor, 2.0f);
 
-    draw_list->AddLine(CoordOriginScreen, CoordTargetScreen, AxisColor, 3.0f);
-
-    ImU32 CircleFill = ImColor(150, 150, 150, 255);
+    ImU32 fill = pointFill;
 
     if (ImageHorizon::ORIGIN == selectedId || (selectedId == 0 && ImageHorizon::ORIGIN == hoveredId))
-    {
-        CircleFill = ImColor(255, 255, 255, 255);
-    }
+        fill = pointHover;
 
-    draw_list->AddCircleFilled(CoordOriginScreen, 4.0f, CircleFill);
-    draw_list->AddCircle(CoordOriginScreen, 5.0f, ImColor(0, 0, 0, 200), 12, 2.0f);
+    draw_list->AddCircleFilled(CoordOriginScreen, pointSize*0.5f, pointStroke);
+    draw_list->AddCircleFilled(CoordOriginScreen, pointSize*0.5f-1.f, fill);
 
-    CircleFill = ImColor(150, 150, 150, 255);
+
+
+    fill = pointFill;
 
     if (ImageHorizon::TARGET == selectedId || (selectedId == 0 && ImageHorizon::TARGET == hoveredId))
-    {
-        CircleFill = ImColor(255, 255, 255, 255);
-    }
+        fill = pointHover;
 
-    draw_list->AddCircleFilled(CoordTargetScreen, 4.0f, CircleFill);
-    draw_list->AddCircle(CoordTargetScreen, 5.0f, ImColor(0, 0, 0, 200), 12, 2.0f);
+    draw_list->AddCircleFilled(CoordTargetScreen, pointSize*0.5f, pointStroke);
+    draw_list->AddCircleFilled(CoordTargetScreen, pointSize*0.5f-1.f, fill);
+
 
 }
 

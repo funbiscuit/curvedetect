@@ -406,9 +406,8 @@ void CurveDetect::UpdateSubdivision(bool bUpdateAll)
                 int n0 = k*(ExtraPoints + 1) + k_p;
                 
                 MidPoint = (SubdividedPoints[n0].imagePosition + SubdividedPoints[n0 + step].imagePosition) * 0.5f;
-                
-                SnapToCurve(MidPoint);
-                SnapToBary(MidPoint);
+
+                SubdividedPoints[n0 + step / 2].isSnapped = SnapToCurve(MidPoint) && SnapToBary(MidPoint);
                 SubdividedPoints[n0 + step / 2].imagePosition = MidPoint;
                 SubdividedPoints[n0 + step / 2].isSubdivisionPoint = true;
             }
