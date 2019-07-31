@@ -195,7 +195,7 @@ void CurveDetect::ExportToClipboard(std::string columnSeparator,
     
     SortPoints();
     UpdateSubdivision(true);
-    SortArray(SubdividedPoints);
+//    SortArray(SubdividedPoints);
     
     Vec2D RealPoint;
     std::stringstream sstr;
@@ -263,7 +263,7 @@ void CurveDetect::ExportPoints(const char* path, bool asText)
 {
     SortPoints();
     UpdateSubdivision(true);
-    SortArray(SubdividedPoints);
+//    SortArray(SubdividedPoints);
     
     Vec2D RealPoint;
     
