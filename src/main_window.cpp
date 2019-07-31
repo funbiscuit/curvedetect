@@ -430,7 +430,10 @@ void MainWindow::ProcessInput()
             bIsMouseDownFirst = true;
         }
         if(ImGui::IsMouseDoubleClicked(0))
+        {
             OnMouseDoubleClick(0);
+            bIsMouseDownFirst = true;
+        }
         
         // Open context menu
         if (ImGui::IsMouseClicked(1))
