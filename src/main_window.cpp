@@ -874,70 +874,19 @@ void MainWindow::ShowSidePanel()
     
     if(curve)
         SubdivideIterations=curve->SubdivideIterations;
-    
-    int PrevSubdivideIterations = SubdivideIterations;
-// 	ImGui::PushItemWidth(65.0f);
-// 	ImGui::InputInt("Subdivision", &SubdivideIterations);
-// 	ImGui::PopItemWidth();
-    
+
     ImVec2 CurPos = ImGui::GetCursorPos();
-    
+
     ImGui::SetCursorPosY(CurPos.y + 3.0f);
-    ImGui::Text("Subdivision");
+    ImGui::Text("Subdivision:");
     ImGui::SameLine();
     ImGui::SetCursorPosY(CurPos.y);
-    ImGui::SetCursorPosX(SettingsWidth -30.0f*2-5.0f);
-    
-    if (PrevSubdivideIterations <=0 || !curve)
-        ImGui_PushDisableButton();
-    if (ImGui::Button("-", ImVec2(30.f, 0)) && SubdivideIterations>0)
-    {
-        SubdivideIterations--;
-    }
-    if (PrevSubdivideIterations <=0 || !curve)
-        ImGui_PopDisableButton();
-    
-    ImGui::SameLine();
-    ImGui::SetCursorPosX(SettingsWidth - 30.0f);
-    
-    if (PrevSubdivideIterations >=CurveDetect::MaxSubdivideIterations || !curve)
-        ImGui_PushDisableButton();
-    if (ImGui::Button("+", ImVec2(30.f, 0)) && SubdivideIterations<CurveDetect::MaxSubdivideIterations)
-    {
-        SubdivideIterations++;
-    }
-    if (PrevSubdivideIterations >=CurveDetect::MaxSubdivideIterations || !curve)
-        ImGui_PopDisableButton();
 
-// 	if (SubdivideIterations > MaxSubdivideIterations)
-// 		SubdivideIterations = MaxSubdivideIterations;
-// 	if (SubdivideIterations < 0)
-// 		SubdivideIterations = 0;
-    
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    ImVec2 WinPos = ImGui::GetWindowPos();
     CurPos = ImGui::GetCursorPos();
-    
-    float barTotalWidth = SettingsWidth;
-    float barSpacing = 5.0f;
-    float barWidth = (barTotalWidth - (CurveDetect::MaxSubdivideIterations - 1)*barSpacing) / float(CurveDetect::MaxSubdivideIterations);
-    
-    for (int i = 0; i < CurveDetect::MaxSubdivideIterations; i++)
-    {
-        ImVec2 PointPos0 = ImVec2((barWidth + barSpacing)*i, 5.0f) + WinPos + CurPos;
-        ImVec2 PointPos1 = ImVec2((barWidth + barSpacing)*i+barWidth, 5.0f) + WinPos + CurPos;
-        ImVec2 PointPos2 = ImVec2(barWidth+barSpacing, 5.0f) + WinPos + CurPos;
-        ImU32 LineColor = ImColor(200, 200, 200, 255);
-        
-        if(i<SubdivideIterations)
-            LineColor= ImColor(154, 204, 255, 255);//TODO primary color
-        
-        draw_list->AddLine(PointPos0, PointPos1, LineColor, 6.0f);
-        
-        
-    }
-    
-    ImGui::SetCursorPosY(CurPos.y + 15.0f);
+
+    ImGui::PushItemWidth(SettingsWidth - CurPos.x);
+    ImGui::SliderInt("##subdiv_slider", &SubdivideIterations, 0, 6);
+    ImGui::PopItemWidth();
     
     
     
