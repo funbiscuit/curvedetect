@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <algorithm>
+#include <cmath>
 #include "mat_file_writer.h"
 #include "main_app.h"
 
@@ -411,14 +412,14 @@ void CurveDetect::UpdateSubdivision()
             auto& nextLeft = SubdividedPoints[left+1];
 
             nextLeft.imagePosition = leftPos + (rightPos-leftPos)/double(right-left);
-            nextLeft.isSnapped = SnapToCurve(nextLeft.imagePosition) && SnapToBary(nextLeft.imagePosition);
+            nextLeft.isSnapped = Snap(nextLeft.imagePosition);
             nextLeft.isSubdivisionPoint = true;
 
             if(j!=extraPointsHalf)
             {
                 auto& nextRight = SubdividedPoints[right-1];
                 nextRight.imagePosition = rightPos - (rightPos-leftPos)/double(right-left);
-                nextRight.isSnapped = SnapToCurve(nextRight.imagePosition) && SnapToBary(nextRight.imagePosition);
+                nextRight.isSnapped = Snap(nextRight.imagePosition);
                 nextRight.isSubdivisionPoint = true;
             }
 
@@ -428,89 +429,10 @@ void CurveDetect::UpdateSubdivision()
     }
 }
 
-bool CurveDetect::SnapToCurve(Vec2D& point)
+bool CurveDetect::Snap(Vec2D& pos)
 {
-    
-    int localX, localY;//to this vars local coords will be written
-    
-    int hside = (int)SnapDistance;
-    
-    localX = int(point.x);
-    localY = int(point.y);
-    
-    if (!image->getClosestBlack(localX, localY, hside, BinarizationLevel))
-    {
-        //std::cout << "Bad point!\n";
-        return false;
-    }
-    
-    if (localX != int(point.x))
-    {
-        point.x = float(localX);
-    }
-    if (localY != int(point.y))
-    {
-        point.y = float(localY);
-    }
-    return true;
-    //std::cout << "loc snap: (" << snapX << "," << snapY << ")\n";
-}
-
-bool CurveDetect::SnapToBary(Vec2D& point)
-{
-    int localX, localY;//to this vars local coords will be written
-    
-    int baryX, baryY; //local coords of snapped point
-    
-    int hside = 3;// ZoomPixelHSide;
-    
-    localX = int(point.x);
-    localY = int(point.y);
-    
-    MatrixXi PointRegion;
-    
-    if (!image->getNearbyPoints(localX, localY, hside, PointRegion))
-    {
-        std::cout << "Bad point!\n";
-        return false;
-    }
-    
-    //by default just leave point where it was
-    baryX = localX;
-    baryY = localY;
-    
-    
-    
-    int baryMass = 0;
-    
-    Vec2D BaryOffset;
-    
-    for (int kx = 0; kx <= 2 * hside; kx++)
-    {
-        for (int ky = 0; ky <= 2 * hside; ky++)
-        {
-            if (PointRegion(ky, kx) < BinarizationLevel)
-            {
-                baryMass += BinarizationLevel - PointRegion(ky, kx);
-                
-                BaryOffset += Vec2D(double(kx - localX), double(ky - localY))*double(BinarizationLevel - PointRegion(ky, kx));
-                
-            }
-            
-        }
-    }
-    
-    if (baryMass > 0)
-    {
-        BaryOffset /= double(baryMass);
-
-        point += BaryOffset;
-        return true;
-    } else
-        return false;
-    
-    //ImagePoint.x += (baryX - localX);
-    //ImagePoint.y += (baryY - localY);
+    return image ? image->SnapToCurve(pos, BinarizationLevel, (int)SnapDistance) &&
+                    image->SnapToBary(pos, BinarizationLevel) : false;
 }
 
 Vec2D CurveDetect::ConvertImageToReal(const Vec2D& point)
@@ -616,7 +538,7 @@ void CurveDetect::SnapSelected()
     auto sel = GetSelected();
 
     if(sel && image)
-        sel->isSnapped = SnapToCurve(sel->imagePosition) && SnapToBary(sel->imagePosition);
+        sel->isSnapped = Snap(sel->imagePosition);
 }
 
 void CurveDetect::BackupSelectedTick()

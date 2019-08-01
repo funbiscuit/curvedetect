@@ -22,7 +22,6 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/libs/imgui
         ${PROJECT_SOURCE_DIR}/libs/tfd
         ${PROJECT_SOURCE_DIR}/libs/stb
-        ${PROJECT_SOURCE_DIR}/libs/eigen
         ${PROJECT_SOURCE_DIR}
 )
 

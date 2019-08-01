@@ -71,7 +71,8 @@ public:
     
 private:
     std::shared_ptr<Image> image;
-    
+
+    //TODO move to settings
     float SnapDistance;
     float hoverZone = 14.f;
     float MinTickPixelDistance = 5.0f;
@@ -107,22 +108,8 @@ private:
     void SortArray(std::vector<ImagePoint>& Array);
     bool IsArraySorted(std::vector<ImagePoint>& Array);
 
-    
-    /**
-     * will snap point to closest black (0) point
-     * so for more precision use with SnapToBary
-     * @param ImagePoint
-     */
-    bool SnapToCurve(Vec2D& point);
-    
-    /**
-     * will snap point to barycenter of current zoom region
-     * will not be precise if there are grid lines in the region
-     * so make sure that in zoom region only curve points are shown
-     * @param ImagePoint
-     */
-    bool SnapToBary(Vec2D& point);
-    
+    bool Snap(Vec2D& pos);
+
     /**
      * converts pixel coordinates to real data
      * @param ImagePoint

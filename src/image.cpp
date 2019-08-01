@@ -12,24 +12,25 @@
 Image::Image(std::string path)
 {
     texture=0;
+    imagePixels = nullptr;
 
     image = stbi_load(path.c_str(), &width, &height, nullptr, 3);
 
     if(image)
     {
         texture = ImGui_ImplOpenGL3_CreateTexture(image, width, height, false, false);
+
+        imagePixels = new uint8_t[width*height];
     
-        ImageMatrix = MatrixXi(height, width);
-    
-        for (int kx = 0; kx < width; kx++)
+        for (int col = 0; col < width; col++)
         {
-            for (int ky = 0; ky < height; ky++)
+            for (int row = 0; row < height; row++)
             {
-                float r = *(image + 3*(ky * width + kx));
-                float g = *(image + 3*(ky * width + kx)+1);
-                float b = *(image + 3*(ky * width + kx)+2);
-            
-                ImageMatrix(ky, kx) =int(0.2126f * r + 0.7152f * g + 0.0722f * b);
+                float r = *(image + 3*(row * width + col));
+                float g = *(image + 3*(row * width + col)+1);
+                float b = *(image + 3*(row * width + col)+2);
+
+                imagePixels[row * width + col]=uint8_t(0.2126f * r + 0.7152f * g + 0.0722f * b);
             }
         }
     }
@@ -39,6 +40,8 @@ Image::~Image()
 {
     if(image)
         delete(image);
+    if(imagePixels)
+        delete(imagePixels);
     //TODO SIGSEGV if destroying after window close
 //    if(texture!=0)
 //        ImGui_ImplOpenGL3_DestroyTexture(texture);
@@ -75,11 +78,11 @@ int Image::getPixelValue(int px, int py)
     if (!isPixelInside(px, py))
         return 0;
     
-    return ImageMatrix(py, px);
+    return imagePixels[py * width + px];
 }
 
 
-bool Image::getNearbyPoints(int& px, int& py, int hside, MatrixXi& out_PointRegion)
+bool Image::getNearbyPoints(int& px, int& py, int hside)
 {
     
     if (!isPixelInside(px, py))
@@ -87,6 +90,7 @@ bool Image::getNearbyPoints(int& px, int& py, int hside, MatrixXi& out_PointRegi
     
     int localX, localY;
     localX = localY = hside;
+    int side = hside*2+1;
     
     if (px < hside)
     {
@@ -109,14 +113,14 @@ bool Image::getNearbyPoints(int& px, int& py, int hside, MatrixXi& out_PointRegi
         localY = 2 * hside + 1 - height + py;
         py = height - hside - 1;
     }
-    
-    out_PointRegion.resize(2 * hside + 1, 2 * hside + 1);
+
+    pixelsRegion.resize(side*side);
     
     for (int kx = px - hside; kx <= px + hside; kx++)
     {
         for (int ky = py - hside; ky <= py + hside; ky++)
         {
-            out_PointRegion(ky - py + hside, kx - px + hside) = ImageMatrix(ky, kx);
+            pixelsRegion[(ky - py + hside)*side + kx - px + hside] = imagePixels[ky * width + kx];
         }
     }
     
@@ -126,68 +130,99 @@ bool Image::getNearbyPoints(int& px, int& py, int hside, MatrixXi& out_PointRegi
     return true;
 }
 
-bool Image::getClosestBlack(int& px, int& py, int hside, int ColorLevel)
+bool Image::SnapToCurve(Vec2D& point, int binLevel, int dist)
 {
-    if (!isPixelInside(px, py))
+    if(!image)
         return false;
-    
-    for (int side = 0; side <= hside; side++)
+
+    int hside = dist;
+    int side = hside*2+1;
+
+    if(width < side*2 || height<side*2)
+        return false;
+
+    int px = (int) std::round(point.x);
+    int py = (int) std::round(point.y);
+
+    int minDist = side*side;
+    int closestX = -1;
+    int closestY = -1;
+
+
+    for (int row = 0; row < side; ++row)
     {
-        int kx, ky;
-        
-        int left = (px < side ? 0 : px - side);
-        int right = (px > width - 1 - side ? width - 1 - px : px + side);
-        int top = (py < side ? 0 : py - side);
-        int bottom = (py > height - 1 - side ? height - 1 - px : py + side);
-        
-        for (kx = left; kx <= right; kx++)
+        for (int column = 0; column < side; ++column)
         {
-            for (ky = top; ky <= bottom; ky++)
+            int globalRow = py - hside + row;
+            int globalColumn = px - hside + column;
+            bool isBlack = false;
+            if (globalRow >= 0 && globalRow < height && globalColumn >= 0 && globalColumn < width)
+                isBlack = imagePixels[globalRow * width + globalColumn] < binLevel;
+
+            if (isBlack)
             {
-                int dist2 = (kx - px)*(kx - px) + (ky - py)*(ky - py);
-                
-                if(dist2> side*side || dist2<(side-1)*(side-1))
-                    continue;
-                
-                if (ImageMatrix(ky, kx) < ColorLevel)
+                int dx = hside - column;
+                int dy = hside - row;
+                int dist = dx * dx + dy * dy;
+                if (dist < minDist)
                 {
-                    px = kx;
-                    py = ky;
-                    return true;
+                    minDist = dist;
+                    closestX = column;
+                    closestY = row;
                 }
             }
-// 			if (ImageMatrix(top, kx) < CurveColorLevel)
-// 			{
-// 				px = kx;
-// 				py = top;
-// 				return true;
-// 			}
-// 			if (ImageMatrix(bottom, kx) < CurveColorLevel)
-// 			{
-// 				px = kx;
-// 				py = bottom;
-// 				return true;
-// 			}
         }
-// 		for (ky = top; ky <= bottom; ky++)
-// 		{
-// 			if (ImageMatrix(ky, left) < CurveColorLevel)
-// 			{
-// 				px = left;
-// 				py = ky;
-// 				return true;
-// 			}
-// 			if (ImageMatrix(ky, right) < CurveColorLevel)
-// 			{
-// 				px = right;
-// 				py = ky;
-// 				return true;
-// 			}
-// 		}
-    
-    
-    
     }
-    
-    return false;
+
+    if (closestX == -1 || closestY == -1)
+        return false;
+
+    point.x = px + closestX - hside;
+    point.y = py + closestY - hside;
+
+    return true;
+}
+
+bool Image::SnapToBary(Vec2D& point, int binLevel)
+{
+    int localX, localY;//to this vars local coords will be written
+
+    int baryX, baryY; //local coords of snapped point
+
+    //TODO move to settings
+    int hside = 6;// ZoomPixelHSide;
+    int side = hside*2+1;
+
+    localX = int(point.x);
+    localY = int(point.y);
+
+    if (!getNearbyPoints(localX, localY, hside))
+    {
+        std::cout << "Bad point!\n";
+        return false;
+    }
+
+    int baryMass = 0;
+    Vec2D BaryOffset;
+
+    for (int kx = 0; kx <= 2 * hside; kx++)
+    {
+        for (int ky = 0; ky <= 2 * hside; ky++)
+        {
+            auto col = pixelsRegion[ky*side + kx];
+            if (col < binLevel)
+            {
+                baryMass += binLevel - col;
+                BaryOffset += Vec2D(double(kx - localX), double(ky - localY))*double(binLevel - col);
+            }
+        }
+    }
+
+    if (baryMass > 0)
+    {
+        BaryOffset /= double(baryMass);
+        point += BaryOffset;
+        return true;
+    } else
+        return false;
 }

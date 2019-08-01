@@ -3,8 +3,8 @@
 #define CURVEDETECT_IMAGE_H
 
 #include <string>
-#include <Eigen/Dense>
-using Eigen::MatrixXi;
+#include <vector>
+#include "image_elements.h"
 
 class Image {
 public:
@@ -19,15 +19,24 @@ public:
     }
     
     bool isPixelInside(int px, int py);
-    bool getClosestBlack(int& px, int& py, int hside, int ColorLevel);
-    
-    
+
     int getPixelValue(int px, int py);
-    
-    //px and py will be replaced with the local coordinates
-    //inside of returned region
-    //region will be a square with side = (2*hside+1)
-    bool getNearbyPoints(int& px, int& py, int hside, MatrixXi& out_PointRegion);
+
+    /**
+     * will snap point to closest black (0) point
+     * so for more precision use with SnapToBary
+     * @param ImagePoint
+     */
+    bool SnapToCurve(Vec2D& point, int binLevel, int dist);
+
+    /**
+     * will snap point to barycenter of current zoom region
+     * will not be precise if there are grid lines in the region
+     * so make sure that in zoom region only curve points are shown
+     * @param ImagePoint
+     */
+    bool SnapToBary(Vec2D& point, int binLevel);
+
 
 private:
 
@@ -36,8 +45,22 @@ private:
     unsigned int texture;
     int width;
     int height;
-    
-    MatrixXi ImageMatrix;
+
+    uint8_t* imagePixels;
+
+    //used for storing result of getNearbyPoints
+    std::vector<uint8_t> pixelsRegion;
+
+
+    /**
+     * Result will be stored in pixelsRegion variable
+     * region will be a square with side = (2*hside+1)
+     * @param px replaced with the local coordinates
+     * @param py replaced with the local coordinates
+     * @param hside half side of region
+     * @return
+     */
+    bool getNearbyPoints(int& px, int& py, int hside);
 
 };
 
