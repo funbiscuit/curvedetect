@@ -698,11 +698,13 @@ void CurveDetect::DeleteSelected()
         }
         selectedPoint = 0;
         hoveredPoint = 0;
+        SortPoints();
         UpdateSubdivision(true);
     }
     else if(selectedOrigin)
     {
         ResetHorizon();
+        SortPoints();
         UpdateSubdivision(true);
     }
 }

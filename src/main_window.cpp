@@ -291,30 +291,16 @@ void MainWindow::OnMouseDown(int btn)
         {
             case MODE_POINTS:
                 if (app.isCtrlPressed())
-                {
                     curve->AddPoint(Vec2D(HoveredPixel));
-                }
-                else if (curve->SelectHovered(ImageElement::POINT))
-                {
-                    curve->MoveSelected(Vec2D(HoveredPixel));
-                    curve->SortPoints();
-                    curve->UpdateSubdivision();
-                }
+                else
+                    curve->SelectHovered(ImageElement::POINT);
                 break;
             case MODE_HORIZON:
-                if (curve->SelectHovered(ImageElement::HORIZON))
-                {
-                    curve->MoveSelected(Vec2D(HoveredPixel));
-                    curve->SortPoints();
-                    curve->UpdateSubdivision();
-                }
+                curve->SelectHovered(ImageElement::HORIZON);
                 break;
             case MODE_TICKS:
                 if (curve->SelectHovered(ImageElement::TICKS))
-                {
-                    //TODO process double click and show input window
                     curve->BackupSelectedTick();
-                }
                 break;
             default:
                 break;
@@ -385,11 +371,12 @@ void MainWindow::OnMouseDrag(int btn)
 
 void MainWindow::ProcessInput()
 {
+    auto& app=MainApp::getInstance();
     static bool bIsMouseDownFirst = true;
     static ImVec2 lastMousePos = ImGui::GetMousePos();
+    static bool prevCtrl = app.isCtrlPressed();
     ImVec2 delta = ImGui::GetMousePos()-lastMousePos;
-    bool moving = (std::abs(delta.x)+std::abs(delta.y))>0.f;
-    auto& app=MainApp::getInstance();
+    bool moving = (std::abs(delta.x)+std::abs(delta.y))>0.f || prevCtrl != app.isCtrlPressed();
 
 
     if (ImGui::IsWindowFocused())
@@ -451,7 +438,7 @@ void MainWindow::ProcessInput()
         bIsReadyForAction = true;
     }
     lastMousePos+=delta;
-    
+    prevCtrl = app.isCtrlPressed();
 }
 
 void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
@@ -475,8 +462,9 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     auto pointStroke = ImColor(64, 64, 64, 255);
     auto userHover = ImColor(255, 255, 255, 255);
     auto userFill = ImColor(124, 252, 0, 255);
+    auto deleteFill = ImColor(205, 92, 92, 255);
     auto subdivFill = ImColor(128, 128, 128, 255);
-    auto subdivBadFill = ImColor(205, 92, 92, 255);
+    auto subdivBadFill = deleteFill;
 
     //draw lines between subdivided points
     if (allPoints.size() > 1)
@@ -518,7 +506,7 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
 
         if (CurrentMode == MODE_POINTS)
             if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
-                fill = userHover;
+                fill = deleteOnRelease ? deleteFill : userHover;
 
         draw_list->AddCircleFilled(PointPos, userSize*0.5f, pointStroke);
         draw_list->AddCircleFilled(PointPos, userSize*0.5f-1.f, fill);
@@ -831,6 +819,7 @@ void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
     auto pointStroke = ImColor(64, 64, 64, 255);
     auto pointHover = ImColor(255, 255, 255, 255);
     auto pointFill = ImColor(255, 200, 60, 255);
+    auto deleteFill = ImColor(205, 92, 92, 255);
 
     auto CoordOriginImg=horizon.imagePosition.ToImVec2();
     auto CoordOriginTargetX=horizon.target.imagePosition.ToImVec2();
@@ -844,7 +833,7 @@ void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
     ImU32 fill = pointFill;
 
     if (ImageHorizon::ORIGIN == selectedId || (selectedId == 0 && ImageHorizon::ORIGIN == hoveredId))
-        fill = pointHover;
+        fill = deleteOnRelease ? deleteFill : pointHover;
 
     draw_list->AddCircleFilled(CoordOriginScreen, pointSize*0.5f, pointStroke);
     draw_list->AddCircleFilled(CoordOriginScreen, pointSize*0.5f-1.f, fill);
@@ -1091,12 +1080,14 @@ void MainWindow::ShowSidePanel()
     std::string modifierStr = "(move)";
     
     auto& app=MainApp::getInstance();
+
+    bool snap = curve ? curve->GetSelectedId()!=0 : false;
     
     if (app.isCtrlPressed())
     {
-        modifierStr = "(new)";
+        modifierStr = snap ? "(snap)" : "(new)";
     }
-    else if (app.isShiftPressed())
+    else if (deleteOnRelease)
     {
         modifierStr = "(delete)";
     }
