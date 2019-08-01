@@ -1,54 +1,28 @@
 #ifndef CURVEDETECT_MAT_FILE_WRITER_H
 #define CURVEDETECT_MAT_FILE_WRITER_H
 
-#include <stdio.h>
-#include <stdint.h>
+#include <cstdio>
+#include <cstdint>
 
-enum miTYPE
+class MatFileWriter
 {
-	miINT8 = 1,
-	miUINT8 = 2,
-	miINT16 = 3,
-	miUINT16 = 4,
-	miINT32 = 5,
-	miUINT32 = 6,
-	miSINGLE = 7,
-	miDOUBLE = 9,
-	miINT64 = 12,
-	miUINT64 = 13,
-	miMATRIX = 14,
+public:
+	static MatFileWriter* get(const char* path);
+
+	MatFileWriter& matrix(const char *name, float *first, size_t rows, size_t cols = 1, bool bRowMajor = true);
+	MatFileWriter& matrix(const char *name, double *first, size_t rows, size_t cols = 1, bool bRowMajor = true);
+
+	void close();
+
+private:
+	FILE *outFile;
+
+	void write_header();
+
+	void write_data_element(uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems);
+	void write_data_element_tag(uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems);
+	void write_data_element_body(uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems);
+
 };
-
-enum mxCLASS
-{
-	mxCHAR_CLASS = 4,
-	mxDOUBLE_CLASS = 6,
-	mxSINGLE_CLASS = 7,
-	mxINT8_CLASS = 8,
-	mxUINT8_CLASS = 9,
-	mxINT16_CLASS = 10,
-	mxUINT16_CLASS = 11,
-	mxINT32_CLASS = 12,
-	mxUINT32_CLASS = 13
-};
-
-
-
-
-void write_test_file(FILE *fp);
-
-
-void write_matrix_to_file(FILE *fp, const char *name, float *first, size_t rows, size_t cols = 1, bool bRowMajor = true);
-void write_matrix_to_file(FILE *fp, const char *name, double *first, size_t rows, size_t cols = 1,
-						  bool bRowMajor = true);
-
-void write_vector_to_file(FILE *fp, const char *name, float *first, size_t nItems);
-
-void write_header(FILE *fp);
-
-void write_data_element(FILE *outfile, uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems);
-
-void write_data_element_tag(FILE *outfile, uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems);
-void write_data_element_body(FILE *outfile, uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems);
 
 #endif //CURVEDETECT_MAT_FILE_WRITER_H

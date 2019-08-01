@@ -255,30 +255,30 @@ void CurveDetect::export_points(const char *path, bool asText)
 {
     update_subdiv();
     
-    Vec2D RealPoint;
-    
-    std::vector<Vec2D> RealUserPoints(userPoints.size());
-    std::vector<Vec2D> RealSubdividedPoints(allPoints.size());
-    
+    Vec2D realPoint;
+
+    double userPointsImage[userPoints.size()*2];
+    double allPointsImage[allPoints.size()*2];
+    double userPointsReal[userPoints.size()*2];
+    double allPointsReal[allPoints.size()*2];
     
     std::ofstream ofs;
     
     if(asText)
-        ofs.open(path);// , std::ofstream::out | std::ofstream::app);
-    
-    
-    
-    
+        ofs.open(path);
+
     for (size_t kp = 0; kp < allPoints.size(); kp++)
     {
-        RealPoint = image_point_to_real(allPoints[kp].imagePosition);
-        RealSubdividedPoints[kp] = RealPoint;
+        allPointsImage[kp*2]=allPoints[kp].imagePosition.x;
+        allPointsImage[kp*2+1]=allPoints[kp].imagePosition.y;
+
+        realPoint = image_point_to_real(allPoints[kp].imagePosition);
+
+        allPointsReal[kp*2]=realPoint.x;
+        allPointsReal[kp*2+1]=realPoint.y;
         
         if (asText)
-        {
-            ofs << RealPoint.x << "\t" << RealPoint.y << "\n";
-        }
-        
+            ofs << realPoint.x << "\t" << realPoint.y << "\n";
     }
     
     if (asText)
@@ -289,23 +289,26 @@ void CurveDetect::export_points(const char *path, bool asText)
     
     for (size_t kp = 0; kp < userPoints.size(); kp++)
     {
-        RealPoint = image_point_to_real(userPoints[kp].imagePosition);
-        RealUserPoints[kp] = RealPoint;
+        userPointsImage[kp*2]=allPoints[kp].imagePosition.x;
+        userPointsImage[kp*2+1]=allPoints[kp].imagePosition.y;
+
+        realPoint = image_point_to_real(allPoints[kp].imagePosition);
+
+        userPointsReal[kp*2]=realPoint.x;
+        userPointsReal[kp*2+1]=realPoint.y;
     }
     
-    
-    FILE* fp=fopen(path, "wb");
-    
-    if (fp != nullptr)
+
+    auto writer = MatFileWriter::get(path);
+
+    if (writer)
     {
-        write_header(fp);
-        write_matrix_to_file(fp, "UserPointsPixels", &(userPoints[0].imagePosition.x), userPoints.size(), 2);
-        write_matrix_to_file(fp, "SubdividedPointsPixels", &(allPoints[0].imagePosition.x), allPoints.size(), 2);
-        write_matrix_to_file(fp, "UserPointsReal", &(RealUserPoints[0].x), RealUserPoints.size(), 2);
-        write_matrix_to_file(fp, "SubdividedPointsReal", &(RealSubdividedPoints[0].x), RealSubdividedPoints.size(), 2);
+        writer->matrix("UserPointsPixels", userPointsImage, userPoints.size(), 2)
+                .matrix("SubdividedPointsPixels", allPointsImage, allPoints.size(), 2)
+                .matrix("UserPointsReal", userPointsReal, userPoints.size(), 2)
+                .matrix("SubdividedPointsReal", allPointsReal, allPoints.size(), 2)
+                .close();
     }
-    
-    fclose(fp);
 }
 
 
