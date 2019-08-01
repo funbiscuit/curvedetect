@@ -4,7 +4,9 @@ Curve Detect
 Almost cross-platform (no macOS support) way to convert scan or picture 
 of your graph to digital data.
 
-Tested with Manjaro Linux and Windows 7/10 x64
+`curvedetect` uses OpenGL 3.0 for rendering so it is required to run it.
+
+Tested with Manjaro Linux (gcc) and Windows 7/10 x64 (mingw-gcc and msvc)
 
 
 
@@ -12,7 +14,8 @@ Requirements
 ------------
 
 To build from source you will need `cmake`.
-Supported compilers are gcc (Linux and MinGW) and msvc
+
+Supported compilers are `gcc` (Linux and MinGW) and `msvc`
 (tested with Visual Studio 2015 Community Edition)
 
 Linux is covered in [Linux](#linux) section.
@@ -62,20 +65,7 @@ Now you should be able to build application with mingw64. Launch mingw64 console
 
 After that just execute `build-win.sh` helper script while located in project directory to build the app.
 If it builds successfully, output will be stored in `bin` directory.
-
-To be able to launch it, you will need to place 3 DLLs to the same folder as the executable
-(if they're not accessible through PATH variable). All of them should be available in
- `C:\msysXX\mingw64\bin` (assuming MSYS2 was installed to `C:\msysXX`).
-As of time of writing this readme, app requires the following DLLs:
-~~~
-libgcc_s_seh-1.dll
-libstdc++-6.dll
-libwinpthread-1.dll
-~~~
-The easiest way to determine what DLLs are actually required is to copy all DLLs from
-`C:\msysXX\mingw64\bin` to the folder with executable and launch it.
-While app is working, select everything and delete them.
-Windows will refuse to delete loaded libraries while all unused will be safely deleted
+No MinGW DLLs are required to launch executable (static linking is used).
 
 ##### Visual Studio
 

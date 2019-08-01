@@ -41,7 +41,7 @@ if( WIN32 )
     ## On Windows disable console if not in debug mode
     if( WIN32 AND NOT (CMAKE_BUILD_TYPE STREQUAL Debug) )
         if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-            set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -mwindows")
+            set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -static -mwindows")
         elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
             set_target_properties(${PROJECT_NAME} PROPERTIES
                     LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
