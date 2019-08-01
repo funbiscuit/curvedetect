@@ -9,14 +9,7 @@
 
 #include <algorithm>
 #include "mat_file_writer.h"
-
-//TODO should not be here
-#include "main_window.h"
-
-#include "imgui_helpers.h"
-
-#include <curve_detect.h>
-#include <main_app.h>
+#include "main_app.h"
 
 
 
@@ -128,7 +121,7 @@ bool CurveDetect::IsReadyForExport(int& out_Result)
     
     out_Result = ExportReadyStatus::ExportReadyStatus_Ready;
     
-    if (SortedUserPoints.size() < 2)
+    if (UserPoints.size() < 2)
     {
         out_Result |= ExportReadyStatus::ExportReadyStatus_NoPoints;
     }
@@ -192,10 +185,8 @@ void CurveDetect::ExportToClipboard(std::string columnSeparator,
     int out_Result;
     if (!IsReadyForExport(out_Result))
         return;
-    
-    SortPoints();
-    UpdateSubdivision(true);
-//    SortArray(SubdividedPoints);
+
+    UpdateSubdivision();
     
     Vec2D RealPoint;
     std::stringstream sstr;
@@ -261,13 +252,11 @@ void CurveDetect::numToStr(double num, char decimalSeparator, std::string& out_S
 
 void CurveDetect::ExportPoints(const char* path, bool asText)
 {
-    SortPoints();
-    UpdateSubdivision(true);
-//    SortArray(SubdividedPoints);
+    UpdateSubdivision();
     
     Vec2D RealPoint;
     
-    std::vector<Vec2D> RealUserPoints(SortedUserPoints.size());
+    std::vector<Vec2D> RealUserPoints(UserPoints.size());
     std::vector<Vec2D> RealSubdividedPoints(SubdividedPoints.size());
     
     
@@ -297,9 +286,9 @@ void CurveDetect::ExportPoints(const char* path, bool asText)
         return;
     }
     
-    for (size_t kp = 0; kp < SortedUserPoints.size(); kp++)
+    for (size_t kp = 0; kp < UserPoints.size(); kp++)
     {
-        RealPoint = ConvertImageToReal(SortedUserPoints[kp].imagePosition);
+        RealPoint = ConvertImageToReal(UserPoints[kp].imagePosition);
         RealUserPoints[kp] = RealPoint;
     }
     
@@ -309,7 +298,7 @@ void CurveDetect::ExportPoints(const char* path, bool asText)
     if (fp != nullptr)
     {
         writeHeader(fp);
-        writeMatrixToMatFile(fp, "UserPointsPixels", &(SortedUserPoints[0].imagePosition.x), SortedUserPoints.size(), 2);
+        writeMatrixToMatFile(fp, "UserPointsPixels", &(UserPoints[0].imagePosition.x), UserPoints.size(), 2);
         writeMatrixToMatFile(fp, "SubdividedPointsPixels", &(SubdividedPoints[0].imagePosition.x), SubdividedPoints.size(), 2);
         writeMatrixToMatFile(fp, "UserPointsReal", &(RealUserPoints[0].x), RealUserPoints.size(), 2);
         writeMatrixToMatFile(fp, "SubdividedPointsReal", &(RealSubdividedPoints[0].x), RealSubdividedPoints.size(), 2);
@@ -321,9 +310,7 @@ void CurveDetect::ExportPoints(const char* path, bool asText)
 
 void CurveDetect::SortPoints()
 {
-    SortedUserPoints = UserPoints;
-    
-    SortArray(SortedUserPoints);
+    SortArray(UserPoints);
 }
 
 
@@ -339,82 +326,106 @@ void CurveDetect::SortArray(std::vector<ImagePoint>& Array)
 
         return proj_i<proj_j;
     });
-
-//    sort(Array.begin(), Array.end(), sort_objectX);
 }
 
-void CurveDetect::UpdateSubdivision(bool bUpdateAll)
+bool CurveDetect::IsArraySorted(std::vector<ImagePoint>& Array)
 {
-    int PointsNum = SortedUserPoints.size();
+    auto origin = horizon.imagePosition;
+    auto target = horizon.target.imagePosition;
+
+    return std::is_sorted(Array.begin(), Array.end(), [&origin, &target](const ImagePoint &lhs, const ImagePoint &rhs)
+    {
+        double proj_i = (target.x - origin.x)*(lhs.imagePosition.x - origin.x) + (target.y - origin.y)*(lhs.imagePosition.y - origin.y);
+        double proj_j = (target.x - origin.x)*(rhs.imagePosition.x - origin.x) + (target.y - origin.y)*(rhs.imagePosition.y - origin.y);
+
+        return proj_i<proj_j;
+    });
+}
+
+void CurveDetect::UpdateSubdivision()
+{
+    //when fast update is true then only intervals where end positions change will be updated
+    //everything else should be the same so we don't bother updating them
+    bool isSorted = IsArraySorted(UserPoints);
+    bool fastUpdate = subdivThreshold == BinarizationLevel && isSorted;
+    subdivThreshold = BinarizationLevel;
+    int userPointsCount = UserPoints.size();
     
-    if (PointsNum < 2)
+    if (userPointsCount < 2)
     {
         SubdividedPoints.clear();
         return;
     }
+    if(!isSorted)
+        SortPoints();
     
     
     //extra points for each two user points
-    //int ExtraPoints = std::pow(2, SubdivideIterations) - 1;
-    int ExtraPoints = (1 << SubdivideIterations) - 1;//=(2^S)-1
-    
-    //std::cout << "ep: " << ExtraPoints << " new: " << (1 << SubdivideIterations)-1 << "\n";
-    
-    int SubPointNum = (ExtraPoints + 1)*(PointsNum - 1) + 1;
-    
-    
-    static std::vector<ImagePoint> LastUserPoints;
-    
-    
-    if (SubdividedPoints.size() != SubPointNum)
-        SubdividedPoints.resize(SubPointNum);
-    
-    
-    
-    //copy existing point to new array
-    for (size_t k = 0; k < SortedUserPoints.size(); k++)
-    {
-        SubdividedPoints[k*(ExtraPoints+1)] = SortedUserPoints[k];
-    }
-    
-    
-    
-    auto PrevPoints = SubdividedPoints;
-    for (size_t k = 0; k < SortedUserPoints.size()-1; k++)
-    {
-        if (SortedUserPoints.size() == LastUserPoints.size())
-        {
-            if (!bUpdateAll
-                && SortedUserPoints[k].X() == LastUserPoints[k].X()
-                && SortedUserPoints[k].Y() == LastUserPoints[k].Y()
-                && SortedUserPoints[k+1].X() == LastUserPoints[k+1].X()
-                && SortedUserPoints[k+1].Y() == LastUserPoints[k+1].Y())
-            {
-                continue;
-            }
-        }
-        
-        Vec2D MidPoint = SortedUserPoints[k].imagePosition;
-        for (int k_it = 0; k_it < SubdivideIterations; k_it++)
-        {
-            //k*(ExtraPoints + 1) - left, (k+1)*(ExtraPoints+1) - right
-            
-            int step = (1 << (SubdivideIterations-k_it));// for 0 it
-            
-            for (int k_p = 0; k_p < ExtraPoints + 1; k_p+=step)
-            {
-                int n0 = k*(ExtraPoints + 1) + k_p;
-                
-                MidPoint = (SubdividedPoints[n0].imagePosition + SubdividedPoints[n0 + step].imagePosition) * 0.5f;
+    int extraPoints = (1 << SubdivideIterations) - 1;//=(2^S)-1
 
-                SubdividedPoints[n0 + step / 2].isSnapped = SnapToCurve(MidPoint) && SnapToBary(MidPoint);
-                SubdividedPoints[n0 + step / 2].imagePosition = MidPoint;
-                SubdividedPoints[n0 + step / 2].isSubdivisionPoint = true;
-            }
-        }
+    //number of points we need to move from one border to mid point (excluding)
+    int extraPointsHalf = (1 << (SubdivideIterations-1));
+
+    int allPointsCount = (extraPoints + 1)*(userPointsCount - 1) + 1;
+
+    if (SubdividedPoints.size() != allPointsCount)
+    {
+        SubdividedPoints.clear();
+        SubdividedPoints.resize(allPointsCount);
+        for(int i=0; i < userPointsCount; ++i)
+            SubdividedPoints[i*(extraPoints+1)].imagePosition = UserPoints[i].imagePosition;
+        fastUpdate=false;
     }
 
-    LastUserPoints = SortedUserPoints;
+    bool forceSubdiv = false;
+
+    int step =extraPoints + 1;
+    for (int i = 0; i < userPointsCount-1; ++i)
+    {
+        //check if we need to subdivide this segment
+
+        int left = i*step;
+        int right = left + step;
+
+        Vec2D leftPos = SubdividedPoints[left].imagePosition;
+        Vec2D rightPos = SubdividedPoints[right].imagePosition;
+        const Vec2D& leftPosNew = UserPoints[i].imagePosition;
+        const Vec2D& rightPosNew = UserPoints[i+1].imagePosition;
+
+
+        //check that both ends didnt move (if it is allowed to check this)
+        if(!forceSubdiv && fastUpdate && leftPos==leftPosNew && rightPos == rightPosNew)
+            continue;
+        else
+        {
+            forceSubdiv = !(rightPos == rightPosNew);
+            SubdividedPoints[left].imagePosition = leftPosNew;
+            SubdividedPoints[right].imagePosition = rightPosNew;
+        }
+
+        for(int j=1; j<= extraPointsHalf; ++j)
+        {
+            leftPos = SubdividedPoints[left].imagePosition;
+            rightPos = SubdividedPoints[right].imagePosition;
+
+            auto& nextLeft = SubdividedPoints[left+1];
+
+            nextLeft.imagePosition = leftPos + (rightPos-leftPos)/double(right-left);
+            nextLeft.isSnapped = SnapToCurve(nextLeft.imagePosition) && SnapToBary(nextLeft.imagePosition);
+            nextLeft.isSubdivisionPoint = true;
+
+            if(j!=extraPointsHalf)
+            {
+                auto& nextRight = SubdividedPoints[right-1];
+                nextRight.imagePosition = rightPos - (rightPos-leftPos)/double(right-left);
+                nextRight.isSnapped = SnapToCurve(nextRight.imagePosition) && SnapToBary(nextRight.imagePosition);
+                nextRight.isSubdivisionPoint = true;
+            }
+
+            ++left;
+            --right;
+        }
+    }
 }
 
 bool CurveDetect::SnapToCurve(Vec2D& point)
@@ -556,8 +567,8 @@ Vec2D CurveDetect::ConvertImageToReal(const Vec2D& point)
 void CurveDetect::ResetAll()
 {
     UserPoints.clear();
-    SortedUserPoints.clear();
     SubdividedPoints.clear();
+    subdivThreshold = -1;
     
     XTicks.resize(2);
     YTicks.resize(2);
@@ -620,7 +631,6 @@ void CurveDetect::AddPoint(Vec2D pos)
     UserPoints.emplace_back(pos);
     selectedPoint = UserPoints.back().id;
     SnapSelected();
-    SortPoints();
     UpdateSubdivision();
 }
 
@@ -698,14 +708,12 @@ void CurveDetect::DeleteSelected()
         }
         selectedPoint = 0;
         hoveredPoint = 0;
-        SortPoints();
-        UpdateSubdivision(true);
+        UpdateSubdivision();
     }
     else if(selectedOrigin)
     {
         ResetHorizon();
-        SortPoints();
-        UpdateSubdivision(true);
+        UpdateSubdivision();
     }
 }
 
@@ -775,7 +783,7 @@ void CurveDetect::SetBinarizationLevel(int level)
     if(BinarizationLevel==level)
         return;
     BinarizationLevel=level;
-    UpdateSubdivision(true);
+    UpdateSubdivision();
 }
 
 
@@ -784,7 +792,7 @@ void CurveDetect::SetSubdivIterations(int subdiv)
     if(SubdivideIterations==subdiv)
         return;
     SubdivideIterations=subdiv;
-    UpdateSubdivision(true);
+    UpdateSubdivision();
 }
 
 ImageHorizon CurveDetect::GetHorizon() {

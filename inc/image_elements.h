@@ -34,6 +34,7 @@ public:
         return x*x + y*y;
     }
 };
+static inline bool operator==(const Vec2D& lhs, const Vec2D& rhs)  { return lhs.x==rhs.x && lhs.y==rhs.y; }
 static inline Vec2D operator*(const Vec2D& lhs, const float rhs)   { return Vec2D(lhs.x*rhs, lhs.y*rhs); }
 static inline Vec2D operator/(const Vec2D& lhs, const float rhs)   { return Vec2D(lhs.x/rhs, lhs.y/rhs); }
 static inline Vec2D operator+(const Vec2D& lhs, const Vec2D& rhs)  { return Vec2D(lhs.x+rhs.x, lhs.y+rhs.y); }

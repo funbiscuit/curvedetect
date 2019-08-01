@@ -362,7 +362,6 @@ void MainWindow::OnMouseDrag(int btn)
 
             if(CurrentMode == MODE_POINTS || CurrentMode == MODE_HORIZON)
             {
-                curve->SortPoints();
                 curve->UpdateSubdivision();
             }
         }

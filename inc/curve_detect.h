@@ -3,8 +3,6 @@
 
 #include <vector>
 #include <string>
-//TODO should not be here, use something else for ImVec2 and ImVec4
-#include <imgui.h>
 #include <memory>
 #include <image.h>
 #include <image_elements.h>
@@ -65,8 +63,7 @@ public:
     void ExportToClipboard(std::string columnSeparator, std::string lineEnding, char decimalSeparator);
 
 
-    void SortPoints();
-    void UpdateSubdivision(bool bUpdateAll = false);
+    void UpdateSubdivision();
 
     static const int MaxSubdivideIterations=6;
     int SubdivideIterations;
@@ -93,8 +90,8 @@ private:
     ImageHorizon::HorizonPoint selectedOrigin = ImageHorizon::NONE;
     
     std::vector<ImagePoint> UserPoints; //position of user points (pixels)
-    std::vector<ImagePoint> SortedUserPoints; //position of user points (pixels)
     std::vector<ImagePoint> SubdividedPoints; //position of all points (pixels) both user and generated
+    int subdivThreshold = -1;
 
     std::vector<ImageTickLine> XTicks;
     std::vector<ImageTickLine> YTicks;
@@ -106,9 +103,9 @@ private:
     void UpdateHoveredTickY(Vec2D imagePos);
     void UpdateHoveredHorizon(Vec2D imagePos);
 
-    
+    void SortPoints();
     void SortArray(std::vector<ImagePoint>& Array);
-
+    bool IsArraySorted(std::vector<ImagePoint>& Array);
 
     
     /**
