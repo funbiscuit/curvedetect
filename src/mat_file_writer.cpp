@@ -7,9 +7,9 @@
 
 #include <imgui.h>
 
-void writeTestMatFile(FILE* fp)
+void write_test_file(FILE *fp)
 {
-	writeHeader(fp);
+	write_header(fp);
 
 	std::vector<float> vect;
 
@@ -27,11 +27,12 @@ void writeTestMatFile(FILE* fp)
 	vect2.push_back(ImVec2(51.0f, 67.0f));
 
 	//writeVectorToMatFile(fp, "TempArr34", &vect[0], vect.size());
-	//writeMatrixToMatFile(fp, "TempArr34", &vect[0], vect.size()/2, 2, true);
-	writeMatrixToMatFile(fp, "TempArr34", &(vect2[0].x), vect2.size(), 2);
+	//write_matrix_to_file(fp, "TempArr34", &vect[0], vect.size()/2, 2, true);
+	write_matrix_to_file(fp, "TempArr34", &(vect2[0].x), vect2.size(), 2);
 }
 
-void writeMatrixToMatFile(FILE* fp, const char* name, float* first, size_t rows, size_t cols /*= 1*/, bool bRowMajor /*= true*/)
+void write_matrix_to_file(FILE *fp, const char *name, float *first, size_t rows, size_t cols /*= 1*/,
+						  bool bRowMajor /*= true*/)
 {
 	//write data element
 	uint32_t data_type = miMATRIX;
@@ -96,18 +97,18 @@ void writeMatrixToMatFile(FILE* fp, const char* name, float* first, size_t rows,
 
 	//write dimenstions
 
-	writeDataElement(fp, miINT32, dims, sizeof(int32_t), 2);
+	write_data_element(fp, miINT32, dims, sizeof(int32_t), 2);
 
 	//write array name
 
-	writeDataElement(fp, miINT8, (void*)name, sizeof(char), static_cast<uint32_t>(strlen(name)));
+	write_data_element(fp, miINT8, (void *) name, sizeof(char), static_cast<uint32_t>(strlen(name)));
 
 
 	//write array data
-	writeDataElementTag(fp, miSINGLE, first, sizeof(float), static_cast<uint32_t>(rows * cols));
+	write_data_element_tag(fp, miSINGLE, first, sizeof(float), static_cast<uint32_t>(rows * cols));
 	if (!bRowMajor)
 	{
-		writeDataElementBody(fp, miSINGLE, first, sizeof(float), static_cast<uint32_t>(rows * cols));
+		write_data_element_body(fp, miSINGLE, first, sizeof(float), static_cast<uint32_t>(rows * cols));
 	}
 	else
 	{
@@ -150,7 +151,8 @@ void writeMatrixToMatFile(FILE* fp, const char* name, float* first, size_t rows,
 }
 
 
-void writeMatrixToMatFile(FILE* fp, const char* name, double* first, size_t rows, size_t cols /*= 1*/, bool bRowMajor /*= true*/)
+void write_matrix_to_file(FILE *fp, const char *name, double *first, size_t rows, size_t cols /*= 1*/,
+						  bool bRowMajor /*= true*/)
 {
 	//TODO combine matrix of different types in one function (a lot of repeating code)
 
@@ -212,17 +214,17 @@ void writeMatrixToMatFile(FILE* fp, const char* name, double* first, size_t rows
 	fwrite(&TempUInt32, sizeof(uint32_t), 1, fp);
 
 	//write dimenstions
-	writeDataElement(fp, miINT32, dims, sizeof(int32_t), 2);
+	write_data_element(fp, miINT32, dims, sizeof(int32_t), 2);
 
 	//write array name
-	writeDataElement(fp, miINT8, (void*)name, sizeof(char), static_cast<uint32_t>(strlen(name)));
+	write_data_element(fp, miINT8, (void *) name, sizeof(char), static_cast<uint32_t>(strlen(name)));
 
 
 	//write array data
-	writeDataElementTag(fp, miDOUBLE, first, sizeof(double), static_cast<uint32_t>(rows * cols));
+	write_data_element_tag(fp, miDOUBLE, first, sizeof(double), static_cast<uint32_t>(rows * cols));
 	if (!bRowMajor)
 	{
-		writeDataElementBody(fp, miDOUBLE, first, sizeof(double), static_cast<uint32_t>(rows * cols));
+		write_data_element_body(fp, miDOUBLE, first, sizeof(double), static_cast<uint32_t>(rows * cols));
 	}
 	else
 	{
@@ -264,14 +266,14 @@ void writeMatrixToMatFile(FILE* fp, const char* name, double* first, size_t rows
 
 }
 
-void writeVectorToMatFile(FILE* fp, const char* name, float* first, size_t nItems)
+void write_vector_to_file(FILE *fp, const char *name, float *first, size_t nItems)
 {
 
-	writeMatrixToMatFile(fp, name, first, nItems, 1);
+	write_matrix_to_file(fp, name, first, nItems, 1);
 
 }
 
-void writeHeader(FILE* fp)
+void write_header(FILE *fp)
 {
 
 	const size_t HeaderSize = 116;	//matlab uses 116 bytes for header text
@@ -318,13 +320,13 @@ void writeHeader(FILE* fp)
 
 }
 
-void writeDataElement(FILE* outfile, uint32_t type, void* data, size_t dataItemSize, uint32_t nDataItems)
+void write_data_element(FILE *outfile, uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems)
 {
-	writeDataElementTag(outfile, type, data, dataItemSize, nDataItems);
-	writeDataElementBody(outfile, type, data, dataItemSize, nDataItems);
+	write_data_element_tag(outfile, type, data, dataItemSize, nDataItems);
+	write_data_element_body(outfile, type, data, dataItemSize, nDataItems);
 }
 
-void writeDataElementTag(FILE* outfile, uint32_t type, void* data, size_t dataItemSize, uint32_t nDataItems)
+void write_data_element_tag(FILE *outfile, uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems)
 {
 	uint32_t    nBytes;
 	uint32_t    paddingBytes = 0;
@@ -353,7 +355,7 @@ void writeDataElementTag(FILE* outfile, uint32_t type, void* data, size_t dataIt
 
 }
 
-void writeDataElementBody(FILE* outfile, uint32_t type, void* data, size_t dataItemSize, uint32_t nDataItems)
+void write_data_element_body(FILE *outfile, uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems)
 {
 	uint8_t     tempUInt8;
 	uint32_t    nBytes;

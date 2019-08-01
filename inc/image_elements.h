@@ -26,7 +26,7 @@ public:
         x=vec.x;
         y=vec.y;
     }
-    ImVec2 ToImVec2() const
+    inline ImVec2 to_imvec() const
     {
         return ImVec2((float)x, (float)y);
     }
@@ -36,16 +36,16 @@ public:
     }
 };
 static inline bool operator==(const Vec2D& lhs, const Vec2D& rhs)  { return lhs.x==rhs.x && lhs.y==rhs.y; }
-static inline Vec2D operator*(const Vec2D& lhs, const float rhs)   { return Vec2D(lhs.x*rhs, lhs.y*rhs); }
-static inline Vec2D operator/(const Vec2D& lhs, const float rhs)   { return Vec2D(lhs.x/rhs, lhs.y/rhs); }
+static inline Vec2D operator*(const Vec2D& lhs, const double rhs)  { return Vec2D(lhs.x*rhs, lhs.y*rhs); }
+static inline Vec2D operator/(const Vec2D& lhs, const double rhs)  { return Vec2D(lhs.x/rhs, lhs.y/rhs); }
 static inline Vec2D operator+(const Vec2D& lhs, const Vec2D& rhs)  { return Vec2D(lhs.x+rhs.x, lhs.y+rhs.y); }
 static inline Vec2D operator-(const Vec2D& lhs, const Vec2D& rhs)  { return Vec2D(lhs.x-rhs.x, lhs.y-rhs.y); }
 static inline Vec2D operator*(const Vec2D& lhs, const Vec2D& rhs)  { return Vec2D(lhs.x*rhs.x, lhs.y*rhs.y); }
 static inline Vec2D operator/(const Vec2D& lhs, const Vec2D& rhs)  { return Vec2D(lhs.x/rhs.x, lhs.y/rhs.y); }
 static inline Vec2D& operator+=(Vec2D& lhs, const Vec2D& rhs)      { lhs.x += rhs.x; lhs.y += rhs.y; return lhs; }
 static inline Vec2D& operator-=(Vec2D& lhs, const Vec2D& rhs)      { lhs.x -= rhs.x; lhs.y -= rhs.y; return lhs; }
-static inline Vec2D& operator*=(Vec2D& lhs, const float rhs)       { lhs.x *= rhs; lhs.y *= rhs; return lhs; }
-static inline Vec2D& operator/=(Vec2D& lhs, const float rhs)       { lhs.x /= rhs; lhs.y /= rhs; return lhs; }
+static inline Vec2D& operator*=(Vec2D& lhs, const double rhs)       { lhs.x *= rhs; lhs.y *= rhs; return lhs; }
+static inline Vec2D& operator/=(Vec2D& lhs, const double rhs)       { lhs.x /= rhs; lhs.y /= rhs; return lhs; }
 
 
 class ImageElement
@@ -109,13 +109,13 @@ public:
 
     }
 
-    void setValueStr(const char* str);
-    static void filterValueStr(std::string& str, bool finalFilter);
+    void set_value(const char *str);
+    static void filter_value(std::string &str, bool finalFilter);
 
-    double DistTo(const Vec2D& imagePosition, const Vec2D& tickDirection);
+    double dist_to(const Vec2D &imagePosition, const Vec2D &tickDirection);
 
-    void MakeBackup();
-    void RestoreBackup();
+    void create_backup();
+    void restore_backup();
 };
 
 
@@ -139,8 +139,8 @@ public:
         target.imagePosition.x+=100.0;
     }
 
-    Vec2D VerticalDirection();
-    Vec2D HorizontalDirection();
+    Vec2D vertical_dir();
+    Vec2D horizontal_dir();
 };
 
 

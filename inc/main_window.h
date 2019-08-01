@@ -33,71 +33,69 @@ public:
 private:
     float toolbar_width;
     std::shared_ptr<Image> image;
+    std::shared_ptr<CurveDetect> curve;
+
+
+    ImColor colorDisabled = ImColor(200, 200, 200);
+    
+    float zoomWindowSize;
     
     
-    ImVec4 ColorDisabled = ImVec4(0.78f, 0.78f, 0.78f, 1.0f);
+    ActionMode currentMode;
     
-    float ZoomWndSize;
-    
-    
-    ActionMode CurrentMode;
-    
-    int ZoomPixelHSide;
+    int zoomPixelHalfSide;
     
     
     char decimalSeparator;
     
     std::string columnSeparator;
     std::string lineEnding;
+
     
-    
-    bool bSmoothPoints;
-    
-    bool bDrawSubdivideMarkers = true;
+    bool bShowSubdivPoints = true;
     bool bShowImage = true;
     bool bShowBinarization = false;
     
     
     
-    float MinImageScale;
-    float CurrentImageScale;
-    float MaxImageScale;
+    float minImageScale;
+    float imageScale;
+    float maxImageScale;
     
     
-    ImVec2 CurrentImPos;
-    ImVec2 HoveredPixel;
+    ImVec2 imagePosition;
+    ImVec2 hoveredImagePixel;
 
     bool bIsContextMenuOpened = false;
     bool bIsReadyForAction = true;
 
     bool deleteOnRelease = false;
-    
-    std::shared_ptr<CurveDetect> curve;
-    
-    void ShowMainWindow();
-    void ShowImage(ImVec2 canvasSize);
 
-    void ProcessInput();
-    void OnMouseDown(int btn);
-    void OnMouseUp(int btn);
-    void OnMouseDoubleClick(int btn);
-    void OnMouseDrag(int btn);
+    
+    void render_main_window();
+    void render_image(ImVec2 canvasSize);
 
-    void ShowPoints(float ImageScale, ImVec2 im_pos, ImVec2 MousePos);
+    void process_input();
+    void on_mouse_down(int btn);
+    void on_mouse_up(int btn);
+    void on_mouse_double_click(int btn);
+    void on_mouse_drag(int btn);
+
+    void render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos);
     
-    void ShowTickConfigPopup();
+    void render_tick_config_popup();
     
-    bool ShowZoomWindow(const ImVec2 &canvas_sz, ImVec2& out_ZoomOrigin);
+    bool render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOrigin);
     
-    void ShowTickLines(ImVec2 im_pos);
+    void render_grid_lines(ImVec2 im_pos);
     
-    void ShowCoordSystem(const ImVec2 &im_pos);
-    
-    
-    void ShowSidePanel();
+    void render_horizon(const ImVec2 &im_pos);
     
     
-    void OpenImage();
+    void render_side_panel();
+    
+    
+    void on_open_image();
     
     
     void ImGui_PopDisableButton();
@@ -105,14 +103,15 @@ private:
     void ImGui_PushDisableButton();
     
     
-    void ResetAll();
+    void reset_all();
     
-    void ExportPoints();
+    void on_export_points();
     
     //tries to make a full line inside of specified region
     //that goes through specified point and points at specified direction
     //outputs result to out_Start and out_End
-    bool MakeFullLine(ImVec2 Point, ImVec2 Direction, ImVec2& out_Start, ImVec2& out_End, ImVec2 RegionSize, ImVec2 RegionTL=ImVec2(0.0f,0.0f));
+    bool extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, ImVec2 &out_End, ImVec2 RegionSize,
+                     ImVec2 RegionTL = ImVec2(0.0f, 0.0f));
     
     
     

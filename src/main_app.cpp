@@ -38,7 +38,7 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
     window = wnd;
 
     //load app icons
-    auto images= Resources::getInstance().get_app_icons();
+    auto images= Resources::get().get_app_icons();
     glfwSetWindowIcon(window, images.size(), &images[0]);
 
 
@@ -78,11 +78,11 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
     
     glfwGetWindowSize(window, &m_width, &m_height);
     mainWindow.on_resize(m_width, m_height);
-    
-    glfwSetWindowSizeCallback(window, onWindowResize);
-    glfwSetKeyCallback(window, onKeyCallback);
-    
-    SetUseIMGUICursor(false);
+
+    glfwSetWindowSizeCallback(window, on_window_resize);
+    glfwSetKeyCallback(window, on_key_callback);
+
+    set_use_imgui_cursor(false);
     
     mainWindow.init();
     
@@ -91,18 +91,18 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
 }
 
 
-void MainApp::onWindowResize(GLFWwindow* wnd, int width, int height)
+void MainApp::on_window_resize(GLFWwindow *wnd, int width, int height)
 {
-    MainApp& inst = getInstance();
+    MainApp& inst = get();
     inst.m_width = width;
     inst.m_height = height;
     inst.mainWindow.on_resize(width, height);
 }
 
 
-void MainApp::onKeyCallback(GLFWwindow* wnd, int key, int scancode, int action, int mods)
+void MainApp::on_key_callback(GLFWwindow *wnd, int key, int scancode, int action, int mods)
 {
-    MainApp& inst = getInstance();
+    MainApp& inst = get();
     
     ImGui_ImplGlfw_KeyCallback(wnd, key, scancode, action, mods);
     
@@ -188,14 +188,14 @@ void MainApp::new_frame()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-MainApp& MainApp::getInstance()
+MainApp& MainApp::get()
 {
     static MainApp instance;
     return instance;
 }
 
 
-void MainApp::SetUseIMGUICursor(bool bShowCursor)
+void MainApp::set_use_imgui_cursor(bool bShowCursor)
 {
     bool showNativeCursor = (!bShowCursor || !bShouldUseIMGUICursor);
     

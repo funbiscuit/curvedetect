@@ -10,15 +10,19 @@
 
 enum ExportReadyStatus //: int
 {
-    ExportReadyStatus_Ready = 0,
-    ExportReadyStatus_NoPoints = 1,
-    ExportReadyStatus_NoXTicks = 2,
-    ExportReadyStatus_NoYTicks = 4,
-    ExportReadyStatus_XTicksSimilarPositions = 8,
-    ExportReadyStatus_XTicksSimilarValues = 16,
-    ExportReadyStatus_YTicksSimilarPositions = 32,
-    ExportReadyStatus_YTicksSimilarValues = 64,
-    
+    READY =                1 << 0,
+    NO_IMAGE =             1 << 1,
+    NO_POINTS =            1 << 2,
+    ONE_POINT =            1 << 3,
+    NO_X_GRID_LINES =      1 << 4,
+    ONE_X_GRID_LINE =      1 << 5,
+    NO_Y_GRID_LINES =      1 << 6,
+    ONE_Y_GRID_LINE =      1 << 7,
+    PIXEL_OVERLAP_X_GRID = 1 << 8,
+    VALUE_OVERLAP_X_GRID = 1 << 9,
+    PIXEL_OVERLAP_Y_GRID = 1 << 10,
+    VALUE_OVERLAP_Y_GRID = 1 << 11,
+
 };
 
 
@@ -28,55 +32,55 @@ public:
     
     CurveDetect(std::shared_ptr<Image> image);
     
-    void ResetAll();
-    void ResetHorizon();
-    void UpdateHoveredItem(Vec2D imagePos);
+    void reset_all();
+    void reset_horizon();
+    void update_hovered(Vec2D hoveredImagePos);
 
-    void AddPoint(Vec2D pos);
+    void add_point(Vec2D pos);
     
-    uint64_t GetSelectedId();
-    ImageElement* GetSelected();
-    uint64_t GetHoveredId(int selectionFilter);
+    uint64_t get_selected_id();
+    ImageElement* get_selected();
+    uint64_t get_hovered_id(int selectionFilter);
 
-    bool SelectHovered(int selectionFilter);
-    void DeleteSelected();
-    bool MoveSelected(Vec2D pos);
-    void DeselectAll();
-    void SnapSelected();
-    void BackupSelectedTick();
+    bool select_hovered(int selectionFilter);
+    void delete_selected();
+    bool move_selected(Vec2D pos);
+    void deselect_all();
+    void snap_selected();
+    void backup_selected_tick();
 
-    void CheckTarget();
+    void check_horizon();
     
-    const std::vector<ImagePoint> GetAllPoints();
-    const std::vector<ImagePoint> GetUserPoints();
-    std::vector<ImageTickLine>& GetXTicks();
-    std::vector<ImageTickLine>& GetYTicks();
+    const std::vector<ImagePoint> get_all_points();
+    const std::vector<ImagePoint> get_user_points();
+    std::vector<ImageTickLine>& get_xticks();
+    std::vector<ImageTickLine>& get_yticks();
 
-    ImageHorizon GetHorizon();
+    ImageHorizon get_horizon();
     
-    void SetBinarizationLevel(int level);
-    void SetSubdivIterations(int subdiv);
+    void set_bin_level(int level);
+    void set_subdiv_level(int subdiv);
     
-    bool IsReadyForExport(int& out_Result);
-    
-    void ExportPoints(const char* path, bool asText);
-    void ExportToClipboard(std::string columnSeparator, std::string lineEnding, char decimalSeparator);
+    bool is_export_ready(int &out_Result);
+
+    //TODO actual export should be inside main app?
+    void export_points(const char *path, bool asText);
+    void copy_to_clipboard(std::string columnSeparator, std::string lineEnding, char decimalSeparator);
 
 
-    void UpdateSubdivision();
+    void update_subdiv();
 
-    static const int MaxSubdivideIterations=8;
-    int SubdivideIterations;
-    int BinarizationLevel;
+    static const int maxSubdivLevel=8;
+    int subdivLevel;
+    int binLevel;
     
 private:
     std::shared_ptr<Image> image;
 
     //TODO move to settings
-    float SnapDistance;
+    float snapDist;
     float hoverZone = 14.f;
-    float MinTickPixelDistance = 5.0f;
-    float MinTickRealDistance = 0.001f;
+    double minTickPixelDiff = 5.0;
 
     uint64_t hoveredPoint = 0;
     uint64_t selectedPoint = 0;
@@ -90,35 +94,37 @@ private:
     ImageHorizon::HorizonPoint hoveredOrigin = ImageHorizon::NONE;
     ImageHorizon::HorizonPoint selectedOrigin = ImageHorizon::NONE;
     
-    std::vector<ImagePoint> UserPoints; //position of user points (pixels)
-    std::vector<ImagePoint> SubdividedPoints; //position of all points (pixels) both user and generated
-    int subdivThreshold = -1;
+    std::vector<ImagePoint> userPoints; //position of user points (pixels)
+    std::vector<ImagePoint> allPoints; //position of all points (pixels) both user and generated
 
-    std::vector<ImageTickLine> XTicks;
-    std::vector<ImageTickLine> YTicks;
+    // binarization level that was used to calculate current subdivision
+    // so if it didn't change we can update subdivision much faster
+    int subdivBinLevel = -1;
+
+    std::vector<ImageTickLine> xticks;
+    std::vector<ImageTickLine> yticks;
 
     ImageHorizon horizon;
 
-    void UpdateHoveredPoint(Vec2D imagePos);
-    void UpdateHoveredTickX(Vec2D imagePos);
-    void UpdateHoveredTickY(Vec2D imagePos);
-    void UpdateHoveredHorizon(Vec2D imagePos);
+    void update_hovered_point(Vec2D imagePos);
+    void update_hovered_tickx(Vec2D imagePos);
+    void update_hovered_ticky(Vec2D imagePos);
+    void update_hovered_horizon(Vec2D imagePos);
 
-    void SortPoints();
-    void SortArray(std::vector<ImagePoint>& Array);
-    bool IsArraySorted(std::vector<ImagePoint>& Array);
+    void sort_points();
+    bool are_points_sorted();
 
-    bool Snap(Vec2D& pos);
+    bool snap(Vec2D &pos);
 
     /**
      * converts pixel coordinates to real data
      * @param ImagePoint
      * @return
      */
-    Vec2D ConvertImageToReal(const Vec2D& point);
+    Vec2D image_point_to_real(const Vec2D &point);
     
     
-    void numToStr(double num, char decimalSeparator, std::string& out_String);
+    void double_to_string(double num, char decimalSeparator, std::string &out_String);
 };
 
 

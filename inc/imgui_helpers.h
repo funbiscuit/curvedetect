@@ -6,7 +6,7 @@
 
 namespace ImGui
 {
-    bool IsMouseHoveringWindow();
+    bool is_mouse_hovering_window();
 }
 
 static inline ImVec2 operator*(const ImVec2& lhs, const float rhs)              { return ImVec2(lhs.x*rhs, lhs.y*rhs); }

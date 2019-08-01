@@ -19,11 +19,11 @@ public:
         return texture;
     }
     
-    bool isPixelInside(int px, int py);
+    bool is_pixel_inside(int px, int py);
 
-    int getPixelValue(int px, int py);
+    int get_pixel_value(int px, int py);
 
-    bool Snap(Vec2D& pos, int binLevel, int dist);
+    bool snap(Vec2D &pos, int binLevel, int dist);
 
 
 private:
@@ -50,14 +50,14 @@ private:
      * @param hside half side of region
      * @return
      */
-    bool getNearbyPoints(int& px, int& py, int hside);
+    bool update_pixel_region(int &px, int &py, int hside);
 
     /**
      * will snap point to closest black (0) point
-     * so for more precision use with SnapToBary
+     * so for more precision use with snap_to_bary
      * @param ImagePoint
      */
-    bool SnapToCurve(Vec2D& point, int binLevel, int dist);
+    bool snap_to_closest(Vec2D &point, int binLevel, int dist);
 
     /**
      * will snap point to barycenter of current zoom region
@@ -65,7 +65,7 @@ private:
      * so make sure that in zoom region only curve points are shown
      * @param ImagePoint
      */
-    bool SnapToBary(Vec2D& point, int binLevel);
+    bool snap_to_bary(Vec2D &point, int binLevel);
 };
 
 

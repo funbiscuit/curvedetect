@@ -25,14 +25,14 @@ public:
     
     void new_frame();
     
-    static MainApp& getInstance();
+    static MainApp& get();
     
     void copy_to_clipboard(const char* text);
     
-    bool isCtrlPressed(){return bCtrlPressed;}
-    bool isShiftPressed(){return bShiftPressed;}
-    bool isAltPressed(){return bAltPressed;}
-    bool isEnterReleased(){return bEnterReleased;}
+    bool is_ctrl_down(){return bCtrlPressed;}
+    bool is_shift_down(){return bShiftPressed;}
+    bool is_alt_down(){return bAltPressed;}
+    bool is_enter_up(){return bEnterReleased;}
 
 private:
     
@@ -43,8 +43,8 @@ private:
     
     MainWindow mainWindow;
     
-    static void onWindowResize(GLFWwindow* wnd, int width, int height);
-    static void onKeyCallback(GLFWwindow* wnd, int key, int scancode, int action, int mods);
+    static void on_window_resize(GLFWwindow *wnd, int width, int height);
+    static void on_key_callback(GLFWwindow *wnd, int key, int scancode, int action, int mods);
     
     bool bShouldUseIMGUICursor;
     
@@ -52,7 +52,7 @@ private:
     
     GLFWwindow *window;
     
-    void SetUseIMGUICursor(bool bShowCursor);
+    void set_use_imgui_cursor(bool bShowCursor);
     
     
 };

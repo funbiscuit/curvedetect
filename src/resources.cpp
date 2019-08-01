@@ -1,7 +1,7 @@
 
 #include "resources.h"
 
-Resources& Resources::getInstance()
+Resources& Resources::get()
 {
     static Resources instance;
     return instance;

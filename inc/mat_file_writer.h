@@ -35,19 +35,20 @@ enum mxCLASS
 
 
 
-void writeTestMatFile(FILE* fp);
+void write_test_file(FILE *fp);
 
 
-void writeMatrixToMatFile(FILE* fp, const char* name, float* first, size_t rows, size_t cols = 1, bool bRowMajor = true);
-void writeMatrixToMatFile(FILE* fp, const char* name, double* first, size_t rows, size_t cols = 1, bool bRowMajor = true);
+void write_matrix_to_file(FILE *fp, const char *name, float *first, size_t rows, size_t cols = 1, bool bRowMajor = true);
+void write_matrix_to_file(FILE *fp, const char *name, double *first, size_t rows, size_t cols = 1,
+						  bool bRowMajor = true);
 
-void writeVectorToMatFile(FILE* fp, const char* name, float* first, size_t nItems);
+void write_vector_to_file(FILE *fp, const char *name, float *first, size_t nItems);
 
-void writeHeader(FILE* fp);
+void write_header(FILE *fp);
 
-void writeDataElement(FILE* outfile, uint32_t type, void* data, size_t dataItemSize, uint32_t nDataItems);
+void write_data_element(FILE *outfile, uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems);
 
-void writeDataElementTag(FILE* outfile, uint32_t type, void* data, size_t dataItemSize, uint32_t nDataItems);
-void writeDataElementBody(FILE* outfile, uint32_t type, void* data, size_t dataItemSize, uint32_t nDataItems);
+void write_data_element_tag(FILE *outfile, uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems);
+void write_data_element_body(FILE *outfile, uint32_t type, void *data, size_t dataItemSize, uint32_t nDataItems);
 
 #endif //CURVEDETECT_MAT_FILE_WRITER_H

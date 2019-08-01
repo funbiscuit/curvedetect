@@ -65,7 +65,7 @@ bool Image::is_loaded()
 }
 
 
-bool Image::isPixelInside(int px, int py)
+bool Image::is_pixel_inside(int px, int py)
 {
     if (!is_loaded() || px < 0 || py < 0)
         return false;
@@ -75,19 +75,19 @@ bool Image::isPixelInside(int px, int py)
 }
 
 
-int Image::getPixelValue(int px, int py)
+int Image::get_pixel_value(int px, int py)
 {
-    if (!isPixelInside(px, py))
+    if (!is_pixel_inside(px, py))
         return 0;
     
     return imagePixels[py * width + px];
 }
 
 
-bool Image::getNearbyPoints(int& px, int& py, int hside)
+bool Image::update_pixel_region(int &px, int &py, int hside)
 {
     
-    if (!isPixelInside(px, py))
+    if (!is_pixel_inside(px, py))
         return false;
     
     int localX, localY;
@@ -132,24 +132,24 @@ bool Image::getNearbyPoints(int& px, int& py, int hside)
     return true;
 }
 
-bool Image::Snap(Vec2D& pos, int binLevel, int dist)
+bool Image::snap(Vec2D &pos, int binLevel, int dist)
 {
     //TODO dist is not changed in snap cache
-    snapCache.setBinLevel(binLevel);
+    snapCache.set_bin_level(binLevel);
     int px = (int)pos.x;
     int py = (int)pos.y;
 
-    if(snapCache.isAvailable(px, py))
+    if(snapCache.is_available(px, py))
         return snapCache.snap(px, py, pos);
     else
     {
-        bool canSnap = SnapToCurve(pos, binLevel, dist) && SnapToBary(pos, binLevel);
-        snapCache.cacheSnap(px, py, pos, canSnap);
+        bool canSnap = snap_to_closest(pos, binLevel, dist) && snap_to_bary(pos, binLevel);
+        snapCache.cache_snap_info(px, py, pos, canSnap);
         return canSnap;
     }
 }
 
-bool Image::SnapToCurve(Vec2D& point, int binLevel, int dist)
+bool Image::snap_to_closest(Vec2D &point, int binLevel, int dist)
 {
     if(!image)
         return false;
@@ -202,7 +202,7 @@ bool Image::SnapToCurve(Vec2D& point, int binLevel, int dist)
     return true;
 }
 
-bool Image::SnapToBary(Vec2D& point, int binLevel)
+bool Image::snap_to_bary(Vec2D &point, int binLevel)
 {
     int localX, localY;//to this vars local coords will be written
 
@@ -215,7 +215,7 @@ bool Image::SnapToBary(Vec2D& point, int binLevel)
     localX = int(point.x);
     localY = int(point.y);
 
-    if (!getNearbyPoints(localX, localY, hside))
+    if (!update_pixel_region(localX, localY, hside))
     {
         std::cout << "Bad point!\n";
         return false;

@@ -14,7 +14,7 @@
 uint64_t ImageElement::nextId=3;
 
 
-void ImageTickLine::setValueStr(const char* str)
+void ImageTickLine::set_value(const char *str)
 {
     char* end;
     auto val = strtod(str, &end);
@@ -25,7 +25,7 @@ void ImageTickLine::setValueStr(const char* str)
     }
 }
 
-void ImageTickLine::filterValueStr(std::string& str, bool finalFilter)
+void ImageTickLine::filter_value(std::string &str, bool finalFilter)
 {
     std::regex regInvalidChar("[^,.0-9-]");
     str=std::regex_replace(str, regInvalidChar, "");
@@ -65,7 +65,7 @@ void ImageTickLine::filterValueStr(std::string& str, bool finalFilter)
 }
 
 
-double ImageTickLine::DistTo(const Vec2D& imagePosition, const Vec2D& tickDirection)
+double ImageTickLine::dist_to(const Vec2D &imagePosition, const Vec2D &tickDirection)
 {
     double dx = tickDirection.x;
     double dy = tickDirection.y;
@@ -89,13 +89,13 @@ double ImageTickLine::DistTo(const Vec2D& imagePosition, const Vec2D& tickDirect
 }
 
 
-void ImageTickLine::MakeBackup()
+void ImageTickLine::create_backup()
 {
     backup = new ImageTickLine(imagePosition);
     backup->tickValue = tickValue;
 }
 
-void ImageTickLine::RestoreBackup()
+void ImageTickLine::restore_backup()
 {
     if (backup == nullptr)
         return;
@@ -107,7 +107,7 @@ void ImageTickLine::RestoreBackup()
 }
 
 
-Vec2D ImageHorizon::VerticalDirection()
+Vec2D ImageHorizon::vertical_dir()
 {
     Vec2D dir = Vec2D(target.imagePosition.y - imagePosition.y, -target.imagePosition.x + imagePosition.x);
     double norm = std::sqrt(dir.x * dir.x + dir.y * dir.y);
@@ -126,7 +126,7 @@ Vec2D ImageHorizon::VerticalDirection()
     return dir;
 }
 
-Vec2D ImageHorizon::HorizontalDirection()
+Vec2D ImageHorizon::horizontal_dir()
 {
     Vec2D dir = Vec2D(target.imagePosition.x - imagePosition.x, target.imagePosition.y - imagePosition.y);
     double norm = std::sqrt(dir.x * dir.x + dir.y * dir.y);

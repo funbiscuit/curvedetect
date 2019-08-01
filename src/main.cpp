@@ -54,7 +54,7 @@ int init()
     
     glfwSetWindowSizeLimits(window, 800, 500, GLFW_DONT_CARE, GLFW_DONT_CARE);
     
-    MainApp& app = MainApp::getInstance();
+    MainApp& app = MainApp::get();
     if(!app.init(window, glsl_version))
     {
         std::cout << "Can't initialize application\n";

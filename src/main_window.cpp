@@ -23,16 +23,16 @@ MainWindow::MainWindow()
     height=720;
     toolbar_width=280;
     
-    CurrentMode = MODE_NONE;
+    currentMode = MODE_NONE;
     
     
-    MinImageScale = 1.0f;
-    CurrentImageScale = 1.0f;
-    MaxImageScale = 3.0f;
+    minImageScale = 1.0f;
+    imageScale = 1.0f;
+    maxImageScale = 3.0f;
     
-    ZoomPixelHSide = 30;
+    zoomPixelHalfSide = 30;
     
-    ZoomWndSize = 200.0f;
+    zoomWindowSize = 200.0f;
     
     decimalSeparator = '.';
     columnSeparator = "\t";
@@ -78,7 +78,7 @@ void MainWindow::on_render()
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     if (ImGui::Begin("Main Window", nullptr, window_flags))
     {
-        ShowMainWindow();
+        render_main_window();
         ImGui::End();
     }
     ImGui::PopStyleVar();
@@ -90,7 +90,7 @@ void MainWindow::init()
 #ifndef NDEBUG
     image=std::make_shared<Image>("../img/test.png");
     curve=std::make_shared<CurveDetect>(image);
-    curve->ResetAll();
+    curve->reset_all();
 #endif
 }
 
@@ -99,11 +99,11 @@ void MainWindow::on_resize(int w, int h)
     width=w; height=h;
 }
 
-void MainWindow::ShowMainWindow()
+void MainWindow::render_main_window()
 {
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    
-    ShowSidePanel();
+
+    render_side_panel();
     
     ImGui::SameLine();
     
@@ -113,8 +113,8 @@ void MainWindow::ShowMainWindow()
     
     // Create our canvas
     if(image)
-        ImGui::Text("Hovered pixel (%d,%d) value: %d", (int)HoveredPixel.x, (int)HoveredPixel.y,
-                    image->getPixelValue((int)HoveredPixel.x, (int)HoveredPixel.y));
+        ImGui::Text("Hovered pixel (%d,%d) value: %d", (int)hoveredImagePixel.x, (int)hoveredImagePixel.y,
+                    image->get_pixel_value((int) hoveredImagePixel.x, (int) hoveredImagePixel.y));
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -123,37 +123,37 @@ void MainWindow::ShowMainWindow()
 
     ImVec2 canvas_sz = ImGui::GetWindowSize();
 
-    ShowImage(canvas_sz);
+    render_image(canvas_sz);
 
     ImVec2 WinPos = ImGui::GetWindowPos();
     ImVec2 MousePos = ImGui::GetMousePos();
-    HoveredPixel = (MousePos - WinPos - CurrentImPos)/CurrentImageScale;
+    hoveredImagePixel = (MousePos - WinPos - imagePosition)/imageScale;
 
     if(curve)
-        curve->UpdateHoveredItem(Vec2D(HoveredPixel));
-    
-    ProcessInput();
-    
-    
-    ShowCoordSystem(CurrentImPos);
-    ShowTickLines(CurrentImPos);
-    ShowPoints(CurrentImageScale, CurrentImPos, MousePos);
+        curve->update_hovered(Vec2D(hoveredImagePixel));
+
+    process_input();
+
+
+    render_horizon(imagePosition);
+    render_grid_lines(imagePosition);
+    render_points(imageScale, imagePosition, MousePos);
     
     ImVec2 ZoomOrigin;
     
-    if (image && ShowZoomWindow(canvas_sz, ZoomOrigin))
+    if (image && render_zoom_window(canvas_sz, ZoomOrigin))
     {
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
-        float zoomedScale = ZoomWndSize/ float(2 * ZoomPixelHSide + 1);
+        float zoomedScale = zoomWindowSize/ float(2 * zoomPixelHalfSide + 1);
         
-        ImVec2 zoomedImPos = ZoomOrigin -HoveredPixel*zoomedScale-WinPos;
+        ImVec2 zoomedImPos = ZoomOrigin -hoveredImagePixel*zoomedScale-WinPos;
         
-        ImVec2 ZoomWnd = ImVec2(ZoomWndSize, ZoomWndSize);
+        ImVec2 ZoomWnd = ImVec2(zoomWindowSize, zoomWindowSize);
 
         //TODO add ticks and horizon
         //draw zoomed curve in zoom window
         draw_list->PushClipRect(ZoomOrigin- ZoomWnd*0.5f, ZoomOrigin+ ZoomWnd*0.5f, true);
-        ShowPoints(zoomedScale, zoomedImPos, ZoomOrigin);
+        render_points(zoomedScale, zoomedImPos, ZoomOrigin);
         draw_list->PopClipRect();
         
     }
@@ -174,9 +174,9 @@ void MainWindow::ShowMainWindow()
         
         for(int j=0;j<3;++j)
         {
-            if (ImGui::MenuItem(items[j], nullptr, CurrentMode == modes[j], true))
+            if (ImGui::MenuItem(items[j], nullptr, currentMode == modes[j], true))
             {
-                CurrentMode = modes[j];
+                currentMode = modes[j];
                 bIsReadyForAction = true;
             }
             
@@ -189,9 +189,9 @@ void MainWindow::ShowMainWindow()
         bIsContextMenuOpened = false;
     }
     ImGui::PopStyleVar();
-    
-    
-    ShowTickConfigPopup();
+
+
+    render_tick_config_popup();
     
     
     
@@ -201,7 +201,7 @@ void MainWindow::ShowMainWindow()
     ImGui::EndGroup();
 }
 
-void MainWindow::ShowImage(ImVec2 canvasSize)
+void MainWindow::render_image(ImVec2 canvasSize)
 {
     if(image)
     {
@@ -215,34 +215,34 @@ void MainWindow::ShowImage(ImVec2 canvasSize)
         scaleX = canvasSize.x / im_width;
         scaleY = canvasSize.y / im_height;
 
-        MinImageScale = scaleX < scaleY ? scaleX : scaleY;
+        minImageScale = scaleX < scaleY ? scaleX : scaleY;
 
         bool bScaleChanged = false;
 
-        if (ImGui::IsMouseHoveringWindow())
+        if (ImGui::is_mouse_hovering_window())
         {
             ImGuiIO& imIO = ImGui::GetIO();
 
             if (imIO.MouseWheel != 0)
             {
-                CurrentImageScale *= std::pow(1.1f, imIO.MouseWheel);
+                imageScale *= std::pow(1.1f, imIO.MouseWheel);
                 bScaleChanged = true;
             }
         }
 
-        if (CurrentImageScale < MinImageScale)
-            CurrentImageScale = MinImageScale;
-        if (CurrentImageScale > MaxImageScale)
-            CurrentImageScale = MaxImageScale;
+        if (imageScale < minImageScale)
+            imageScale = minImageScale;
+        if (imageScale > maxImageScale)
+            imageScale = maxImageScale;
 
         ImVec2 WinPos = ImGui::GetWindowPos();
         ImVec2 MousePos = ImGui::GetMousePos();
         if(bScaleChanged)
-            CurrentImPos = MousePos - HoveredPixel*CurrentImageScale - WinPos;
+            imagePosition = MousePos - hoveredImagePixel*imageScale - WinPos;
 
         ImVec2 MinImPos, MaxImPos;
-        MinImPos.x = canvasSize.x - im_width*CurrentImageScale;
-        MinImPos.y = canvasSize.y - im_height*CurrentImageScale;
+        MinImPos.x = canvasSize.x - im_width*imageScale;
+        MinImPos.y = canvasSize.y - im_height*imageScale;
 
         MaxImPos = ImVec2(0.0f, 0.0f);
 
@@ -259,20 +259,20 @@ void MainWindow::ShowImage(ImVec2 canvasSize)
 
         if(ImGui::IsMouseDragging(2))
         {
-            CurrentImPos += ImGui::GetMouseDragDelta(2);
+            imagePosition += ImGui::GetMouseDragDelta(2);
             ImGui::ResetMouseDragDelta(2);
         }
 
-        CurrentImPos.x = CurrentImPos.x < MinImPos.x ? MinImPos.x : (CurrentImPos.x > MaxImPos.x ? MaxImPos.x : CurrentImPos.x);
-        CurrentImPos.y = CurrentImPos.y < MinImPos.y ? MinImPos.y : (CurrentImPos.y > MaxImPos.y ? MaxImPos.y : CurrentImPos.y);
+        imagePosition.x = imagePosition.x < MinImPos.x ? MinImPos.x : (imagePosition.x > MaxImPos.x ? MaxImPos.x : imagePosition.x);
+        imagePosition.y = imagePosition.y < MinImPos.y ? MinImPos.y : (imagePosition.y > MaxImPos.y ? MaxImPos.y : imagePosition.y);
 
-        im_width*=CurrentImageScale;
-        im_height*=CurrentImageScale;
+        im_width*=imageScale;
+        im_height*=imageScale;
 
         if (bShowImage)
         {
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
-            ImVec2 cur_pos = ImGui::GetCursorScreenPos()+CurrentImPos;
+            ImVec2 cur_pos = ImGui::GetCursorScreenPos()+imagePosition;
             draw_list->AddImage((void *)(intptr_t)(texID), cur_pos, cur_pos + ImVec2(im_width, im_height));
         }
 
@@ -283,25 +283,25 @@ void MainWindow::ShowImage(ImVec2 canvasSize)
     }
 }
 
-void MainWindow::OnMouseDown(int btn)
+void MainWindow::on_mouse_down(int btn)
 {
-    auto& app=MainApp::getInstance();
+    auto& app= MainApp::get();
     if (btn == 0)
     {
-        switch (CurrentMode)
+        switch (currentMode)
         {
             case MODE_POINTS:
-                if (app.isCtrlPressed())
-                    curve->AddPoint(Vec2D(HoveredPixel));
+                if (app.is_ctrl_down())
+                    curve->add_point(Vec2D(hoveredImagePixel));
                 else
-                    curve->SelectHovered(ImageElement::POINT);
+                    curve->select_hovered(ImageElement::POINT);
                 break;
             case MODE_HORIZON:
-                curve->SelectHovered(ImageElement::HORIZON);
+                curve->select_hovered(ImageElement::HORIZON);
                 break;
             case MODE_TICKS:
-                if (curve->SelectHovered(ImageElement::TICKS))
-                    curve->BackupSelectedTick();
+                if (curve->select_hovered(ImageElement::TICKS))
+                    curve->backup_selected_tick();
                 break;
             default:
                 break;
@@ -309,22 +309,22 @@ void MainWindow::OnMouseDown(int btn)
     }
 }
 
-void MainWindow::OnMouseUp(int btn)
+void MainWindow::on_mouse_up(int btn)
 {
-    auto& app=MainApp::getInstance();
+    auto& app= MainApp::get();
     if (btn == 0)
     {
-        switch (CurrentMode)
+        switch (currentMode)
         {
             case MODE_POINTS:
             case MODE_HORIZON:
                 if (deleteOnRelease)
-                    curve->DeleteSelected();
+                    curve->delete_selected();
                 else
-                    curve->DeselectAll();
+                    curve->deselect_all();
                 break;
             case MODE_TICKS:
-                curve->DeselectAll();
+                curve->deselect_all();
                 break;
             default:
                 break;
@@ -332,15 +332,15 @@ void MainWindow::OnMouseUp(int btn)
     }
 }
 
-void MainWindow::OnMouseDoubleClick(int btn)
+void MainWindow::on_mouse_double_click(int btn)
 {
-    auto& app=MainApp::getInstance();
+    auto& app= MainApp::get();
     if (btn == 0)
     {
-        switch (CurrentMode)
+        switch (currentMode)
         {
             case MODE_TICKS:
-                if(curve->GetSelectedId())
+                if(curve->get_selected_id())
                     ImGui::OpenPopup("TickConfig");
                 break;
             default:
@@ -349,34 +349,34 @@ void MainWindow::OnMouseDoubleClick(int btn)
     }
 }
 
-void MainWindow::OnMouseDrag(int btn)
+void MainWindow::on_mouse_drag(int btn)
 {
-    auto& app=MainApp::getInstance();
+    auto& app= MainApp::get();
     if (btn == 0 && curve)
     {
         deleteOnRelease = false;
 
-        if(curve->MoveSelected(Vec2D(HoveredPixel)))
+        if(curve->move_selected(Vec2D(hoveredImagePixel)))
         {
-            if(app.isCtrlPressed())
-                curve->SnapSelected();
+            if(app.is_ctrl_down())
+                curve->snap_selected();
 
-            if(CurrentMode == MODE_POINTS || CurrentMode == MODE_HORIZON)
+            if(currentMode == MODE_POINTS || currentMode == MODE_HORIZON)
             {
-                curve->UpdateSubdivision();
+                curve->update_subdiv();
             }
         }
     }
 }
 
-void MainWindow::ProcessInput()
+void MainWindow::process_input()
 {
-    auto& app=MainApp::getInstance();
+    auto& app= MainApp::get();
     static bool bIsMouseDownFirst = true;
     static ImVec2 lastMousePos = ImGui::GetMousePos();
-    static bool prevCtrl = app.isCtrlPressed();
+    static bool prevCtrl = app.is_ctrl_down();
     ImVec2 delta = ImGui::GetMousePos()-lastMousePos;
-    bool moving = (std::abs(delta.x)+std::abs(delta.y))>0.f || prevCtrl != app.isCtrlPressed();
+    bool moving = (std::abs(delta.x)+std::abs(delta.y))>0.f || prevCtrl != app.is_ctrl_down();
 
 
     if (ImGui::IsWindowFocused())
@@ -388,37 +388,37 @@ void MainWindow::ProcessInput()
         {
             if (io.KeysDown[GLFW_KEY_1+j] || io.KeysDown[GLFW_KEY_KP_1+j])
             {
-                CurrentMode = modes[j];
+                currentMode = modes[j];
             }
         }
 
-        if(curve && curve->GetSelectedId()==0)
-            deleteOnRelease = app.isShiftPressed();
+        if(curve && curve->get_selected_id()==0)
+            deleteOnRelease = app.is_shift_down();
     }
 
-    if (curve && ImGui::IsMouseHoveringWindow() && !bIsContextMenuOpened && bIsReadyForAction)
+    if (curve && ImGui::is_mouse_hovering_window() && !bIsContextMenuOpened && bIsReadyForAction)
     {
-        if (ImGui::IsMouseDown(0) && image->isPixelInside((int)HoveredPixel.x, (int)HoveredPixel.y))
+        if (ImGui::IsMouseDown(0) && image->is_pixel_inside((int) hoveredImagePixel.x, (int) hoveredImagePixel.y))
         {
             if (bIsMouseDownFirst) //first press
             {
-                OnMouseDown(0);
+                on_mouse_down(0);
             }
             else if(moving)
             {
-                OnMouseDrag(0);
+                on_mouse_drag(0);
             }
             bIsMouseDownFirst = false;
         }
         if (ImGui::IsMouseReleased(0))
         {
-            OnMouseUp(0);
+            on_mouse_up(0);
             
             bIsMouseDownFirst = true;
         }
         if(ImGui::IsMouseDoubleClicked(0))
         {
-            OnMouseDoubleClick(0);
+            on_mouse_double_click(0);
             bIsMouseDownFirst = true;
         }
         
@@ -431,17 +431,17 @@ void MainWindow::ProcessInput()
     }
     
     if(curve)
-        curve->CheckTarget();
+        curve->check_horizon();
     
     if (ImGui::IsMouseReleased(0) && !bIsContextMenuOpened)
     {
         bIsReadyForAction = true;
     }
     lastMousePos+=delta;
-    prevCtrl = app.isCtrlPressed();
+    prevCtrl = app.is_ctrl_down();
 }
 
-void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
+void MainWindow::render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos)
 {
     if(!curve)
         return;
@@ -451,10 +451,10 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     
-    uint64_t selectedId=curve->GetSelectedId();
-    uint64_t hoveredId=curve->GetHoveredId(ImageElement::POINT);
-    auto& allPoints=curve->GetAllPoints();
-    auto& userPoints=curve->GetUserPoints();
+    uint64_t selectedId= curve->get_selected_id();
+    uint64_t hoveredId= curve->get_hovered_id(ImageElement::POINT);
+    auto& allPoints= curve->get_all_points();
+    auto& userPoints= curve->get_user_points();
 
     float subdivSize = 8.f;
     float userSize = 12.f;
@@ -471,11 +471,11 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     //draw lines between subdivided points
     if (allPoints.size() > 1)
     {
-        ImVec2 LastDrawnPos = allPoints[0].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
+        ImVec2 LastDrawnPos = allPoints[0].imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
         for (size_t kp = 0; kp < allPoints.size() - 1; kp++)
         {
-            ImVec2 PointPos0 = allPoints[kp].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
-            ImVec2 PointPos1 = allPoints[kp + 1].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
+            ImVec2 PointPos0 = allPoints[kp].imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
+            ImVec2 PointPos1 = allPoints[kp + 1].imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
 
             draw_list->AddLine(PointPos0, PointPos1, lineColor, 1.5f);
 
@@ -483,7 +483,7 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
 
             double dist1 = Vec2D(PointPos0-LastDrawnPos).norm2();
 
-            if (bDrawSubdivideMarkers)
+            if (bShowSubdivPoints)
             {
                 if(dist1>subdivSpacing*subdivSpacing)
                 {
@@ -499,21 +499,21 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     //TODO maybe not needed
     //if we are pressing button - draw a line from press location to snapped point
 //    if (SelectedItem >= 0 && ImGui::IsMouseDown(0) && CurrentMode == ActionMode1_AddPoints
-//        && SelectedItem < int(UserPoints.size()) && ImGui::IsMouseHoveringWindow())
+//        && SelectedItem < int(userPoints.size()) && ImGui::IsMouseHoveringWindow())
 //    {
-//        ImVec2 PointPos0 = UserPoints[SelectedItem] * im_scale + im_pos + WinPos;
+//        ImVec2 PointPos0 = userPoints[SelectedItem] * im_scale + im_pos + WinPos;
 //
 //        ImU32 LineColor = ImColor(80, 220, 80, 220);
 //        draw_list->AddLine(PointPos0, MousePos, LineColor, 2.0f);
 //    }
 
-    auto& app=MainApp::getInstance();
+    auto& app= MainApp::get();
     for (const auto &point : userPoints) {
-        ImVec2 PointPos = point.imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
+        ImVec2 PointPos = point.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
 
         ImU32 fill = userFill;
 
-        if (CurrentMode == MODE_POINTS)
+        if (currentMode == MODE_POINTS)
             if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
                 fill = deleteOnRelease ? deleteFill : userHover;
 
@@ -525,7 +525,7 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
 int onTickInput(ImGuiInputTextCallbackData *data)
 {
     std::string tickVal = data->Buf;
-    ImageTickLine::filterValueStr(tickVal, false);
+    ImageTickLine::filter_value(tickVal, false);
     strcpy(data->Buf,tickVal.c_str());
     data->BufTextLen=tickVal.length();
     if(data->CursorPos>tickVal.length())
@@ -534,7 +534,7 @@ int onTickInput(ImGuiInputTextCallbackData *data)
     return 0;
 }
 
-void MainWindow::ShowTickConfigPopup()
+void MainWindow::render_tick_config_popup()
 {
     if(!curve)
         return;
@@ -560,14 +560,14 @@ void MainWindow::ShowTickConfigPopup()
         static std::string tickVal = "0";
         char buf[65];
     
-        auto selected=(ImageTickLine*) curve->GetSelected();
-        auto& XTicks=curve->GetXTicks();
-        auto& YTicks=curve->GetYTicks();
+        auto selected=(ImageTickLine*) curve->get_selected();
+        auto& XTicks= curve->get_xticks();
+        auto& YTicks= curve->get_yticks();
     
         if (bTickConfigInit && selected)
         {
             tickVal = selected->tickValueStr;
-            ImageTickLine::filterValueStr(tickVal, false);
+            ImageTickLine::filter_value(tickVal, false);
             
             bTickConfigInit = false;
         }
@@ -584,16 +584,16 @@ void MainWindow::ShowTickConfigPopup()
         ImGui::InputText("Value", buf, 30, ImGuiInputTextFlags_CallbackAlways, &onTickInput);
         tickVal=buf;
         
-        auto& app=MainApp::getInstance();
+        auto& app= MainApp::get();
         
-        if (ImGui::Button("OK", ImVec2(120, 0)) || app.isEnterReleased())
+        if (ImGui::Button("OK", ImVec2(120, 0)) || app.is_enter_up())
         {
-            ImageTickLine::filterValueStr(tickVal, true);
+            ImageTickLine::filter_value(tickVal, true);
 
             if(selected)
-                selected->setValueStr(tickVal.c_str());
+                selected->set_value(tickVal.c_str());
 
-            curve->DeselectAll();
+            curve->deselect_all();
 
             bTickConfigInit = true;
             ImGui::CloseCurrentPopup();
@@ -604,9 +604,9 @@ void MainWindow::ShowTickConfigPopup()
         {
 
             if(selected)
-                selected->RestoreBackup();
+                selected->restore_backup();
 
-            curve->DeselectAll();
+            curve->deselect_all();
             
             bTickConfigInit = true;
             ImGui::CloseCurrentPopup();
@@ -623,7 +623,7 @@ void MainWindow::ShowTickConfigPopup()
     ImGui::PopStyleVar(2);
 }
 
-bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, ImVec2& out_ZoomOrigin)
+bool MainWindow::render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOrigin)
 {
     if(!image)
         return false;
@@ -633,8 +633,8 @@ bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, ImVec2& out_ZoomOrigin)
     
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     
-    float im_width = float(image->get_width())*CurrentImageScale;
-    float im_height = float(image->get_height())*CurrentImageScale;
+    float im_width = float(image->get_width())*imageScale;
+    float im_height = float(image->get_height())*imageScale;
     
     float im_aspect = im_height / im_width;
     
@@ -645,11 +645,11 @@ bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, ImVec2& out_ZoomOrigin)
     ZoomWndOffset = ImVec2(15.f, 15.f);
     ZoomPos = MousePos+ZoomWndOffset;
     
-    if (ZoomPos.x + ZoomWndSize + ZoomRectBorder * 2 - WinPos.x > canvas_sz.x)
-        ZoomPos.x = MousePos.x - (ZoomWndSize + ZoomRectBorder * 2);
+    if (ZoomPos.x + zoomWindowSize + ZoomRectBorder * 2 - WinPos.x > canvas_sz.x)
+        ZoomPos.x = MousePos.x - (zoomWindowSize + ZoomRectBorder * 2);
 
-    if (ZoomPos.y + ZoomWndSize + ZoomRectBorder * 2 - WinPos.y > canvas_sz.y)
-        ZoomPos.y = MousePos.y - (ZoomWndSize + ZoomRectBorder * 2);
+    if (ZoomPos.y + zoomWindowSize + ZoomRectBorder * 2 - WinPos.y > canvas_sz.y)
+        ZoomPos.y = MousePos.y - (zoomWindowSize + ZoomRectBorder * 2);
     
     if (ZoomPos.x - ZoomRectBorder * 2 - WinPos.x < 0)
         ZoomPos.x = ZoomRectBorder * 2 + WinPos.x;
@@ -657,35 +657,35 @@ bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, ImVec2& out_ZoomOrigin)
     if (ZoomPos.y - ZoomRectBorder * 2 - WinPos.y < 0)
         ZoomPos.y = ZoomRectBorder * 2 + WinPos.y;
 
-    ZoomUV0 = HoveredPixel;
+    ZoomUV0 = hoveredImagePixel;
     ZoomUV0.x /= image->get_width();
     ZoomUV0.y /= image->get_height();
     
-    out_ZoomOrigin = ZoomPos + ImVec2(ZoomWndSize*0.5f,ZoomWndSize*0.5f);
+    out_ZoomOrigin = ZoomPos + ImVec2(zoomWindowSize*0.5f,zoomWindowSize*0.5f);
     
-    float ZoomUVsideU = float(2 * ZoomPixelHSide + 1) / float(image->get_width());
+    float ZoomUVsideU = float(2 * zoomPixelHalfSide + 1) / float(image->get_width());
     
     
     ZoomUV0 -= ImVec2(ZoomUVsideU, ZoomUVsideU / im_aspect)*0.5f;
     ZoomUV1 = ZoomUV0 + ImVec2(ZoomUVsideU, ZoomUVsideU / im_aspect);
     
     //draw zoom window
-    if (ImGui::IsMouseHoveringWindow() && CurrentMode != MODE_NONE)
+    if (ImGui::is_mouse_hovering_window() && currentMode != MODE_NONE)
     {
         ImU32 ZoomBgColor = ImColor(120, 120, 120, 220);
         draw_list->AddRectFilled(ZoomPos - ImVec2(ZoomRectBorder, ZoomRectBorder),
-                                 ZoomPos + ImVec2(ZoomRectBorder+ ZoomWndSize, ZoomRectBorder+ ZoomWndSize),
+                                 ZoomPos + ImVec2(ZoomRectBorder+ zoomWindowSize, ZoomRectBorder+ zoomWindowSize),
                                  ZoomBgColor, 5.0f);
         
         GLuint texID = image->get_texture();
         draw_list->AddImage((void *)(intptr_t)(texID), ZoomPos,
-                            ZoomPos + ImVec2(ZoomWndSize,ZoomWndSize), ZoomUV0, ZoomUV1);
+                            ZoomPos + ImVec2(zoomWindowSize,zoomWindowSize), ZoomUV0, ZoomUV1);
         
         ImU32 CrossColor = ImColor(120, 120, 120, 220);
-        draw_list->AddLine(ImVec2(ZoomWndSize*0.5f, 0.f) + ZoomPos,
-                           ImVec2(ZoomWndSize*0.5f, ZoomWndSize) + ZoomPos, CrossColor);
-        draw_list->AddLine(ImVec2(0.f, ZoomWndSize*0.5f) + ZoomPos,
-                           ImVec2(ZoomWndSize, ZoomWndSize*0.5f) + ZoomPos, CrossColor);
+        draw_list->AddLine(ImVec2(zoomWindowSize*0.5f, 0.f) + ZoomPos,
+                           ImVec2(zoomWindowSize*0.5f, zoomWindowSize) + ZoomPos, CrossColor);
+        draw_list->AddLine(ImVec2(0.f, zoomWindowSize*0.5f) + ZoomPos,
+                           ImVec2(zoomWindowSize, zoomWindowSize*0.5f) + ZoomPos, CrossColor);
         
         return true;
     }
@@ -693,7 +693,7 @@ bool MainWindow::ShowZoomWindow(const ImVec2 &canvas_sz, ImVec2& out_ZoomOrigin)
     return false;
 }
 
-void MainWindow::ShowTickLines(ImVec2 im_pos)
+void MainWindow::render_grid_lines(ImVec2 im_pos)
 {
     if(!curve)
         return;
@@ -708,13 +708,13 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
     const auto tickSel = ImColor(59, 155, 59, 255);
 
     
-    auto horizon=curve->GetHorizon();
-    auto CoordOriginImg=horizon.imagePosition.ToImVec2();
-    auto CoordOriginTargetX=horizon.target.imagePosition.ToImVec2();
-    uint64_t hoveredId=curve->GetHoveredId(ImageElement::TICKS);
-    uint64_t selectedId=curve->GetSelectedId();
-    auto& XTicks=curve->GetXTicks();
-    auto& YTicks=curve->GetYTicks();
+    auto horizon= curve->get_horizon();
+    auto CoordOriginImg= horizon.imagePosition.to_imvec();
+    auto CoordOriginTargetX= horizon.target.imagePosition.to_imvec();
+    uint64_t hoveredId= curve->get_hovered_id(ImageElement::TICKS);
+    uint64_t selectedId= curve->get_selected_id();
+    auto& XTicks= curve->get_xticks();
+    auto& YTicks= curve->get_yticks();
     
     ImVec2 TargetDirX = CoordOriginTargetX - CoordOriginImg;
     
@@ -730,7 +730,7 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
     for (auto &tick : XTicks) {
         ImU32 col = tickColor;
 
-        if (CurrentMode & MODE_TICKS)
+        if (currentMode & MODE_TICKS)
         {
             if (tick.id == selectedId)
                 col = tickSel;
@@ -738,18 +738,18 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
                 col = tickHover;
         }
         
-        ImVec2 XTickPosition= tick.imagePosition.ToImVec2();
+        ImVec2 XTickPosition= tick.imagePosition.to_imvec();
         
-        if (!MakeFullLine(XTickPosition, TargetDirY, LineStart, LineEnd,
-                          ImVec2((float)image->get_width(), (float)image->get_height()) - LineMargin * 2, LineMargin))
+        if (!extend_line(XTickPosition, TargetDirY, LineStart, LineEnd,
+                         ImVec2((float) image->get_width(), (float) image->get_height()) - LineMargin * 2, LineMargin))
         {
             LineStart = ImVec2(LineMargin.x, CoordOriginImg.y);
             LineEnd = ImVec2(image->get_width() - LineMargin.x, CoordOriginImg.y);
             //std::cout << "force horizontal\n";
         }
-        LineStart = WinPos + im_pos + LineStart*CurrentImageScale;
-        LineEnd = WinPos + im_pos + LineEnd*CurrentImageScale;
-        LabelPos = WinPos + im_pos+(tick.imagePosition*CurrentImageScale + Vec2D(10.f,0.f)).ToImVec2();
+        LineStart = WinPos + im_pos + LineStart*imageScale;
+        LineEnd = WinPos + im_pos + LineEnd*imageScale;
+        LabelPos = WinPos + im_pos+ (tick.imagePosition * imageScale + Vec2D(10.f, 0.f)).to_imvec();
 
         //draw_list->AddLine(ImVec2(TickPos, 0.0f)+WinPos, ImVec2(TickPos, canvas_sz.y)+WinPos, col, 1.0f);
         draw_list->AddLine(LineStart, LineEnd, col, 2.0f);
@@ -768,7 +768,7 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
     for (auto &tick : YTicks) {
         ImU32 col = tickColor;
 
-        if (CurrentMode & MODE_TICKS)
+        if (currentMode & MODE_TICKS)
         {
             if (tick.id == selectedId)
                 col = tickSel;
@@ -776,18 +776,18 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
                 col = tickHover;
         }
 
-        ImVec2 YTickPosition= tick.imagePosition.ToImVec2();
+        ImVec2 YTickPosition= tick.imagePosition.to_imvec();
         
-        if (!MakeFullLine(YTickPosition, TargetDirX, LineStart, LineEnd,
-                          ImVec2((float)image->get_width(), (float)image->get_height()) - LineMargin * 2, LineMargin))
+        if (!extend_line(YTickPosition, TargetDirX, LineStart, LineEnd,
+                         ImVec2((float) image->get_width(), (float) image->get_height()) - LineMargin * 2, LineMargin))
         {
             LineStart = ImVec2(LineMargin.x, CoordOriginImg.y);
             LineEnd = ImVec2(image->get_width() - LineMargin.x, CoordOriginImg.y);
             //std::cout << "force horizontal\n";
         }
-        LineStart = WinPos + im_pos + LineStart*CurrentImageScale;
-        LineEnd = WinPos + im_pos + LineEnd*CurrentImageScale;
-        LabelPos = WinPos + im_pos+(tick.imagePosition*CurrentImageScale + Vec2D(0.f,10.f)).ToImVec2();
+        LineStart = WinPos + im_pos + LineStart*imageScale;
+        LineEnd = WinPos + im_pos + LineEnd*imageScale;
+        LabelPos = WinPos + im_pos+ (tick.imagePosition * imageScale + Vec2D(0.f, 10.f)).to_imvec();
 
         //draw_list->AddLine(ImVec2(TickPos, 0.0f)+WinPos, ImVec2(TickPos, canvas_sz.y)+WinPos, col, 1.0f);
         draw_list->AddLine(LineStart, LineEnd, col, 2.0f);
@@ -810,18 +810,18 @@ void MainWindow::ShowTickLines(ImVec2 im_pos)
     }
 }
 
-void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
+void MainWindow::render_horizon(const ImVec2 &im_pos)
 {
-    if(!curve || CurrentMode != MODE_HORIZON)
+    if(!curve || currentMode != MODE_HORIZON)
         return;
     
     ImVec2 WinPos = ImGui::GetWindowPos();
     
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
-    auto horizon=curve->GetHorizon();
-    auto selectedId=curve->GetSelectedId();
-    auto hoveredId=curve->GetHoveredId(ImageElement::HORIZON);
+    auto horizon= curve->get_horizon();
+    auto selectedId= curve->get_selected_id();
+    auto hoveredId= curve->get_hovered_id(ImageElement::HORIZON);
 
     float pointSize = 12.f;
     auto lineColor = ImColor(128, 128, 128, 255);
@@ -830,11 +830,11 @@ void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
     auto pointFill = ImColor(255, 200, 60, 255);
     auto deleteFill = ImColor(205, 92, 92, 255);
 
-    auto CoordOriginImg=horizon.imagePosition.ToImVec2();
-    auto CoordOriginTargetX=horizon.target.imagePosition.ToImVec2();
+    auto CoordOriginImg= horizon.imagePosition.to_imvec();
+    auto CoordOriginTargetX= horizon.target.imagePosition.to_imvec();
     
-    ImVec2 CoordOriginScreen = CoordOriginImg*CurrentImageScale + im_pos + WinPos;
-    ImVec2 CoordTargetScreen = CoordOriginTargetX*CurrentImageScale + im_pos + WinPos;
+    ImVec2 CoordOriginScreen = CoordOriginImg*imageScale + im_pos + WinPos;
+    ImVec2 CoordTargetScreen = CoordOriginTargetX*imageScale + im_pos + WinPos;
 
     //draw horizon
     draw_list->AddLine(CoordOriginScreen, CoordTargetScreen, lineColor, 2.0f);
@@ -860,7 +860,7 @@ void MainWindow::ShowCoordSystem(const ImVec2 &im_pos)
 
 }
 
-void MainWindow::ShowSidePanel()
+void MainWindow::render_side_panel()
 {
     float SettingsWidth = 250.0f;
     
@@ -871,7 +871,7 @@ void MainWindow::ShowSidePanel()
     int SubdivideIterations=0;
     
     if(curve)
-        SubdivideIterations=curve->SubdivideIterations;
+        SubdivideIterations=curve->subdivLevel;
 
     ImVec2 CurPos = ImGui::GetCursorPos();
 
@@ -883,12 +883,12 @@ void MainWindow::ShowSidePanel()
     CurPos = ImGui::GetCursorPos();
 
     ImGui::PushItemWidth(SettingsWidth - CurPos.x);
-    ImGui::SliderInt("##subdiv_slider", &SubdivideIterations, 0, CurveDetect::MaxSubdivideIterations);
+    ImGui::SliderInt("##subdiv_slider", &SubdivideIterations, 0, CurveDetect::maxSubdivLevel);
     ImGui::PopItemWidth();
     
     
     
-    ImGui::Checkbox("Draw Markers", &bDrawSubdivideMarkers);
+    ImGui::Checkbox("Draw Subdivision Points", &bShowSubdivPoints);
     ImGui::Checkbox("Show Image", &bShowImage);
     ImGui::Checkbox("Show Binarization", &bShowBinarization);
     //ImGui::Checkbox("Smooth Subdivision", &bSmoothPoints);
@@ -896,7 +896,7 @@ void MainWindow::ShowSidePanel()
     
     if (curve)
     {
-        int BinarizationLevel = curve->BinarizationLevel;
+        int BinarizationLevel = curve->binLevel;
         int PrevBinarizationLevel = BinarizationLevel;
         
         CurPos = ImGui::GetCursorPos();
@@ -918,9 +918,9 @@ void MainWindow::ShowSidePanel()
         ImGui::PopID();
         
         ImGui_ImplOpenGL3_SetBinarizationLevel(BinarizationLevel);
-        
-        curve->SetSubdivIterations(SubdivideIterations);
-        curve->SetBinarizationLevel(BinarizationLevel);
+
+        curve->set_subdiv_level(SubdivideIterations);
+        curve->set_bin_level(BinarizationLevel);
         
         
         
@@ -935,20 +935,20 @@ void MainWindow::ShowSidePanel()
         
         CurPos = ImGui::GetCursorPos();
         
-        float NewScale = CurrentImageScale;
+        float NewScale = imageScale;
         
         ImGui::PushItemWidth(SettingsWidth - CurPos.x);
         ImGui::PushID("image_scale_slider");
-        ImGui::SliderFloat("", &NewScale, MinImageScale, MaxImageScale, "%.2f");
+        ImGui::SliderFloat("", &NewScale, minImageScale, maxImageScale, "%.2f");
         ImGui::PopItemWidth();
         
         
-        //ImVec2 PrevHoveredPixel = (MousePos - WinPos - CurrentImPos) / CurrentImageScale;
-        if (NewScale != CurrentImageScale)
+        //ImVec2 PrevHoveredPixel = (MousePos - WinPos - imagePosition) / imageScale;
+        if (NewScale != imageScale)
         {
             //TODO keep center in place
-            CurrentImageScale = NewScale;
-            //CurrentImPos = MousePos - HoveredPixel*CurrentImageScale - WinPos;
+            imageScale = NewScale;
+            //imagePosition = MousePos - HoveredPixel*imageScale - WinPos;
         }
         
         
@@ -959,11 +959,11 @@ void MainWindow::ShowSidePanel()
     
     if (ImGui::Button("Open Image", ImVec2(SettingsWidth, 0)))
     {
-        OpenImage();
+        on_open_image();
     }
     
     int out_Result;
-    bool bExportReady = curve ? curve->IsReadyForExport(out_Result) : false;
+    bool bExportReady = curve ? curve->is_export_ready(out_Result) : false;
     
     if(!bExportReady)
     {
@@ -971,11 +971,11 @@ void MainWindow::ShowSidePanel()
     }
     if (ImGui::Button("Export", ImVec2(SettingsWidth, 0)) && bExportReady)
     {
-        ExportPoints();
+        on_export_points();
     }
     if (ImGui::Button("Copy to Clipboard", ImVec2(SettingsWidth, 0)) && bExportReady)
     {
-        curve->ExportToClipboard(columnSeparator, lineEnding, decimalSeparator);
+        curve->copy_to_clipboard(columnSeparator, lineEnding, decimalSeparator);
     }
     
     if(!bExportReady)
@@ -984,7 +984,7 @@ void MainWindow::ShowSidePanel()
     
     if (ImGui::Button("Reset All", ImVec2(SettingsWidth, 0)))
     {
-        ResetAll();
+        reset_all();
     }
     
     ImGui::Separator();
@@ -1042,41 +1042,41 @@ void MainWindow::ShowSidePanel()
     std::string buf = "";
     
     
-    buf = out_Result == ExportReadyStatus_Ready ? "Yes" : "No";
+    buf = out_Result == READY ? "Yes" : "No";
     ImGui::Text("Ready for export: %s", buf.c_str());
     
     
-    buf = out_Result & ExportReadyStatus_NoPoints ? "Not enough" : "Ready";
+    buf = out_Result & NO_POINTS ? "Not enough" : "Ready";
     
     ImGui::Text("Points: %s", buf.c_str());
     
-    if (out_Result & ExportReadyStatus_NoXTicks)
+    if (out_Result & NO_X_GRID_LINES)
     {
         buf = "Not enough";
     }
-    else if (out_Result & ExportReadyStatus_XTicksSimilarPositions)
+    else if (out_Result & PIXEL_OVERLAP_X_GRID)
     {
         buf = "Overlapping positions";
     }
     else
     {
-        buf = out_Result & ExportReadyStatus_XTicksSimilarValues ? "Overlapping values" : "Ready";
+        buf = out_Result & VALUE_OVERLAP_X_GRID ? "Overlapping values" : "Ready";
     }
     
     ImGui::Text("X Ticks: %s", buf.c_str());
     
     
-    if (out_Result & ExportReadyStatus_NoYTicks)
+    if (out_Result & NO_Y_GRID_LINES)
     {
         buf = "Not enough";
     }
-    else if (out_Result & ExportReadyStatus_YTicksSimilarPositions)
+    else if (out_Result & PIXEL_OVERLAP_Y_GRID)
     {
         buf = "Overlapping positions";
     }
     else
     {
-        buf = out_Result & ExportReadyStatus_YTicksSimilarValues ? "Overlapping values" : "Ready";
+        buf = out_Result & VALUE_OVERLAP_Y_GRID ? "Overlapping values" : "Ready";
     }
     
     ImGui::Text("Y Ticks %s", buf.c_str());
@@ -1088,11 +1088,11 @@ void MainWindow::ShowSidePanel()
     
     std::string modifierStr = "(move)";
     
-    auto& app=MainApp::getInstance();
+    auto& app= MainApp::get();
 
-    bool snap = curve ? curve->GetSelectedId()!=0 : false;
+    bool snap = curve ? curve->get_selected_id()!=0 : false;
     
-    if (app.isCtrlPressed())
+    if (app.is_ctrl_down())
     {
         modifierStr = snap ? "(snap)" : "(new)";
     }
@@ -1103,7 +1103,7 @@ void MainWindow::ShowSidePanel()
     
     std::string helpStr;
     
-    switch (CurrentMode)
+    switch (currentMode)
     {
         case MODE_NONE:
             modeStr = "None";
@@ -1136,11 +1136,11 @@ void MainWindow::ShowSidePanel()
     ImGui::EndChild();
 }
 
-void MainWindow::ExportPoints()
+void MainWindow::on_export_points()
 {
     
     int out_Result;
-    if (!curve || !curve->IsReadyForExport(out_Result))
+    if (!curve || !curve->is_export_ready(out_Result))
         return;
     
     char const * lFilterPatterns[2] = { "*.txt", "*.mat" };
@@ -1195,7 +1195,7 @@ void MainWindow::ExportPoints()
                     "question",
                     1))
             {
-                ExportPoints();
+                on_export_points();
                 return;
             }
             
@@ -1212,19 +1212,19 @@ void MainWindow::ExportPoints()
                 "question",
                 1))
         {
-            ExportPoints();
+            on_export_points();
             return;
         }
         
     }
     
     std::cout << "save: " << path << "\n";
-    
-    curve->ExportPoints(lTheSaveFileName, bUseTextFormat);
+
+    curve->export_points(lTheSaveFileName, bUseTextFormat);
 }
 
 
-void MainWindow::OpenImage()
+void MainWindow::on_open_image()
 {
     char const * filename;
     char const * lFilterPatterns[3] = { "*.png", "*.jpg", "*.bmp" };
@@ -1257,26 +1257,27 @@ void MainWindow::OpenImage()
     else
     {
         curve=std::make_shared<CurveDetect>(image);
-        CurrentMode = ActionMode::MODE_POINTS;
+        currentMode = ActionMode::MODE_POINTS;
     }
-    
-    ResetAll();
+
+    reset_all();
 }
 
 
-void MainWindow::ResetAll()
+void MainWindow::reset_all()
 {
-    CurrentImageScale = 0.0f;
+    imageScale = 0.0f;
     
     if (curve)
     {
-        curve->ResetAll();
+        curve->reset_all();
     }
     
 }
 
 
-bool MainWindow::MakeFullLine(ImVec2 Point, ImVec2 Direction, ImVec2& out_Start, ImVec2& out_End, ImVec2 RegionSize, ImVec2 RegionTL/*=ImVec2(0.0f,0.0f)*/)
+bool MainWindow::extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, ImVec2 &out_End, ImVec2 RegionSize,
+                             ImVec2 RegionTL/*=ImVec2(0.0f,0.0f)*/)
 {
     out_Start = Point;
     out_End = Point + Direction;
@@ -1444,8 +1445,8 @@ void MainWindow::ImGui_PopDisableButton()
 
 void MainWindow::ImGui_PushDisableButton()
 {
-    ImGui::PushStyleColor(ImGuiCol_Button, ColorDisabled);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ColorDisabled);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ColorDisabled);
+    ImGui::PushStyleColor(ImGuiCol_Button, colorDisabled.Value);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, colorDisabled.Value);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colorDisabled.Value);
 }
 

@@ -3,7 +3,7 @@
 #include "imgui.h"
 #include "imgui_internal.h"
 
-bool ImGui::IsMouseHoveringWindow()
+bool ImGui::is_mouse_hovering_window()
 {
     ImGuiContext& g = *GImGui;
     return g.HoveredWindow == g.CurrentWindow;

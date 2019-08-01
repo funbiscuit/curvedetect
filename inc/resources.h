@@ -16,7 +16,7 @@ private:
 
 public:
 
-    static Resources& getInstance();
+    static Resources& get();
 
     std::vector<GLFWimage> get_app_icons();
 
