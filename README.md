@@ -108,3 +108,19 @@ In `examples` directory you can find result of processing two images of the same
 First sample is the rotated screenshot of this curve, second sample is photo of curve, that was tuned in image editor.
 Tuning was just color correction, levels and a bit of blur. On verification images blue solid line - original,
 red dotted line - processed with curvedetect.
+
+Dependencies
+------------
+Curve Detect uses following open source software and resources:
+
+GLFW, zlib license, https://github.com/glfw/glfw
+
+glad, MIT license, https://github.com/Dav1dde/glad
+
+Dear ImGui, MIT license, https://github.com/ocornut/imgui
+
+stb, public domain https://github.com/nothings/stb
+
+tiny file dialogs, zlib license, https://sourceforge.net/projects/tinyfiledialogs/
+
+Open Sans font, Apache license, https://www.fontsquirrel.com/fonts/open-sans

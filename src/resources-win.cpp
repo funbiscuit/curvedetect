@@ -33,4 +33,12 @@ std::vector<GLFWimage> Resources::get_app_icons()
     return images;
 }
 
+void* Resources::get_font_data(uint32_t &size)
+{
+    auto hResInfo = FindResourceA(nullptr, "openSansFont", RT_RCDATA);
+    size = SizeofResource(nullptr, hResInfo);
+    return LoadResource(nullptr, hResInfo);
+}
+
+
 #endif

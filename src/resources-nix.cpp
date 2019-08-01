@@ -14,12 +14,14 @@ extern uint8_t _binary_icon_64_png_start;
 extern uint8_t _binary_icon_128_png_start;
 extern uint8_t _binary_icon_256_png_start;
 
-extern uint64_t _binary_icon_16_png_size;
-extern uint64_t _binary_icon_32_png_size;
-extern uint64_t _binary_icon_64_png_size;
-extern uint64_t _binary_icon_128_png_size;
-extern uint64_t _binary_icon_256_png_size;
+extern uint32_t _binary_icon_16_png_size;
+extern uint32_t _binary_icon_32_png_size;
+extern uint32_t _binary_icon_64_png_size;
+extern uint32_t _binary_icon_128_png_size;
+extern uint32_t _binary_icon_256_png_size;
 
+extern uint8_t _binary_opensans_regular_ttf_start;
+extern uint32_t _binary_opensans_regular_ttf_size;
 
 
 std::vector<GLFWimage> Resources::get_app_icons()
@@ -29,7 +31,7 @@ std::vector<GLFWimage> Resources::get_app_icons()
             &_binary_icon_64_png_start,
             &_binary_icon_128_png_start,
             &_binary_icon_256_png_start};
-    uint64_t size[]={_binary_icon_16_png_size,
+    uint32_t size[]={_binary_icon_16_png_size,
                      _binary_icon_32_png_size,
                      _binary_icon_64_png_size,
                      _binary_icon_128_png_size,
@@ -44,6 +46,12 @@ std::vector<GLFWimage> Resources::get_app_icons()
     }
 
     return images;
+}
+
+void* Resources::get_font_data(uint32_t &size)
+{
+    size = _binary_opensans_regular_ttf_size;
+    return &_binary_opensans_regular_ttf_start;
 }
 
 #endif

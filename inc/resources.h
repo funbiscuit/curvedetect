@@ -20,6 +20,12 @@ public:
 
     std::vector<GLFWimage> get_app_icons();
 
+    /**
+     * Returns font data as byte array. Array size will be stored in size param
+     * @param size
+     * @return
+     */
+    void* get_font_data(uint32_t& size);
 };
 
 #endif //CURVEDETECT_RESOURCES_H
