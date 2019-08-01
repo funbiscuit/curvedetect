@@ -289,10 +289,10 @@ void CurveDetect::export_points(const char *path, bool asText)
     
     for (size_t kp = 0; kp < userPoints.size(); kp++)
     {
-        userPointsImage[kp*2]=allPoints[kp].imagePosition.x;
-        userPointsImage[kp*2+1]=allPoints[kp].imagePosition.y;
+        userPointsImage[kp*2]=userPoints[kp].imagePosition.x;
+        userPointsImage[kp*2+1]=userPoints[kp].imagePosition.y;
 
-        realPoint = image_point_to_real(allPoints[kp].imagePosition);
+        realPoint = image_point_to_real(userPoints[kp].imagePosition);
 
         userPointsReal[kp*2]=realPoint.x;
         userPointsReal[kp*2+1]=realPoint.y;
