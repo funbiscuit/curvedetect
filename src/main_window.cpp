@@ -466,9 +466,12 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
     auto subdivFill = ImColor(128, 128, 128, 255);
     auto subdivBadFill = deleteFill;
 
+    double subdivSpacing = subdivSize;
+
     //draw lines between subdivided points
     if (allPoints.size() > 1)
     {
+        ImVec2 LastDrawnPos = allPoints[0].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
         for (size_t kp = 0; kp < allPoints.size() - 1; kp++)
         {
             ImVec2 PointPos0 = allPoints[kp].imagePosition.ToImVec2() * im_scale + im_pos + WinPos;
@@ -477,11 +480,17 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
             draw_list->AddLine(PointPos0, PointPos1, lineColor, 1.5f);
 
             ImU32 fill = allPoints[kp].isSnapped ? subdivFill : subdivBadFill;
-            
+
+            double dist1 = Vec2D(PointPos0-LastDrawnPos).norm2();
+
             if (bDrawSubdivideMarkers)
             {
-                draw_list->AddCircleFilled(PointPos0, subdivSize*0.5f, pointStroke);
-                draw_list->AddCircleFilled(PointPos0, subdivSize*0.5f-1.f, fill);
+                if(dist1>subdivSpacing*subdivSpacing)
+                {
+                    draw_list->AddCircleFilled(PointPos0, subdivSize*0.5f, fill);
+                    draw_list->AddCircle(PointPos0, subdivSize*0.5f, pointStroke);
+                    LastDrawnPos = PointPos0;
+                }
             }
         }
     }
@@ -508,8 +517,8 @@ void MainWindow::ShowPoints(float im_scale, ImVec2 im_pos, ImVec2 MousePos)
             if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
                 fill = deleteOnRelease ? deleteFill : userHover;
 
-        draw_list->AddCircleFilled(PointPos, userSize*0.5f, pointStroke);
-        draw_list->AddCircleFilled(PointPos, userSize*0.5f-1.f, fill);
+        draw_list->AddCircleFilled(PointPos, userSize*0.5f, fill);
+        draw_list->AddCircle(PointPos, userSize*0.5f, pointStroke);
     }
 }
 
