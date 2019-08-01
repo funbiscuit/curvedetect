@@ -65,7 +65,7 @@ public:
 
     void UpdateSubdivision();
 
-    static const int MaxSubdivideIterations=6;
+    static const int MaxSubdivideIterations=8;
     int SubdivideIterations;
     int BinarizationLevel;
     

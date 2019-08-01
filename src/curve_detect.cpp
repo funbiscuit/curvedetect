@@ -431,8 +431,7 @@ void CurveDetect::UpdateSubdivision()
 
 bool CurveDetect::Snap(Vec2D& pos)
 {
-    return image ? image->SnapToCurve(pos, BinarizationLevel, (int)SnapDistance) &&
-                    image->SnapToBary(pos, BinarizationLevel) : false;
+    return image ? image->Snap(pos, BinarizationLevel, (int)SnapDistance) : false;
 }
 
 Vec2D CurveDetect::ConvertImageToReal(const Vec2D& point)

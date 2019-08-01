@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "image_elements.h"
+#include "snap_cache.h"
 
 class Image {
 public:
@@ -22,20 +23,7 @@ public:
 
     int getPixelValue(int px, int py);
 
-    /**
-     * will snap point to closest black (0) point
-     * so for more precision use with SnapToBary
-     * @param ImagePoint
-     */
-    bool SnapToCurve(Vec2D& point, int binLevel, int dist);
-
-    /**
-     * will snap point to barycenter of current zoom region
-     * will not be precise if there are grid lines in the region
-     * so make sure that in zoom region only curve points are shown
-     * @param ImagePoint
-     */
-    bool SnapToBary(Vec2D& point, int binLevel);
+    bool Snap(Vec2D& pos, int binLevel, int dist);
 
 
 private:
@@ -51,6 +39,8 @@ private:
     //used for storing result of getNearbyPoints
     std::vector<uint8_t> pixelsRegion;
 
+    SnapCache snapCache;
+
 
     /**
      * Result will be stored in pixelsRegion variable
@@ -62,6 +52,20 @@ private:
      */
     bool getNearbyPoints(int& px, int& py, int hside);
 
+    /**
+     * will snap point to closest black (0) point
+     * so for more precision use with SnapToBary
+     * @param ImagePoint
+     */
+    bool SnapToCurve(Vec2D& point, int binLevel, int dist);
+
+    /**
+     * will snap point to barycenter of current zoom region
+     * will not be precise if there are grid lines in the region
+     * so make sure that in zoom region only curve points are shown
+     * @param ImagePoint
+     */
+    bool SnapToBary(Vec2D& point, int binLevel);
 };
 
 

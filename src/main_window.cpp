@@ -874,7 +874,7 @@ void MainWindow::ShowSidePanel()
     CurPos = ImGui::GetCursorPos();
 
     ImGui::PushItemWidth(SettingsWidth - CurPos.x);
-    ImGui::SliderInt("##subdiv_slider", &SubdivideIterations, 0, 6);
+    ImGui::SliderInt("##subdiv_slider", &SubdivideIterations, 0, CurveDetect::MaxSubdivideIterations);
     ImGui::PopItemWidth();
     
     

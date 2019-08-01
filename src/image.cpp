@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "image.h"
+#include "snap_cache.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "imgui.h"
@@ -21,6 +22,7 @@ Image::Image(std::string path)
         texture = ImGui_ImplOpenGL3_CreateTexture(image, width, height, false, false);
 
         imagePixels = new uint8_t[width*height];
+        snapCache.resize(width, height);
     
         for (int col = 0; col < width; col++)
         {
@@ -128,6 +130,23 @@ bool Image::getNearbyPoints(int& px, int& py, int hside)
     py = localY;
     
     return true;
+}
+
+bool Image::Snap(Vec2D& pos, int binLevel, int dist)
+{
+    //TODO dist is not changed in snap cache
+    snapCache.setBinLevel(binLevel);
+    int px = (int)pos.x;
+    int py = (int)pos.y;
+
+    if(snapCache.isAvailable(px, py))
+        return snapCache.snap(px, py, pos);
+    else
+    {
+        bool canSnap = SnapToCurve(pos, binLevel, dist) && SnapToBary(pos, binLevel);
+        snapCache.cacheSnap(px, py, pos, canSnap);
+        return canSnap;
+    }
 }
 
 bool Image::SnapToCurve(Vec2D& point, int binLevel, int dist)
