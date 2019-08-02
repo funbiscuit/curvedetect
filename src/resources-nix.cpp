@@ -14,14 +14,17 @@ extern uint8_t _binary_icon_64_png_start;
 extern uint8_t _binary_icon_128_png_start;
 extern uint8_t _binary_icon_256_png_start;
 
-extern uint32_t _binary_icon_16_png_size;
-extern uint32_t _binary_icon_32_png_size;
-extern uint32_t _binary_icon_64_png_size;
-extern uint32_t _binary_icon_128_png_size;
-extern uint32_t _binary_icon_256_png_size;
+// it is easier to get size of data with end-start expression
+// using size doesn't give the correct result
+//extern uint8_t _binary_icon_16_png_size;
+extern uint8_t _binary_icon_16_png_end;
+extern uint8_t _binary_icon_32_png_end;
+extern uint8_t _binary_icon_64_png_end;
+extern uint8_t _binary_icon_128_png_end;
+extern uint8_t _binary_icon_256_png_end;
 
 extern uint8_t _binary_opensans_regular_ttf_start;
-extern uint32_t _binary_opensans_regular_ttf_size;
+extern uint8_t _binary_opensans_regular_ttf_end;
 
 
 std::vector<GLFWimage> Resources::get_app_icons()
@@ -31,11 +34,11 @@ std::vector<GLFWimage> Resources::get_app_icons()
             &_binary_icon_64_png_start,
             &_binary_icon_128_png_start,
             &_binary_icon_256_png_start};
-    uint32_t size[]={_binary_icon_16_png_size,
-                     _binary_icon_32_png_size,
-                     _binary_icon_64_png_size,
-                     _binary_icon_128_png_size,
-                     _binary_icon_256_png_size};
+    uint32_t size[]={static_cast<uint32_t>(&_binary_icon_16_png_end-&_binary_icon_16_png_start),
+                     static_cast<uint32_t>(&_binary_icon_32_png_end - &_binary_icon_16_png_start),
+                     static_cast<uint32_t>(&_binary_icon_64_png_end - &_binary_icon_16_png_start),
+                     static_cast<uint32_t>(&_binary_icon_128_png_end - &_binary_icon_16_png_start),
+                     static_cast<uint32_t>(&_binary_icon_256_png_end - &_binary_icon_16_png_start)};
 
     std::vector<GLFWimage> images;
     for(int i=0;i<5;++i)
@@ -50,7 +53,7 @@ std::vector<GLFWimage> Resources::get_app_icons()
 
 void* Resources::get_font_data(uint32_t &size)
 {
-    size = _binary_opensans_regular_ttf_size;
+    size = static_cast<uint32_t>(&_binary_opensans_regular_ttf_end-&_binary_opensans_regular_ttf_start);
     return &_binary_opensans_regular_ttf_start;
 }
 
