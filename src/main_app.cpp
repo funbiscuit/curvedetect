@@ -10,6 +10,7 @@
 #include <resources.h>
 
 #include <GLFW/glfw3.h>
+#include "clipboard.h"
 
 
 MainApp::MainApp()
@@ -203,9 +204,11 @@ void MainApp::set_use_imgui_cursor(bool bShowCursor)
     glfwSetInputMode(window, GLFW_CURSOR, showNativeCursor ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_HIDDEN);
 }
 
-void MainApp::copy_to_clipboard(const char *text)
+
+
+void MainApp::copy_to_clipboard(const std::string& text)
 {
-    glfwSetClipboardString(window, text);
+    Clipboard::get().set_text(text);
 }
 
 

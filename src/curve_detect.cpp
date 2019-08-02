@@ -234,9 +234,8 @@ void CurveDetect::copy_to_clipboard(std::string columnSeparator,
         sstr << tempLineEnding;
         //sstr << newLineSeq;
     }
-    
-    //TODO should not be here
-    MainApp::get().copy_to_clipboard(sstr.str().c_str());
+
+    MainApp::get().copy_to_clipboard(sstr.str());
 }
 
 void CurveDetect::double_to_string(double num, char decimalSeparator, std::string &out_String)

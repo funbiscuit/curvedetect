@@ -5,6 +5,7 @@
 #include "main_window.h"
 
 #include <vector>
+#include <string>
 #include <imgui.h>
 
 
@@ -27,7 +28,7 @@ public:
     
     static MainApp& get();
     
-    void copy_to_clipboard(const char* text);
+    void copy_to_clipboard(const std::string& text);
     
     bool is_ctrl_down(){return bCtrlPressed;}
     bool is_shift_down(){return bShiftPressed;}
