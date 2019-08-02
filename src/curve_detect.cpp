@@ -257,10 +257,8 @@ void CurveDetect::export_points(const char *path, bool asText)
     
     Vec2D realPoint;
 
-    double userPointsImage[userPoints.size()*2];
-    double allPointsImage[allPoints.size()*2];
-    double userPointsReal[userPoints.size()*2];
-    double allPointsReal[allPoints.size()*2];
+    auto allPointsImage=new double[allPoints.size()*2];
+    auto allPointsReal=new double[allPoints.size()*2];
     
     std::ofstream ofs;
     
@@ -284,9 +282,14 @@ void CurveDetect::export_points(const char *path, bool asText)
     if (asText)
     {
         ofs.close();
+        delete[](allPointsImage);
+        delete[](allPointsReal);
         return;
     }
-    
+
+    auto userPointsImage=new double[userPoints.size()*2];
+    auto userPointsReal=new double[userPoints.size()*2];
+
     for (size_t kp = 0; kp < userPoints.size(); kp++)
     {
         userPointsImage[kp*2]=userPoints[kp].imagePosition.x;
@@ -309,6 +312,11 @@ void CurveDetect::export_points(const char *path, bool asText)
                 .matrix("SubdividedPointsReal", allPointsReal, allPoints.size(), 2)
                 .close();
     }
+
+    delete[](userPointsImage);
+    delete[](userPointsReal);
+    delete[](allPointsImage);
+    delete[](allPointsReal);
 }
 
 
