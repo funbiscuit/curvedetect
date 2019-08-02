@@ -6,52 +6,75 @@
 
 
 /**
- * Example usage:
- *
-    int32_t vals[]={1,2,3,4,5,6};
-    float vals2[]={1.f,2.f,3.f,4.f,5.f,6.f};
-    double vals3[]={1.0,2.0,3.0,4.0,5.0,6.0};
-
-    auto writer = MatFileWriter::get("test.mat");	//path to mat file to be written
-
-    if (writer)
-    {
-        writer->matrix("float_vec", vals2, 3, 2)
-                .matrix("double_vec", vals3, 3, 2)
-                .matrix("int32_vec", vals, 3, 2)
-                .close();	//call to close is required to close opened file and flush all data!
-    }
+ * MatFileWriter creates Matlab file (version 5) with matrices/vectors (only 2d) of all numeric types
+ * For example usage open MatFileWriter::test_writer(path)
  */
 class MatFileWriter
 {
+    /**
+     * should use get() instead of manual creation
+     */
+    MatFileWriter(const MatFileWriter&);
+    MatFileWriter& operator=(MatFileWriter&);
+    MatFileWriter() = default;
+    /**
+     * should call to close() instead of deleting directly
+     */
+    ~MatFileWriter() = default;
 public:
 	enum NumberType
 	{
 		FLOAT = 1,
 		DOUBLE = 2,
-		INT32 = 3
+		INT8 = 3,
+        UINT8 = 4,
+		INT16 = 5,
+        UINT16 = 6,
+		INT32 = 7,
+        UINT32 = 8,
+        INT64 = 9,
+        UINT64 = 10,
+		CHAR =11
 	};
 
 	static MatFileWriter* get(const char* path);
 
-	MatFileWriter& matrix(const char *name, int32_t *first, int rows, int cols = 1, bool bRowMajor = true);
-	MatFileWriter& matrix(const char *name, float *first, int rows, int cols = 1, bool bRowMajor = true);
-	MatFileWriter& matrix(const char *name, double *first, int rows, int cols = 1, bool bRowMajor = true);
+	/**
+	 * Create a test mat file with matrices of all supported data types
+	 * @param path - path to file
+	 */
+    static void test_writer(const char* path);
+
+    MatFileWriter& matrix(const char *name, const float *first, int rows, int cols = 1, bool bRowMajor = true);
+    MatFileWriter& matrix(const char *name, const double *first, int rows, int cols = 1, bool bRowMajor = true);
+
+	MatFileWriter& matrix(const char *name, const int8_t *first, int rows, int cols = 1, bool bRowMajor = true);
+    MatFileWriter& matrix(const char *name, const uint8_t *first, int rows, int cols = 1, bool bRowMajor = true);
+
+	MatFileWriter& matrix(const char *name, const int16_t *first, int rows, int cols = 1, bool bRowMajor = true);
+    MatFileWriter& matrix(const char *name, const uint16_t *first, int rows, int cols = 1, bool bRowMajor = true);
+
+	MatFileWriter& matrix(const char *name, const int32_t *first, int rows, int cols = 1, bool bRowMajor = true);
+    MatFileWriter& matrix(const char *name, const uint32_t *first, int rows, int cols = 1, bool bRowMajor = true);
+
+	MatFileWriter& matrix(const char *name, const int64_t *first, int rows, int cols = 1, bool bRowMajor = true);
+    MatFileWriter& matrix(const char *name, const uint64_t *first, int rows, int cols = 1, bool bRowMajor = true);
+
+    MatFileWriter& matrix(const char *name, const char *first, int rows, int cols = 1, bool bRowMajor = true);
 
 	void close();
 
 private:
 	FILE *outFile;
 
-	MatFileWriter& matrix(const char *name, void* first, NumberType dataType, int rows, int cols, bool bRowMajor);
+	MatFileWriter& matrix(const char *name, const void* first, NumberType dataType, int rows, int cols, bool bRowMajor);
 
 	void write_header();
 
-	void write_data_element(int type, void *data, int dataItemSize, int nDataItems);
-	void write_data_element_tag(int type, int dataItemSize, int nDataItems);
-	void write_data_element_body(int type, void *data, int dataItemSize, int nDataItems);
+	void write_data_element(int type, const void *data, int dataItemSize, int nDataItems, bool charClass);
 
-	void transpose(void* data, int dataItemSize, int rows, int cols);
+	uint8_t* transpose(const void* data, int dataItemSize, int rows, int cols);
+    static inline uint32_t get_padding(uint32_t size);
 };
 
 #endif //CURVEDETECT_MAT_FILE_WRITER_H
