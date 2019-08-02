@@ -21,8 +21,6 @@ public:
     
     bool is_pixel_inside(int px, int py);
 
-    int get_pixel_value(int px, int py);
-
     bool snap(Vec2D &pos, int binLevel, int dist);
 
 

@@ -74,16 +74,6 @@ bool Image::is_pixel_inside(int px, int py)
     
 }
 
-
-int Image::get_pixel_value(int px, int py)
-{
-    if (!is_pixel_inside(px, py))
-        return 0;
-    
-    return imagePixels[py * width + px];
-}
-
-
 bool Image::update_pixel_region(int &px, int &py, int hside)
 {
     
