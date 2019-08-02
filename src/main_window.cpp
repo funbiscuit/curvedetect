@@ -23,7 +23,7 @@ MainWindow::MainWindow()
     height=720;
     toolbar_width=280;
     
-    currentMode = MODE_NONE;
+    currentMode = MODE_POINTS;
     
     
     minImageScale = 1.0f;
@@ -101,7 +101,8 @@ void MainWindow::on_resize(int w, int h)
 
 void MainWindow::render_main_window()
 {
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    if(bShowFps)
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
     render_side_panel();
     
@@ -141,7 +142,7 @@ void MainWindow::render_main_window()
     
     ImVec2 ZoomOrigin;
     
-    if (image && render_zoom_window(canvas_sz, ZoomOrigin))
+    if (image && bShowZoomWindow && render_zoom_window(canvas_sz, ZoomOrigin))
     {
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
         float zoomedScale = zoomWindowSize/ float(2 * zoomPixelHalfSide + 1);
@@ -168,9 +169,9 @@ void MainWindow::render_main_window()
         bIsContextMenuOpened = true;
         bIsReadyForAction = false;
         
-        const char* items[]={"[1] Points","[2] Horizon",
-                             "[3] Ticks"};
-        ActionMode modes[]={MODE_POINTS,MODE_HORIZON,MODE_TICKS};
+        const char* items[]={"[1] Points","[2] Grid",
+                             "[3] Horizon"};
+        ActionMode modes[]={MODE_POINTS,MODE_GRID,MODE_HORIZON};
         
         for(int j=0;j<3;++j)
         {
@@ -299,7 +300,7 @@ void MainWindow::on_mouse_down(int btn)
             case MODE_HORIZON:
                 curve->select_hovered(ImageElement::HORIZON);
                 break;
-            case MODE_TICKS:
+            case MODE_GRID:
                 if (curve->select_hovered(ImageElement::TICKS))
                     curve->backup_selected_tick();
                 break;
@@ -323,7 +324,7 @@ void MainWindow::on_mouse_up(int btn)
                 else
                     curve->deselect_all();
                 break;
-            case MODE_TICKS:
+            case MODE_GRID:
                 curve->deselect_all();
                 break;
             default:
@@ -339,7 +340,7 @@ void MainWindow::on_mouse_double_click(int btn)
     {
         switch (currentMode)
         {
-            case MODE_TICKS:
+            case MODE_GRID:
                 if(curve->get_selected_id())
                     ImGui::OpenPopup("TickConfig");
                 break;
@@ -382,15 +383,14 @@ void MainWindow::process_input()
     if (ImGui::IsWindowFocused())
     {
         ImGuiIO& io = ImGui::GetIO();
-        ActionMode modes[]={MODE_POINTS,MODE_HORIZON,MODE_TICKS};
+        ActionMode modes[]={MODE_POINTS,MODE_GRID,MODE_HORIZON};
 
         for(int j=0;j<3;++j)
-        {
             if (io.KeysDown[GLFW_KEY_1+j] || io.KeysDown[GLFW_KEY_KP_1+j])
-            {
                 currentMode = modes[j];
-            }
-        }
+
+        if(io.KeysDown[GLFW_KEY_F] && io.KeysDownDurationPrev[GLFW_KEY_F]==0.f)
+            bShowFps = !bShowFps;
 
         if(curve && curve->get_selected_id()==0)
             deleteOnRelease = app.is_shift_down();
@@ -670,7 +670,7 @@ bool MainWindow::render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOri
     ZoomUV1 = ZoomUV0 + ImVec2(ZoomUVsideU, ZoomUVsideU / im_aspect);
     
     //draw zoom window
-    if (ImGui::is_mouse_hovering_window() && currentMode != MODE_NONE)
+    if (ImGui::is_mouse_hovering_window())
     {
         ImU32 ZoomBgColor = ImColor(120, 120, 120, 220);
         draw_list->AddRectFilled(ZoomPos - ImVec2(ZoomRectBorder, ZoomRectBorder),
@@ -730,7 +730,7 @@ void MainWindow::render_grid_lines(ImVec2 im_pos)
     for (auto &tick : XTicks) {
         ImU32 col = tickColor;
 
-        if (currentMode & MODE_TICKS)
+        if (currentMode & MODE_GRID)
         {
             if (tick.id == selectedId)
                 col = tickSel;
@@ -768,7 +768,7 @@ void MainWindow::render_grid_lines(ImVec2 im_pos)
     for (auto &tick : YTicks) {
         ImU32 col = tickColor;
 
-        if (currentMode & MODE_TICKS)
+        if (currentMode & MODE_GRID)
         {
             if (tick.id == selectedId)
                 col = tickSel;
@@ -866,7 +866,6 @@ void MainWindow::render_side_panel()
     
     
     ImGui::BeginChild("SettingsWindow", ImVec2(SettingsWidth, 0));
-    ImGui::Text("Settings");
     
     int SubdivideIterations=0;
     
@@ -891,13 +890,13 @@ void MainWindow::render_side_panel()
     ImGui::Checkbox("Draw Subdivision Points", &bShowSubdivPoints);
     ImGui::Checkbox("Show Image", &bShowImage);
     ImGui::Checkbox("Show Binarization", &bShowBinarization);
+    ImGui::Checkbox("Show Zoom Window", &bShowZoomWindow);
     //ImGui::Checkbox("Smooth Subdivision", &bSmoothPoints);
     
     
     if (curve)
     {
         int BinarizationLevel = curve->binLevel;
-        int PrevBinarizationLevel = BinarizationLevel;
         
         CurPos = ImGui::GetCursorPos();
         
@@ -955,58 +954,39 @@ void MainWindow::render_side_panel()
         ImGui::PopID();
     }
     
+    float buttonMargin = 3.f;
     
-    
-    if (ImGui::Button("Open Image", ImVec2(SettingsWidth, 0)))
-    {
+    if (ImGui::Button("Open", ImVec2(SettingsWidth/2-buttonMargin, 0)))
         on_open_image();
-    }
+
+    ImGui::SameLine(0.f,buttonMargin*2);
+
+    if (ImGui::Button("Reset", ImVec2(SettingsWidth/2-buttonMargin, 0)))
+        reset_all();
+
+    ImGui::Separator();
+
+    //render text export settings
     
     int out_Result;
     bool bExportReady = curve ? curve->is_export_ready(out_Result) : false;
     
-    if(!bExportReady)
-    {
-        ImGui_PushDisableButton();
-    }
-    if (ImGui::Button("Export", ImVec2(SettingsWidth, 0)) && bExportReady)
-    {
-        on_export_points();
-    }
-    if (ImGui::Button("Copy to Clipboard", ImVec2(SettingsWidth, 0)) && bExportReady)
-    {
-        curve->copy_to_clipboard(columnSeparator, lineEnding, decimalSeparator);
-    }
+    static char edit_buf_col_sep[10];
+    static char edit_buf_line_end[10];
     
-    if(!bExportReady)
-        ImGui_PopDisableButton();
+    std::string edit_str;
     
+    edit_str = escape(columnSeparator);
+    edit_str.copy(edit_buf_col_sep, 8);
+
+    float inputWidth=90.f;
+
+    ImGui::PushItemWidth(inputWidth);
+    ImGui::TextUnformatted("Column separator");
+    ImGui::SameLine(SettingsWidth-inputWidth);
+    ImGui::InputText("##col-sep", edit_buf_col_sep, 6);
     
-    if (ImGui::Button("Reset All", ImVec2(SettingsWidth, 0)))
-    {
-        reset_all();
-    }
-    
-    ImGui::Separator();
-    
-    ImGui::Text("Export settings");
-    
-    static char edit_buf[10];
-    static char edit_buf2[10];
-    
-    static std::string edit_str;
-    
-    edit_str= escape(columnSeparator);
-    
-    //compiler is really nervous about this
-//#pragma warning( disable : 4996 )
-    edit_str.copy(edit_buf, 8);
-//#pragma warning( default : 4996 )
-    
-    ImGui::PushItemWidth(50.0f);
-    ImGui::InputText("Column separator", edit_buf, 6);
-    
-    edit_str = edit_buf;
+    edit_str = edit_buf_col_sep;
     columnSeparator = unescape(edit_str);
     
     if (columnSeparator.size() == 0)
@@ -1014,126 +994,120 @@ void MainWindow::render_side_panel()
     
     
     edit_str = escape(lineEnding);
-    edit_str.copy(edit_buf2, 8);
+    edit_str.copy(edit_buf_line_end, 8);
+
+    ImGui::TextUnformatted("Line ending");
+    ImGui::SameLine(SettingsWidth-inputWidth);
+    ImGui::InputText("##line-end", edit_buf_line_end, 6);
     
-    ImGui::InputText("Line ending", edit_buf2, 6);
-    
-    edit_str = edit_buf2;
+    edit_str = edit_buf_line_end;
     lineEnding = unescape(edit_str);
     
     if (lineEnding.size() == 0)
         lineEnding = " ";
     
     
-    const char* items[] = { ".", "," };
+    const char* items[] = { "dot", "comma" };
     static int item2 = 0;
-    ImGui::Combo("Decimal separator", &item2, items, IM_ARRAYSIZE(items));   // Combo using proper array. You can also pass a callback to retrieve array value, no need to create/copy an array just for that.
+    ImGui::TextUnformatted("Decimal separator");
+    ImGui::SameLine(SettingsWidth-inputWidth);
+    ImGui::Combo("##dec-sep", &item2, items, 2);   // Combo using proper array. You can also pass a callback to retrieve array value, no need to create/copy an array just for that.
     
     decimalSeparator = items[item2][0];
-    //std::cout << decimalSeparator << "\n";
     
     ImGui::PopItemWidth();
-    
-    
-    
-    
-    ImGui::Separator();
-    
-    std::string buf = "";
-    
-    
-    buf = out_Result == READY ? "Yes" : "No";
-    ImGui::Text("Ready for export: %s", buf.c_str());
-    
-    
-    buf = out_Result & NO_POINTS ? "Not enough" : "Ready";
-    
-    ImGui::Text("Points: %s", buf.c_str());
-    
-    if (out_Result & NO_X_GRID_LINES)
-    {
-        buf = "Not enough";
-    }
-    else if (out_Result & PIXEL_OVERLAP_X_GRID)
-    {
-        buf = "Overlapping positions";
-    }
-    else
-    {
-        buf = out_Result & VALUE_OVERLAP_X_GRID ? "Overlapping values" : "Ready";
-    }
-    
-    ImGui::Text("X Ticks: %s", buf.c_str());
-    
-    
-    if (out_Result & NO_Y_GRID_LINES)
-    {
-        buf = "Not enough";
-    }
-    else if (out_Result & PIXEL_OVERLAP_Y_GRID)
-    {
-        buf = "Overlapping positions";
-    }
-    else
-    {
-        buf = out_Result & VALUE_OVERLAP_Y_GRID ? "Overlapping values" : "Ready";
-    }
-    
-    ImGui::Text("Y Ticks %s", buf.c_str());
+
+    if(!bExportReady)
+        ImGui_PushDisableButton();
+
+    if (ImGui::Button("Copy", ImVec2(SettingsWidth/2-buttonMargin, 0)) && bExportReady)
+        curve->copy_to_clipboard(columnSeparator, lineEnding, decimalSeparator);
+
+    ImGui::SameLine(0.f,buttonMargin*2);
+
+    if (ImGui::Button("Export", ImVec2(SettingsWidth/2-buttonMargin, 0)) && bExportReady)
+        on_export_points();
+
+    if(!bExportReady)
+        ImGui_PopDisableButton();
     
     
     ImGui::Separator();
+
+    render_hints_panel();
     
+    ImGui::EndChild();
+}
+
+void MainWindow::render_hints_panel()
+{
+    if(!curve)
+    {
+        ImGui::TextUnformatted("Open image to begin");
+        return;
+    }
+
+    int out_Result;
+    curve->is_export_ready(out_Result);
+
+//    std::string buf;
+
+    if(out_Result & CurveDetect::NO_POINTS || out_Result & CurveDetect::ONE_POINT)
+        ImGui::TextUnformatted("Add at least 2 points");
+
+
+    if(out_Result & CurveDetect::PIXEL_OVERLAP_X_GRID)
+        ImGui::TextUnformatted("Vertical grid lines are overlapping");
+    else if(out_Result & CurveDetect::VALUE_OVERLAP_X_GRID)
+        ImGui::TextUnformatted("Vertical grid lines have the same value");
+
+    if(out_Result & CurveDetect::PIXEL_OVERLAP_Y_GRID)
+        ImGui::TextUnformatted("Horizontal grid lines are overlapping");
+    else if(out_Result & CurveDetect::VALUE_OVERLAP_Y_GRID)
+        ImGui::TextUnformatted("Horizontal grid lines have the same value");
+
+    if(out_Result != CurveDetect::READY)
+        ImGui::TextUnformatted("");
+
+    //describe current work mode
     std::string modeStr;
-    
     std::string modifierStr = "(move)";
-    
+
     auto& app= MainApp::get();
 
     bool snap = curve ? curve->get_selected_id()!=0 : false;
-    
+
     if (app.is_ctrl_down())
-    {
         modifierStr = snap ? "(snap)" : "(new)";
-    }
     else if (deleteOnRelease)
-    {
         modifierStr = "(delete)";
-    }
-    
+
     std::string helpStr;
-    
+
     switch (currentMode)
     {
-        case MODE_NONE:
-            modeStr = "None";
-            modifierStr = "";
-            helpStr = "Press right mouse button\nto choose work mode";
-            break;
         case MODE_POINTS:
             modeStr = "Point";
-            helpStr = "Drag (or use arrow keys)\nto move a point\nHold Ctrl to add a new point\nHold Shift to delete a point\nHold Ctrl to enable snapping";
+            helpStr = "Drag (or use arrow keys)\nto move a point\nHold Ctrl to add a new point\nShift+Click to delete a point\nHold Ctrl to snap selected point";
             break;
         case MODE_HORIZON:
             modeStr = "Horizon";
             modifierStr = "";
-            helpStr = "Drag (or use arrow keys) to change\nhorizon of image\nHold Ctrl to enable snapping";
+            helpStr = "Drag (or use arrow keys) to change\nhorizon of image\nHold Ctrl to snap selected end";
             break;
-        case MODE_TICKS:
-            modeStr = "Ticks";
+        case MODE_GRID:
+            modeStr = "Grid";
             modifierStr = "";
-            helpStr = "Drag (or use arrow keys)\nto move tick lines\nDouble click to change value\nHold Ctrl to enable snapping";
+            helpStr = "Drag (or use arrow keys)\nto move grid lines\nDouble click to change value\nHold Ctrl to snap selected line";
             break;
-        
+
     }
-    
+
     helpStr += "\n\nDrag with middle button to pan\nUse mouse wheel to zoom";
-    
+
     ImGui::Text("Work mode: %s %s", modeStr.c_str(), modifierStr.c_str());
-    ImGui::Text("");
-    ImGui::Text(helpStr.c_str());
-    
-    ImGui::EndChild();
+    ImGui::TextUnformatted("");
+    ImGui::TextUnformatted(helpStr.c_str());
 }
 
 void MainWindow::on_export_points()

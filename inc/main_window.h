@@ -10,10 +10,9 @@
 
 enum ActionMode
 {
-    MODE_NONE    = 1 << 0,
     MODE_POINTS  = 1 << 1,
     MODE_HORIZON = 1 << 2,
-    MODE_TICKS  = 1 << 3,
+    MODE_GRID  = 1 << 3,
 
 };
 
@@ -55,7 +54,9 @@ private:
     bool bShowSubdivPoints = true;
     bool bShowImage = true;
     bool bShowBinarization = false;
-    
+    bool bShowZoomWindow = false;
+    bool bShowFps = false;
+
     
     
     float minImageScale;
@@ -93,7 +94,8 @@ private:
     
     
     void render_side_panel();
-    
+    void render_hints_panel();
+
     
     void on_open_image();
     

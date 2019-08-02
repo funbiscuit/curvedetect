@@ -119,62 +119,34 @@ void CurveDetect::update_hovered_ticky(Vec2D imagePos)
 
 bool CurveDetect::is_export_ready(int &out_Result)
 {
-    
-    out_Result = ExportReadyStatus::READY;
-    
+    out_Result = READY;
+
     if (userPoints.size() < 2)
-    {
-        out_Result |= ExportReadyStatus::NO_POINTS;
-    }
+        out_Result |= NO_POINTS;
+
     auto dir1=horizon.target.imagePosition-horizon.imagePosition;
     double norm = std::sqrt(dir1.x*dir1.x + dir1.y*dir1.y);
-    if (xticks.size() < 2)
-    {
-        out_Result |= ExportReadyStatus::NO_X_GRID_LINES;
-    }
-    else
-    {
-        auto dxtick=xticks[0].imagePosition-xticks[1].imagePosition;
 
-        //for deriving a and b
-        double det1 = (dxtick.x*dir1.x + dxtick.y*dir1.y)/norm;
-        
-        //std::cout << "det1: "<< det1 << "\n";
-        
-        //float dist=det1/
-        
-        if (std::abs(det1) < minTickPixelDiff)
-        {
-            out_Result |= ExportReadyStatus::PIXEL_OVERLAP_X_GRID;
-        }
-        else if (xticks[0].tickValue == xticks[1].tickValue)
-        {
-            out_Result |= ExportReadyStatus::VALUE_OVERLAP_X_GRID;
-        }
-    }
-    
-    if (yticks.size() < 2)
-    {
-        out_Result |= ExportReadyStatus::NO_Y_GRID_LINES;
-    }
-    else
-    {
-        auto dytick=yticks[0].imagePosition-yticks[1].imagePosition;
+    auto dxtick=xticks[0].imagePosition-xticks[1].imagePosition;
 
-        //for deriving c and d
-        double det2 = (-dytick.x*dir1.y + dytick.y*dir1.x)/norm;
-        
-        //std::cout << "det2: " << det2 << "\n";
-        
-        if (std::abs(det2)<minTickPixelDiff)
-        {
-            out_Result |= ExportReadyStatus::PIXEL_OVERLAP_Y_GRID;
-        }
-        else if (yticks[0].tickValue == yticks[1].tickValue)
-        {
-            out_Result |= ExportReadyStatus::VALUE_OVERLAP_Y_GRID;
-        }
-    }
+    //for deriving a and b
+    double det1 = (dxtick.x*dir1.x + dxtick.y*dir1.y)/norm;
+
+    if (std::abs(det1) < minTickPixelDiff)
+        out_Result |= PIXEL_OVERLAP_X_GRID;
+    else if (xticks[0].tickValue == xticks[1].tickValue)
+        out_Result |= VALUE_OVERLAP_X_GRID;
+
+
+    auto dytick=yticks[0].imagePosition-yticks[1].imagePosition;
+
+    //for deriving c and d
+    double det2 = (-dytick.x*dir1.y + dytick.y*dir1.x)/norm;
+
+    if (std::abs(det2)<minTickPixelDiff)
+        out_Result |= PIXEL_OVERLAP_Y_GRID;
+    else if (yticks[0].tickValue == yticks[1].tickValue)
+        out_Result |= VALUE_OVERLAP_Y_GRID;
     
     return out_Result == READY;
 }

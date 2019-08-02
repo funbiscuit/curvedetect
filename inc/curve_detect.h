@@ -8,27 +8,22 @@
 #include <image_elements.h>
 
 
-enum ExportReadyStatus //: int
-{
-    READY =                1 << 0,
-    NO_IMAGE =             1 << 1,
-    NO_POINTS =            1 << 2,
-    ONE_POINT =            1 << 3,
-    NO_X_GRID_LINES =      1 << 4,
-    ONE_X_GRID_LINE =      1 << 5,
-    NO_Y_GRID_LINES =      1 << 6,
-    ONE_Y_GRID_LINE =      1 << 7,
-    PIXEL_OVERLAP_X_GRID = 1 << 8,
-    VALUE_OVERLAP_X_GRID = 1 << 9,
-    PIXEL_OVERLAP_Y_GRID = 1 << 10,
-    VALUE_OVERLAP_Y_GRID = 1 << 11,
-
-};
 
 
 class CurveDetect
 {
 public:
+
+    enum ExportStatus //: int
+    {
+        READY =                0,
+        NO_POINTS =            1 << 1,
+        ONE_POINT =            1 << 2,
+        PIXEL_OVERLAP_X_GRID = 1 << 3,
+        VALUE_OVERLAP_X_GRID = 1 << 4,
+        PIXEL_OVERLAP_Y_GRID = 1 << 5,
+        VALUE_OVERLAP_Y_GRID = 1 << 6,
+    };
     
     CurveDetect(std::shared_ptr<Image> image);
     
