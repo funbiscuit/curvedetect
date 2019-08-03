@@ -38,6 +38,12 @@ private:
     ImColor colorDisabled = ImColor(200, 200, 200);
     
     float zoomWindowSize;
+    int curveThickness=3;
+    const int curveThicknessMin=2;
+    const int curveThicknessMax=30;
+    int subdivLevel=8;
+    const int maxSubdivLevel=8;
+    int binLevel=127;
     
     
     ActionMode currentMode;

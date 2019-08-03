@@ -863,11 +863,6 @@ void MainWindow::render_side_panel()
     
     
     ImGui::BeginChild("SettingsWindow", ImVec2(SettingsWidth, 0));
-    
-    int SubdivideIterations=0;
-    
-    if(curve)
-        SubdivideIterations=curve->subdivLevel;
 
     ImVec2 CurPos = ImGui::GetCursorPos();
 
@@ -879,7 +874,7 @@ void MainWindow::render_side_panel()
     CurPos = ImGui::GetCursorPos();
 
     ImGui::PushItemWidth(SettingsWidth - CurPos.x);
-    ImGui::SliderInt("##subdiv_slider", &SubdivideIterations, 0, CurveDetect::maxSubdivLevel);
+    ImGui::SliderInt("##subdiv_slider", &subdivLevel, 0, maxSubdivLevel);
     ImGui::PopItemWidth();
     
     
@@ -893,8 +888,6 @@ void MainWindow::render_side_panel()
     
     if (curve)
     {
-        int BinarizationLevel = curve->binLevel;
-        
         CurPos = ImGui::GetCursorPos();
         
         ImGui::SetCursorPosY(CurPos.y + 3.0f);
@@ -906,20 +899,36 @@ void MainWindow::render_side_panel()
         CurPos = ImGui::GetCursorPos();
         
         ImGui::PushItemWidth(SettingsWidth - CurPos.x);
-        ImGui::PushID("bin_level_slider");
-        ImGui::SliderInt("", &BinarizationLevel, 0, 255);
+        ImGui::SliderInt("##bin-level", &binLevel, 0, 255);
         
         ImGui::PopItemWidth();
         
-        ImGui::PopID();
         
-        ImGui_ImplOpenGL3_SetBinarizationLevel(BinarizationLevel);
+        ImGui_ImplOpenGL3_SetBinarizationLevel(binLevel);
 
-        curve->set_subdiv_level(SubdivideIterations);
-        curve->set_bin_level(BinarizationLevel);
+        curve->set_subdiv_level(subdivLevel);
+        curve->set_bin_level(binLevel);
+    
+    
+    
+        //tune curve thickness
+        CurPos = ImGui::GetCursorPos();
         
-        
-        
+        ImGui::SetCursorPosY(CurPos.y + 3.0f);
+        ImGui::Text("Curve thickness: ");
+        ImGui::SameLine();
+        ImGui::SetCursorPosY(CurPos.y);
+        CurPos = ImGui::GetCursorPos();
+        ImGui::PushItemWidth(SettingsWidth - CurPos.x);
+        ImGui::SliderInt("##curve-thick", &curveThickness, curveThicknessMin, curveThicknessMax);
+        ImGui::PopItemWidth();
+        curve->set_curve_thickness(curveThickness);
+    
+    
+    
+    
+    
+    
         CurPos = ImGui::GetCursorPos();
         ImGui::SetCursorPosY(CurPos.y + 3.0f);
         //ImGui::Text("Bin. level");
@@ -934,8 +943,7 @@ void MainWindow::render_side_panel()
         float NewScale = imageScale;
         
         ImGui::PushItemWidth(SettingsWidth - CurPos.x);
-        ImGui::PushID("image_scale_slider");
-        ImGui::SliderFloat("", &NewScale, minImageScale, maxImageScale, "%.2f");
+        ImGui::SliderFloat("##image-scale", &NewScale, minImageScale, maxImageScale, "%.2f");
         ImGui::PopItemWidth();
         
         
@@ -948,7 +956,6 @@ void MainWindow::render_side_panel()
         }
         
         
-        ImGui::PopID();
     }
     
     float buttonMargin = 3.f;

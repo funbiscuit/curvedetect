@@ -15,6 +15,7 @@ public:
     bool is_available(int px, int py);
 
     void set_bin_level(int binLevel);
+    void set_curve_thick(int thick);
 
     bool snap(int px, int py, Vec2D& point);
 
@@ -36,6 +37,7 @@ private:
     std::vector<bool> snapCached;
 
     int cachedBinLevel;
+    int cachedCurveThick;
 
     int width;
     int height;

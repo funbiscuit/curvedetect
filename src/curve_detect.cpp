@@ -322,8 +322,9 @@ void CurveDetect::update_subdiv()
     //when fast update is true then only intervals where end positions change will be updated
     //everything else should be the same so we don't bother updating them
     bool isSorted = are_points_sorted();
-    bool fastUpdate = subdivBinLevel == binLevel && isSorted;
+    bool fastUpdate = subdivBinLevel == binLevel && subdivCurveThick == curveThick && isSorted;
     subdivBinLevel = binLevel;
+    subdivCurveThick = curveThick;
     int userPointsCount = userPoints.size();
     
     if (userPointsCount < 2)
@@ -688,6 +689,16 @@ void CurveDetect::set_subdiv_level(int subdiv)
     subdivLevel=subdiv;
     update_subdiv();
 }
+
+void CurveDetect::set_curve_thickness(int thick)
+{
+    if(curveThick==thick)
+        return;
+    curveThick=thick;
+    image->set_curve_thickness(thick);
+    update_subdiv();
+}
+
 
 ImageHorizon CurveDetect::get_horizon() {
     return horizon;

@@ -223,6 +223,14 @@ bool Image::snap(Vec2D &pos, int binLevel)
     }
 }
 
+void Image::set_curve_thickness(int thick)
+{
+    if(curveThickness==thick)
+        return;
+    curveThickness=thick;
+    snapCache.set_curve_thick(curveThickness);
+}
+
 bool Image::snap_to_closest(Vec2D &point, int binLevel)
 {
     if(!image)
@@ -249,7 +257,8 @@ bool Image::snap_to_closest(Vec2D &point, int binLevel)
 
     //determine pixel step based on curveThickness since then we will be averaging
     //over rectangle, we don't need to snap precisely
-    int step = pow2floor(curveThickness);
+    int step = pow2floor(curveThickness)/2;
+    step = step>0 ? step : 1;
     int image_i = bit_pos(step);
 
     for (int row = 0; row < side; row+=step)
@@ -276,105 +285,15 @@ bool Image::snap_to_closest(Vec2D &point, int binLevel)
             }
         }
     }
-    
-    
-    
-    //10p 20fps
-    
-//    for (int row = 0; row < side; ++row)
-//    {
-//        for (int column = 0; column < side; ++column)
-//        {
-//            int globalRow = py - hside + row;
-//            int globalColumn = px - hside + column;
-//            bool isBlack = false;
-//            if (globalRow >= 0 && globalRow < height && globalColumn >= 0 && globalColumn < width)
-//                isBlack = images[0].pixels[globalRow * width + globalColumn] < binLevel;
-//
-//            if (isBlack)
-//            {
-//                int dx = hside - column;
-//                int dy = hside - row;
-//                int dist = dx * dx + dy * dy;
-//                if (dist < minDist)
-//                {
-//                    minDist = dist;
-//                    closestX = column;
-//                    closestY = row;
-//                }
-//            }
-//        }
-//    }
-    
 
     if (closestX == -1 || closestY == -1)
         return false;
 
-//    std::cout <<"normal snap: "<<px + closestX - hside<<", "<<py + closestY - hside<<"\n";
-    
     point.x = px + closestX - hside;
     point.y = py + closestY - hside;
 
     return true;
 }
-
-
-
-//bool Image::snap_to_closest(Vec2D &point, int binLevel, int dist)
-//{
-//    if(!image)
-//        return false;
-//
-//    int hside = dist;
-//    int side = hside*2+1;
-//
-//    if(width < side*2 || height<side*2)
-//        return false;
-//
-//    int px = (int) std::round(point.x);
-//    int py = (int) std::round(point.y);
-//
-//    int minDist = side*side;
-//    int closestX = -1;
-//    int closestY = -1;
-//
-//
-//    for (int row = 0; row < side; ++row)
-//    {
-//        for (int column = 0; column < side; ++column)
-//        {
-//            int globalRow = py - hside + row;
-//            int globalColumn = px - hside + column;
-//            bool isBlack = false;
-//            if (globalRow >= 0 && globalRow < height && globalColumn >= 0 && globalColumn < width)
-//                isBlack = images[0].pixels[globalRow * width + globalColumn] < binLevel;
-//
-//            if (isBlack)
-//            {
-//                int dx = hside - column;
-//                int dy = hside - row;
-//                int dist = dx * dx + dy * dy;
-//                if (dist < minDist)
-//                {
-//                    minDist = dist;
-//                    closestX = column;
-//                    closestY = row;
-//                }
-//            }
-//        }
-//    }
-//
-//    if (closestX == -1 || closestY == -1)
-//        return false;
-//
-////    std::cout <<"normal snap: "<<px + closestX - hside<<", "<<py + closestY - hside<<"\n";
-//
-//    point.x = px + closestX - hside;
-//    point.y = py + closestY - hside;
-//
-//    return true;
-//}
-
 
 bool Image::snap_to_bary(Vec2D &point, int binLevel)
 {

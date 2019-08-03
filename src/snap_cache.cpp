@@ -1,5 +1,6 @@
 
 #include <snap_cache.h>
+#include <iostream>
 
 #include "snap_cache.h"
 
@@ -8,6 +9,7 @@ SnapCache::SnapCache()
     width = 0;
     height = 0;
     cachedBinLevel = -1;
+    cachedCurveThick = -1;
 }
 
 bool SnapCache::is_available(int px, int py)
@@ -22,6 +24,15 @@ void SnapCache::set_bin_level(int binLevel)
         snapCached.clear(); //this to make sure all values are false
         snapCached.resize(width*height);
         cachedBinLevel = binLevel;
+    }
+}
+void SnapCache::set_curve_thick(int thick)
+{
+    if(cachedCurveThick != thick)
+    {
+        snapCached.clear(); //this to make sure all values are false
+        snapCached.resize(width*height);
+        cachedCurveThick = thick;
     }
 }
 

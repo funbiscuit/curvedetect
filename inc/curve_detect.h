@@ -55,6 +55,7 @@ public:
     
     void set_bin_level(int level);
     void set_subdiv_level(int subdiv);
+    void set_curve_thickness(int thick);
     
     bool is_export_ready(int &out_Result);
 
@@ -65,13 +66,18 @@ public:
 
     void update_subdiv();
 
-    static const int maxSubdivLevel=8;
-    int subdivLevel;
-    int binLevel;
     
 private:
     std::shared_ptr<Image> image;
-
+    
+    // binarization level that was used to calculate current subdivision
+    // so if it didn't change we can update subdivision much faster
+    int subdivBinLevel = -1;
+    int binLevel;
+    int subdivCurveThick = -1;
+    int curveThick;
+    int subdivLevel;
+    
     //TODO use snap distance (from image) instead
     float hoverZone = 14.f;
     //TODO use curve thickness instead
@@ -92,9 +98,6 @@ private:
     std::vector<ImagePoint> userPoints; //position of user points (pixels)
     std::vector<ImagePoint> allPoints; //position of all points (pixels) both user and generated
 
-    // binarization level that was used to calculate current subdivision
-    // so if it didn't change we can update subdivision much faster
-    int subdivBinLevel = -1;
 
     std::vector<ImageTickLine> xticks;
     std::vector<ImageTickLine> yticks;

@@ -36,6 +36,7 @@ public:
 
     bool snap(Vec2D &pos, int binLevel);
 
+    void set_curve_thickness(int thick);
 
 private:
     std::vector<ImageData> images;
@@ -43,7 +44,7 @@ private:
     
     
     //int snapDistance = 25;
-    int snapMultiplier = 5; //snapDistance=snapMultiplier*curveThickness
+    int snapMultiplier = 8; //snapDistance=snapMultiplier*curveThickness
     int curveThickness = 5;
     
     unsigned int texture;
