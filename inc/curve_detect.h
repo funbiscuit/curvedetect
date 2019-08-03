@@ -72,9 +72,9 @@ public:
 private:
     std::shared_ptr<Image> image;
 
-    //TODO move to settings
-    float snapDist;
+    //TODO use snap distance (from image) instead
     float hoverZone = 14.f;
+    //TODO use curve thickness instead
     double minTickPixelDiff = 5.0;
 
     uint64_t hoveredPoint = 0;

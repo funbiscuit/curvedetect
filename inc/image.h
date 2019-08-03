@@ -7,6 +7,19 @@
 #include "image_elements.h"
 #include "snap_cache.h"
 
+
+class ImageData
+{
+public:
+    ImageData() = default;
+    ~ImageData();
+
+    uint8_t* pixels=nullptr;
+    int width;
+    int height;
+};
+
+
 class Image {
 public:
     Image(std::string path);
@@ -21,24 +34,29 @@ public:
     
     bool is_pixel_inside(int px, int py);
 
-    bool snap(Vec2D &pos, int binLevel, int dist);
+    bool snap(Vec2D &pos, int binLevel);
 
 
 private:
-
+    std::vector<ImageData> images;
     unsigned char* image;
-
+    
+    
+    //int snapDistance = 25;
+    int snapMultiplier = 5; //snapDistance=snapMultiplier*curveThickness
+    int curveThickness = 5;
+    
     unsigned int texture;
     int width;
     int height;
-
-    uint8_t* imagePixels;
 
     //used for storing result of getNearbyPoints
     std::vector<uint8_t> pixelsRegion;
 
     SnapCache snapCache;
 
+    void generate_mipmaps();
+    
 
     /**
      * Result will be stored in pixelsRegion variable
@@ -55,7 +73,7 @@ private:
      * so for more precision use with snap_to_bary
      * @param ImagePoint
      */
-    bool snap_to_closest(Vec2D &point, int binLevel, int dist);
+    bool snap_to_closest(Vec2D &point, int binLevel);
 
     /**
      * will snap point to barycenter of current zoom region

@@ -1,6 +1,7 @@
 
 #include <image.h>
 #include <iostream>
+#include <chrono>
 
 #include "image.h"
 #include "snap_cache.h"
@@ -8,20 +9,53 @@
 #include "stb_image.h"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
+#include <bitset>
 
+uint32_t bit_pos(uint32_t val)
+{
+    return std::bitset<32>(val-1).count();
+}
+
+// Round up to lower power of 2 (return x>>1 if it's already a power of 2)
+inline int pow2floor (int x)
+{
+    if (x < 0)
+        return 0;
+    --x;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    x=(x+1)>>1;
+    x = x>0 ? x : 1;
+    return x;
+}
+
+
+
+ImageData::~ImageData()
+{
+    if(pixels)
+        delete[](pixels);
+}
 
 Image::Image(std::string path)
 {
     texture=0;
-    imagePixels = nullptr;
+    
+    //create at most 10 mipmaps
+    images.resize(10);
 
     image = stbi_load(path.c_str(), &width, &height, nullptr, 3);
 
     if(image)
     {
+        images[0].pixels = new uint8_t[width*height];
+        images[0].width = width;
+        images[0].height = height;
         texture = ImGui_ImplOpenGL3_CreateTexture(image, width, height, false, false);
 
-        imagePixels = new uint8_t[width*height];
         snapCache.resize(width, height);
     
         for (int col = 0; col < width; col++)
@@ -32,22 +66,72 @@ Image::Image(std::string path)
                 float g = *(image + 3*(row * width + col)+1);
                 float b = *(image + 3*(row * width + col)+2);
 
-                imagePixels[row * width + col]=uint8_t(0.2126f * r + 0.7152f * g + 0.0722f * b);
+                images[0].pixels[row * width + col]=uint8_t(0.2126f * r + 0.7152f * g + 0.0722f * b);
             }
         }
+
+        auto start=std::chrono::high_resolution_clock::now();
+
+        generate_mipmaps();
+        
+        auto end=std::chrono::high_resolution_clock::now();
+        auto mseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << "create took: " << mseconds << "\n";
     }
+    else
+        images.clear();
+
+
+
+
 }
 
 Image::~Image()
 {
     if(image)
         delete(image);
-    if(imagePixels)
-        delete(imagePixels);
+    images.clear();
+//    if(imagePixels)
+//        delete(imagePixels);
     //TODO SIGSEGV if destroying after window close
 //    if(texture!=0)
 //        ImGui_ImplOpenGL3_DestroyTexture(texture);
 }
+
+void Image::generate_mipmaps()
+{
+    for(int i=1;i<images.size();++i)
+    {
+        int w1=images[i-1].width;
+        int w2=w1/2;
+        int h2=images[i-1].height/2;
+        
+        if(w2<10 || h2<10)
+        {
+            images.resize(i);
+            break;
+        }
+        
+        images[i].pixels = new uint8_t[w2*h2];
+        images[i].width = w2;
+        images[i].height = h2;
+    
+        for (int col = 0; col < w2; col++)
+        {
+            for (int row = 0; row < h2; row++)
+            {
+                uint8_t a = __min(images[i-1].pixels[2*row*w1 + 2*col], images[i-1].pixels[2*row*w1+2*col+1]);
+                uint8_t b = __min(images[i-1].pixels[(2*row+1)*w1 + 2*col], images[i-1].pixels[(2*row+1)*w1+2*col+1]);
+                images[i].pixels[row * w2 + col]=__min(a, b);
+            }
+        }
+        
+    }
+    
+    
+    
+}
+
 
 int Image::get_width()
 {
@@ -112,7 +196,7 @@ bool Image::update_pixel_region(int &px, int &py, int hside)
     {
         for (int ky = py - hside; ky <= py + hside; ky++)
         {
-            pixelsRegion[(ky - py + hside)*side + kx - px + hside] = imagePixels[ky * width + kx];
+            pixelsRegion[(ky - py + hside)*side + kx - px + hside] = images[0].pixels[ky * width + kx];
         }
     }
     
@@ -122,7 +206,7 @@ bool Image::update_pixel_region(int &px, int &py, int hside)
     return true;
 }
 
-bool Image::snap(Vec2D &pos, int binLevel, int dist)
+bool Image::snap(Vec2D &pos, int binLevel)
 {
     //TODO dist is not changed in snap cache
     snapCache.set_bin_level(binLevel);
@@ -133,18 +217,18 @@ bool Image::snap(Vec2D &pos, int binLevel, int dist)
         return snapCache.snap(px, py, pos);
     else
     {
-        bool canSnap = snap_to_closest(pos, binLevel, dist) && snap_to_bary(pos, binLevel);
+        bool canSnap = snap_to_closest(pos, binLevel) && snap_to_bary(pos, binLevel);
         snapCache.cache_snap_info(px, py, pos, canSnap);
         return canSnap;
     }
 }
 
-bool Image::snap_to_closest(Vec2D &point, int binLevel, int dist)
+bool Image::snap_to_closest(Vec2D &point, int binLevel)
 {
     if(!image)
         return false;
 
-    int hside = dist;
+    int hside = snapMultiplier * curveThickness;
     int side = hside*2+1;
 
     if(width < side*2 || height<side*2)
@@ -152,54 +236,152 @@ bool Image::snap_to_closest(Vec2D &point, int binLevel, int dist)
 
     int px = (int) std::round(point.x);
     int py = (int) std::round(point.y);
+    
+    if(!is_pixel_inside(px, py))
+        return false;
+    
+    if(images[0].pixels[py * width + px] < binLevel)
+        return true;
 
     int minDist = side*side;
     int closestX = -1;
     int closestY = -1;
 
+    //determine pixel step based on curveThickness since then we will be averaging
+    //over rectangle, we don't need to snap precisely
+    int step = pow2floor(curveThickness);
+    int image_i = bit_pos(step);
 
-    for (int row = 0; row < side; ++row)
+    for (int row = 0; row < side; row+=step)
     {
-        for (int column = 0; column < side; ++column)
+        for (int column = 0; column < side; column+=step)
         {
             int globalRow = py - hside + row;
             int globalColumn = px - hside + column;
             bool isBlack = false;
             if (globalRow >= 0 && globalRow < height && globalColumn >= 0 && globalColumn < width)
-                isBlack = imagePixels[globalRow * width + globalColumn] < binLevel;
+                isBlack = images[image_i].pixels[(globalRow/step) * (width/step) + globalColumn/step] < binLevel;
 
             if (isBlack)
             {
-                int dx = hside - column;
-                int dy = hside - row;
+                int dx = hside - column-2;
+                int dy = hside - row-2;
                 int dist = dx * dx + dy * dy;
                 if (dist < minDist)
                 {
                     minDist = dist;
-                    closestX = column;
-                    closestY = row;
+                    closestX = column+2;
+                    closestY = row+2;
                 }
             }
         }
     }
+    
+    
+    
+    //10p 20fps
+    
+//    for (int row = 0; row < side; ++row)
+//    {
+//        for (int column = 0; column < side; ++column)
+//        {
+//            int globalRow = py - hside + row;
+//            int globalColumn = px - hside + column;
+//            bool isBlack = false;
+//            if (globalRow >= 0 && globalRow < height && globalColumn >= 0 && globalColumn < width)
+//                isBlack = images[0].pixels[globalRow * width + globalColumn] < binLevel;
+//
+//            if (isBlack)
+//            {
+//                int dx = hside - column;
+//                int dy = hside - row;
+//                int dist = dx * dx + dy * dy;
+//                if (dist < minDist)
+//                {
+//                    minDist = dist;
+//                    closestX = column;
+//                    closestY = row;
+//                }
+//            }
+//        }
+//    }
+    
 
     if (closestX == -1 || closestY == -1)
         return false;
 
+//    std::cout <<"normal snap: "<<px + closestX - hside<<", "<<py + closestY - hside<<"\n";
+    
     point.x = px + closestX - hside;
     point.y = py + closestY - hside;
 
     return true;
 }
 
+
+
+//bool Image::snap_to_closest(Vec2D &point, int binLevel, int dist)
+//{
+//    if(!image)
+//        return false;
+//
+//    int hside = dist;
+//    int side = hside*2+1;
+//
+//    if(width < side*2 || height<side*2)
+//        return false;
+//
+//    int px = (int) std::round(point.x);
+//    int py = (int) std::round(point.y);
+//
+//    int minDist = side*side;
+//    int closestX = -1;
+//    int closestY = -1;
+//
+//
+//    for (int row = 0; row < side; ++row)
+//    {
+//        for (int column = 0; column < side; ++column)
+//        {
+//            int globalRow = py - hside + row;
+//            int globalColumn = px - hside + column;
+//            bool isBlack = false;
+//            if (globalRow >= 0 && globalRow < height && globalColumn >= 0 && globalColumn < width)
+//                isBlack = images[0].pixels[globalRow * width + globalColumn] < binLevel;
+//
+//            if (isBlack)
+//            {
+//                int dx = hside - column;
+//                int dy = hside - row;
+//                int dist = dx * dx + dy * dy;
+//                if (dist < minDist)
+//                {
+//                    minDist = dist;
+//                    closestX = column;
+//                    closestY = row;
+//                }
+//            }
+//        }
+//    }
+//
+//    if (closestX == -1 || closestY == -1)
+//        return false;
+//
+////    std::cout <<"normal snap: "<<px + closestX - hside<<", "<<py + closestY - hside<<"\n";
+//
+//    point.x = px + closestX - hside;
+//    point.y = py + closestY - hside;
+//
+//    return true;
+//}
+
+
 bool Image::snap_to_bary(Vec2D &point, int binLevel)
 {
     int localX, localY;//to this vars local coords will be written
 
-    int baryX, baryY; //local coords of snapped point
-
     //TODO move to settings
-    int hside = 6;// ZoomPixelHSide;
+    int hside = curveThickness;// ZoomPixelHSide;
     int side = hside*2+1;
 
     localX = int(point.x);

@@ -20,8 +20,6 @@ CurveDetect::CurveDetect(std::shared_ptr<Image> image) : horizon(Vec2D(100,100))
     
     binLevel = 127;
     
-    snapDist=30.f;
-    
     subdivLevel = 3;
 }
 
@@ -407,7 +405,7 @@ void CurveDetect::update_subdiv()
 
 bool CurveDetect::snap(Vec2D &pos)
 {
-    return image ? image->snap(pos, binLevel, (int) snapDist) : false;
+    return image ? image->snap(pos, binLevel) : false;
 }
 
 Vec2D CurveDetect::image_point_to_real(const Vec2D &point)
