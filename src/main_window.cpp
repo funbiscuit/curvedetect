@@ -270,7 +270,7 @@ void MainWindow::render_image(ImVec2 canvasSize)
         if (bShowImage)
         {
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
-            ImVec2 cur_pos = ImGui::GetCursorScreenPos()+imagePosition;
+            ImVec2 cur_pos = WinPos+imagePosition;
             draw_list->AddImage((void *)(intptr_t)(texID), cur_pos, cur_pos + ImVec2(im_width, im_height));
         }
 
