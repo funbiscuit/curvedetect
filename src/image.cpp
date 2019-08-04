@@ -120,9 +120,9 @@ void Image::generate_mipmaps()
         {
             for (int row = 0; row < h2; row++)
             {
-                uint8_t a = __min(images[i-1].pixels[2*row*w1 + 2*col], images[i-1].pixels[2*row*w1+2*col+1]);
-                uint8_t b = __min(images[i-1].pixels[(2*row+1)*w1 + 2*col], images[i-1].pixels[(2*row+1)*w1+2*col+1]);
-                images[i].pixels[row * w2 + col]=__min(a, b);
+                uint8_t a = std::min(images[i-1].pixels[2*row*w1 + 2*col], images[i-1].pixels[2*row*w1+2*col+1]);
+                uint8_t b = std::min(images[i-1].pixels[(2*row+1)*w1 + 2*col], images[i-1].pixels[(2*row+1)*w1+2*col+1]);
+                images[i].pixels[row * w2 + col]=std::min(a, b);
             }
         }
         
