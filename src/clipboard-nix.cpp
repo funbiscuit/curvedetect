@@ -23,10 +23,11 @@ void _clipboard_x11_start_copy_loop()
                                       BlackPixel(display, N), WhitePixel(display, N));
     Atom selection = XInternAtom(display, "CLIPBOARD", 0);
 
-    Atom targets_atom, text_atom, UTF8, XA_ATOM = 4, XA_STRING = 31;
+    Atom targets_atom, text_atom, UTF8, XA_ATOM = 4, XA_STRING = 31, XA_TEXT_PLAIN;
 
     targets_atom = XInternAtom(display, "TARGETS", 0);
     text_atom = XInternAtom(display, "TEXT", 0);
+    XA_TEXT_PLAIN = XInternAtom(display, "text/plain", 0);
     UTF8 = XInternAtom(display, "UTF8_STRING", 1);
 
     if (UTF8 == None)
@@ -68,9 +69,22 @@ void _clipboard_x11_start_copy_loop()
                 ev.selection = xsr->selection, ev.time = xsr->time, ev.target = xsr->target, ev.property = xsr->property;
 
                 if (ev.target == targets_atom)
+                {
                     R = XChangeProperty (ev.display, ev.requestor, ev.property,
-                            XA_ATOM, 32, PropModeReplace, (unsigned char*)&UTF8, 1);
-                else if (ev.target == XA_STRING || ev.target == text_atom)
+                                         XA_ATOM, 32, PropModeReplace, (unsigned char*)&UTF8, 1);
+                    
+                    Atom possibleTargets[] = { UTF8, XA_STRING, text_atom, targets_atom, XA_TEXT_PLAIN };
+    
+                    XChangeProperty( ev.display, ev.requestor,
+                                     ev.property,
+                                     XA_ATOM,
+                                     32,
+                                     PropModeReplace,
+                                     (unsigned char *) possibleTargets,
+                                     sizeof(possibleTargets)/sizeof(possibleTargets[0])
+                    );
+                }
+                else if (ev.target == XA_STRING || ev.target == text_atom || ev.target == XA_TEXT_PLAIN)
                     R = XChangeProperty(ev.display, ev.requestor, ev.property,
                             XA_STRING, 8, PropModeReplace, text, size);
                 else if (ev.target == UTF8)
@@ -83,12 +97,14 @@ void _clipboard_x11_start_copy_loop()
                     XSendEvent (display, ev.requestor, 0, 0, (XEvent *)&ev);
                 break;
             case SelectionClear:
+                _clipboard_x11_stop_thread=true;
                 break;
         }
         //not used
         if(_clipboard_x11_stop_thread)
             break;
     }
+    _clipboard_x11_stop_thread=false;
     _clipboard_x11_thread_started=false;
 }
 
@@ -98,7 +114,10 @@ void Clipboard::set_text(std::string text)
     // after calling glfwSetClipboardString we can't save points to file,
     // save dialog gets very laggy and crashes with any input
     // so copy manually via xlib
-
+    
+    //start thread again, if it ended
+    init_platform();
+    
     _clipboard_x11_mutex.lock();
     _clipboard_x11_current_text = text;
     _clipboard_x11_mutex.unlock();
