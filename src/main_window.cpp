@@ -955,6 +955,22 @@ void MainWindow::render_side_panel()
             //imagePosition = MousePos - HoveredPixel*imageScale - WinPos;
         }
         
+        float scale_width=90.f;
+        ImGui::PushItemWidth(scale_width);
+        const char* scales[] = { "linear", "log2", "log10", "ln" };
+        const CurveDetect::AxisScale scales_enum[] ={
+                CurveDetect::LINEAR, CurveDetect::LOG2, CurveDetect::LOG10, CurveDetect::LN };
+        static int xscale = 0;
+        static int yscale = 0;
+        ImGui::TextUnformatted("X Scale:");
+        ImGui::SameLine(SettingsWidth-scale_width);
+        ImGui::Combo("##xscale", &xscale, scales, 4);
+
+        ImGui::TextUnformatted("Y Scale:");
+        ImGui::SameLine(SettingsWidth-scale_width);
+        ImGui::Combo("##yscale", &yscale, scales, 4);
+
+        curve->set_scales(scales_enum[xscale], scales_enum[yscale]);
         
     }
     
@@ -1231,6 +1247,7 @@ void MainWindow::on_open_image()
     {
         tinyfd_messageBox("Can't open image", "Opened file is not an image.\nTry again.", "ok", "error", 0);
         image= nullptr;
+        curve= nullptr;
     }
     else
     {

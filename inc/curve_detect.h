@@ -25,6 +25,14 @@ public:
         VALUE_OVERLAP_Y_GRID = 1 << 6,
     };
     
+    enum AxisScale
+    {
+        LINEAR  = 1,
+        LOG2  = 2,
+        LOG10  = 3,
+        LN  = 4
+    };
+
     CurveDetect(std::shared_ptr<Image> image);
     
     void reset_all();
@@ -57,6 +65,8 @@ public:
     void set_subdiv_level(int subdiv);
     void set_curve_thickness(int thick);
     
+    void set_scales(AxisScale xscale, AxisScale yscale);
+
     bool is_export_ready(int &out_Result);
 
     //TODO actual export should be inside main app?
@@ -98,6 +108,9 @@ private:
     std::vector<ImagePoint> userPoints; //position of user points (pixels)
     std::vector<ImagePoint> allPoints; //position of all points (pixels) both user and generated
 
+
+    AxisScale xscale = LINEAR;
+    AxisScale yscale = LINEAR;
 
     std::vector<ImageTickLine> xticks;
     std::vector<ImageTickLine> yticks;

@@ -9,6 +9,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <curve_detect.h>
+
 #include "mat_file_writer.h"
 #include "main_app.h"
 
@@ -419,15 +421,50 @@ Vec2D CurveDetect::image_point_to_real(const Vec2D &point)
     
     Vec2D Scale, Offset;
 
+    //if scale is not linear, we will need to change tick values so it is linear and then convert point
+    double x0=xticks[0].tickValue, x1=xticks[1].tickValue, y0=yticks[0].tickValue, y1=yticks[1].tickValue;
+
+    if(xscale==LOG10)
+    {
+        x0=std::log10(x0);
+        x1=std::log10(x1);
+    }
+    else if(xscale==LOG2)
+    {
+        x0=std::log2(x0);
+        x1=std::log2(x1);
+    }
+    else if(xscale==LN)
+    {
+        x0=std::log(x0);
+        x1=std::log(x1);
+    }
+
+    if(yscale==LOG10)
+    {
+        y0=std::log10(y0);
+        y1=std::log10(y1);
+    }
+    else if(yscale==LOG2)
+    {
+        y0=std::log2(y0);
+        y1=std::log2(y1);
+    }
+    else if(yscale==LN)
+    {
+        y0=std::log(x0);
+        y1=std::log(x1);
+    }
+
     auto dir1=horizon.target.imagePosition-horizon.imagePosition;
     auto dxtick=xticks[0].imagePosition-xticks[1].imagePosition;
     auto dytick=yticks[0].imagePosition-yticks[1].imagePosition;
     
-    Scale.x = (xticks[0].tickValue - xticks[1].tickValue) / dxtick.x;
-    Scale.y = (yticks[0].tickValue - yticks[1].tickValue) / dytick.y;
+    Scale.x = (x0 - x1) / dxtick.x;
+    Scale.y = (y0 - y1) / dytick.y;
 
-    Offset.x = xticks[1].tickValue - xticks[1].X()*Scale.x;
-    Offset.y = yticks[1].tickValue - yticks[1].Y()*Scale.y;
+    Offset.x = x1 - xticks[1].X()*Scale.x;
+    Offset.y = y1 - yticks[1].Y()*Scale.y;
     
     //xticks[1].z + (ImagePoint.x- xticks[1].x)*Scale.x
     
@@ -442,18 +479,32 @@ Vec2D CurveDetect::image_point_to_real(const Vec2D &point)
 
     double a, b, c, d, e, f;
     
-    a =  (xticks[0].tickValue - xticks[1].tickValue)*dir1.x / det1;
-    b =  (xticks[0].tickValue - xticks[1].tickValue)*dir1.y / det1;
+    a =  (x0 - x1)*dir1.x / det1;
+    b =  (x0 - x1)*dir1.y / det1;
     
-    c = -(yticks[0].tickValue - yticks[1].tickValue)*dir1.y / det2;
-    d =  (yticks[0].tickValue - yticks[1].tickValue)*dir1.x / det2;
+    c = -(y0 - y1)*dir1.y / det2;
+    d =  (y0 - y1)*dir1.x / det2;
     
-    e = xticks[0].tickValue - a*xticks[0].X() - b*xticks[0].Y();
-    f = yticks[0].tickValue - c*yticks[0].X() - d*yticks[0].Y();
+    e = x0 - a*xticks[0].X() - b*xticks[0].Y();
+    f = y0 - c*yticks[0].X() - d*yticks[0].Y();
     
     RealPoint.x = a*point.x + b*point.y + e;
     RealPoint.y = c*point.x + d*point.y + f;
     
+    if(xscale==LOG10)
+        RealPoint.x=std::pow(10.0, RealPoint.x);
+    else if(xscale==LOG2)
+        RealPoint.x=std::pow(2.0, RealPoint.x);
+    else if(xscale==LN)
+        RealPoint.x=std::exp(RealPoint.x);
+
+    if(yscale==LOG10)
+        RealPoint.y=std::pow(10.0, RealPoint.y);
+    else if(yscale==LOG2)
+        RealPoint.x=std::pow(2.0, RealPoint.y);
+    else if(yscale==LN)
+        RealPoint.y=std::exp(RealPoint.y);
+
     
     return RealPoint;
 }
@@ -702,5 +753,11 @@ void CurveDetect::set_curve_thickness(int thick)
 
 ImageHorizon CurveDetect::get_horizon() {
     return horizon;
+}
+
+void CurveDetect::set_scales(AxisScale xscale, AxisScale yscale)
+{
+    this->xscale = xscale;
+    this->yscale = yscale;
 }
 
