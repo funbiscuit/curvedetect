@@ -18,8 +18,8 @@ To build from source you will need `cmake`.
 Supported compilers are `gcc` (Linux and MinGW) and `msvc`
 (tested with Visual Studio 2015 Community Edition)
 
-Linux is covered in [Linux](#linux) section.
-Windows is covered in [Windows](#windows) section.
+Linux is covered in [Linux](#Linux) section.
+Windows is covered in [Windows](#Windows) section.
 
 
 Building from source
@@ -84,19 +84,26 @@ Basic usage
 
 Run the binary `curvedetect` and open desired image. 
 
-Work mode is changed from context menu (right click on opened image and select Points, Horizon or Ticks).
+Work mode is changed from context menu (right click on opened image and select Points, Grid or Horizon).
 
 It is better to enable "Show binarization" and tune binarization level in such way that you see you curve while
 background is white.
 
 If image is rotated - choose horizon and change default horizontal line to horizontal line of image.
 
-Switch to ticks. Position ticks at the correct location on image (it is better to choose ticks at the ends of curve
-for better accuracy). Double click each tick and enter correct value for this tick line.
+Switch to grid mode. Position grid lines at the correct location on image (it is better to choose grid lines
+at the ends of curve for better accuracy). Double click each grid line and enter correct value for this grid line.
 
-Switch to points. Add new points by holding Ctrl and clicking with left mouse button. Then drag point to the point on 
-curve (hold ctrl to snap point to black pixel in black-white image). Increase subdivision to create extra points between
-manually created ones. Subdivided points will automatically snap to black pixels.
+Switch to points. Add new points by holding Ctrl and clicking with left mouse button. Then drag it to the point on
+curve (hold ctrl to snap point to black pixel in black-white image). By default subdivision is at maximum and gives you
+a lot of extra points between manually added ones. Subdivided points are automatically snapped to black pixels. But you
+can decrease subdivision if you don't want extra points.
+
+For more accuracy of snapping tune curve thickness. It should be about the same as actual thickness of curve on the image.
+For example, if you have high dpi image, your curve might be 20 pixels thick. If you leave curve thickness at 3 (default),
+snapping will be not accurate and you can see that if you zoom in. Points will not be at the center of curve. When you
+increase curve thickness, subdivided points will start towards the center of curve and finally will be positioned
+at its center.
 
 After you added all points and you see a correct curve - export it. You can copy to clipboard in text format or export
 to file. Export is supported only to Matlab (.mat) format and text formats (any other extension).
@@ -107,7 +114,8 @@ In `examples` directory you can find result of processing two images of the same
 `y=x^2+50*x*sin(x/10); x=0:100`
 First sample is the rotated screenshot of this curve, second sample is photo of curve, that was tuned in image editor.
 Tuning was just color correction, levels and a bit of blur. On verification images blue solid line - original,
-red dotted line - processed with curvedetect.
+red dashed line - processed with curvedetect. Even for data from photo of graph relative error is less than 5% and this
+error mainly comes from perspective distortions by phone camera.
 
 Dependencies
 ------------
@@ -119,7 +127,7 @@ glad, MIT license, https://github.com/Dav1dde/glad
 
 Dear ImGui, MIT license, https://github.com/ocornut/imgui
 
-stb, public domain https://github.com/nothings/stb
+stb, public domain, https://github.com/nothings/stb
 
 tiny file dialogs, zlib license, https://sourceforge.net/projects/tinyfiledialogs/
 
