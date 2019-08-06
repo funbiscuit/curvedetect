@@ -7,6 +7,12 @@
 #include <X11/Xlib.h>
 #include <thread>
 #include <mutex>
+#include <X11/Xatom.h>
+#include <climits>
+#include <stb_image.h>
+
+#include "image.h"
+
 
 
 std::mutex _clipboard_x11_mutex;
@@ -15,15 +21,98 @@ bool _clipboard_x11_stop_thread=false;
 bool _clipboard_x11_thread_started=false;
 
 
+
+bool get_image(Display *display, Window window, const char *fmtname, ImageData& imageData)
+{
+    const char *bufname = "CLIPBOARD";
+    uint8_t *result;
+    unsigned long ressize, restail;
+    int resbits;
+    Atom bufid = XInternAtom(display, bufname, False),
+            fmtid = XInternAtom(display, fmtname, False),
+            propid = XInternAtom(display, "XSEL_DATA", False),
+            incrid = XInternAtom(display, "INCR", False);
+    XEvent event;
+
+    XSelectInput (display, window, PropertyChangeMask);
+    XConvertSelection(display, bufid, fmtid, propid, window, CurrentTime);
+    do {
+        XNextEvent(display, &event);
+    } while (event.type != SelectionNotify || event.xselection.selection != bufid);
+
+    if (event.xselection.property)
+    {
+        XGetWindowProperty(display, window, propid, 0, LONG_MAX/4, True, AnyPropertyType,
+                           &fmtid, &resbits, &ressize, &restail, &result);
+        if (fmtid != incrid)
+        {
+            imageData.pixels = stbi_load_from_memory(result,
+                                                     (int)ressize, &imageData.width, &imageData.height, nullptr, 4);
+            XFree(result);
+        }
+        else
+        {
+            //get all data
+            uint8_t* data=nullptr;
+            int totalSize=0;
+            do {
+                do {
+                    XNextEvent(display, &event);
+                } while (event.type != PropertyNotify || event.xproperty.atom != propid || event.xproperty.state != PropertyNewValue);
+
+                XGetWindowProperty(display, window, propid, 0, LONG_MAX/4, True, AnyPropertyType,
+                                   &fmtid, &resbits, &ressize, &restail, &result);
+                //not very good way to append data, but it works
+                auto* newData=new uint8_t[totalSize+ressize];
+                memcpy(newData, data, totalSize);
+                memcpy(newData+totalSize, result, ressize);
+                if(data)
+                    delete[](data);
+                data=newData;
+                totalSize+=ressize;
+
+                XFree(result);
+            } while (ressize > 0);
+
+
+            imageData.pixels = stbi_load_from_memory(data,
+                                                     totalSize, &imageData.width, &imageData.height, nullptr, 4);
+
+            if(data)
+                delete[](data);
+        }
+
+        return true;
+    }
+    else // request failed, e.g. owner can't convert to the target format
+        return false;
+}
+
+void test_paste()
+{
+    Display *display = XOpenDisplay(nullptr);
+    unsigned long color = BlackPixel(display, DefaultScreen(display));
+    Window window = XCreateSimpleWindow(display, DefaultRootWindow(display), 0,0, 1,1, 0, color, color);
+
+    ImageData imageData;
+
+    const char* formats[] = { "image/png", "image/jpeg", "image/jpeg", "image/bmp", "image/tiff" };
+
+    auto loaded = get_image(display, window, "image/png", imageData);
+    XDestroyWindow(display, window);
+    XCloseDisplay(display);
+}
+
+
 void _clipboard_x11_start_copy_loop()
 {
     Display* display = XOpenDisplay(nullptr);
     int N = DefaultScreen(display);
     Window window = XCreateSimpleWindow(display, RootWindow(display, N), 0, 0, 1, 1, 0,
-                                      BlackPixel(display, N), WhitePixel(display, N));
+                                        BlackPixel(display, N), WhitePixel(display, N));
     Atom selection = XInternAtom(display, "CLIPBOARD", 0);
 
-    Atom targets_atom, text_atom, UTF8, XA_ATOM = 4, XA_STRING = 31, XA_TEXT_PLAIN;
+    Atom targets_atom, text_atom, UTF8, XA_TEXT_PLAIN;
 
     targets_atom = XInternAtom(display, "TARGETS", 0);
     text_atom = XInternAtom(display, "TEXT", 0);
@@ -72,9 +161,9 @@ void _clipboard_x11_start_copy_loop()
                 {
                     R = XChangeProperty (ev.display, ev.requestor, ev.property,
                                          XA_ATOM, 32, PropModeReplace, (unsigned char*)&UTF8, 1);
-                    
+
                     Atom possibleTargets[] = { UTF8, XA_STRING, text_atom, targets_atom, XA_TEXT_PLAIN };
-    
+
                     XChangeProperty( ev.display, ev.requestor,
                                      ev.property,
                                      XA_ATOM,
@@ -86,10 +175,10 @@ void _clipboard_x11_start_copy_loop()
                 }
                 else if (ev.target == XA_STRING || ev.target == text_atom || ev.target == XA_TEXT_PLAIN)
                     R = XChangeProperty(ev.display, ev.requestor, ev.property,
-                            XA_STRING, 8, PropModeReplace, text, size);
+                                        XA_STRING, 8, PropModeReplace, text, size);
                 else if (ev.target == UTF8)
                     R = XChangeProperty(ev.display, ev.requestor, ev.property,
-                            UTF8, 8, PropModeReplace, text, size);
+                                        UTF8, 8, PropModeReplace, text, size);
                 else
                     ev.property = None;
 
@@ -114,10 +203,12 @@ void Clipboard::set_text(std::string text)
     // after calling glfwSetClipboardString we can't save points to file,
     // save dialog gets very laggy and crashes with any input
     // so copy manually via xlib
-    
+
+//    test_paste();
+
     //start thread again, if it ended
     init_platform();
-    
+
     _clipboard_x11_mutex.lock();
     _clipboard_x11_current_text = text;
     _clipboard_x11_mutex.unlock();
