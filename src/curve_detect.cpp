@@ -424,36 +424,16 @@ Vec2D CurveDetect::image_point_to_real(const Vec2D &point)
     //if scale is not linear, we will need to change tick values so it is linear and then convert point
     double x0=xticks[0].tickValue, x1=xticks[1].tickValue, y0=yticks[0].tickValue, y1=yticks[1].tickValue;
 
-    if(xscale==LOG10)
-    {
-        x0=std::log10(x0);
-        x1=std::log10(x1);
-    }
-    else if(xscale==LOG2)
-    {
-        x0=std::log2(x0);
-        x1=std::log2(x1);
-    }
-    else if(xscale==LN)
+    if(xscale==LOG)
     {
         x0=std::log(x0);
         x1=std::log(x1);
     }
 
-    if(yscale==LOG10)
+    if(yscale==LOG)
     {
-        y0=std::log10(y0);
-        y1=std::log10(y1);
-    }
-    else if(yscale==LOG2)
-    {
-        y0=std::log2(y0);
-        y1=std::log2(y1);
-    }
-    else if(yscale==LN)
-    {
-        y0=std::log(x0);
-        y1=std::log(x1);
+        y0=std::log(y0);
+        y1=std::log(y1);
     }
 
     auto dir1=horizon.target.imagePosition-horizon.imagePosition;
@@ -491,18 +471,10 @@ Vec2D CurveDetect::image_point_to_real(const Vec2D &point)
     RealPoint.x = a*point.x + b*point.y + e;
     RealPoint.y = c*point.x + d*point.y + f;
     
-    if(xscale==LOG10)
-        RealPoint.x=std::pow(10.0, RealPoint.x);
-    else if(xscale==LOG2)
-        RealPoint.x=std::pow(2.0, RealPoint.x);
-    else if(xscale==LN)
+    if(xscale==LOG)
         RealPoint.x=std::exp(RealPoint.x);
 
-    if(yscale==LOG10)
-        RealPoint.y=std::pow(10.0, RealPoint.y);
-    else if(yscale==LOG2)
-        RealPoint.x=std::pow(2.0, RealPoint.y);
-    else if(yscale==LN)
+    if(yscale==LOG)
         RealPoint.y=std::exp(RealPoint.y);
 
     

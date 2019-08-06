@@ -28,9 +28,7 @@ public:
     enum AxisScale
     {
         LINEAR  = 1,
-        LOG2  = 2,
-        LOG10  = 3,
-        LN  = 4
+        LOG  = 2,
     };
 
     CurveDetect(std::shared_ptr<Image> image);

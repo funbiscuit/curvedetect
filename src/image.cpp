@@ -10,6 +10,7 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include <bitset>
+#include <algorithm>
 
 uint32_t bit_pos(uint32_t val)
 {
