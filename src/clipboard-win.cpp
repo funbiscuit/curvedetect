@@ -24,4 +24,11 @@ void Clipboard::set_text(std::string text)
     glfwSetClipboardString(nullptr, text.c_str());
 }
 
+bool Clipboard::get_image(ImageData& imageData)
+{
+    //TODO not supported yet
+
+    return false;
+}
+
 #endif

@@ -3,6 +3,7 @@
 #define CURVEDETECT_CLIPBOARD_H
 
 #include <string>
+#include "image.h"
 
 class Clipboard
 {
@@ -17,6 +18,7 @@ public:
     static Clipboard& get();
 
     void set_text(std::string text);
+    bool get_image(ImageData& imageData);
 
 private:
 

@@ -23,6 +23,7 @@ public:
 class Image {
 public:
     Image(std::string path);
+    Image(ImageData& imageData);
     ~Image();
 
     int get_width();

@@ -11,7 +11,6 @@
 #include <climits>
 #include <stb_image.h>
 
-#include "image.h"
 
 
 
@@ -22,13 +21,12 @@ bool _clipboard_x11_thread_started=false;
 
 
 
-bool get_image(Display *display, Window window, const char *fmtname, ImageData& imageData)
+bool _clipboard_x11_get_image(Display *display, Window window, const char *fmtname, ImageData& imageData)
 {
-    const char *bufname = "CLIPBOARD";
     uint8_t *result;
     unsigned long ressize, restail;
     int resbits;
-    Atom bufid = XInternAtom(display, bufname, False),
+    Atom bufid = XInternAtom(display, "CLIPBOARD", False),
             fmtid = XInternAtom(display, fmtname, False),
             propid = XInternAtom(display, "XSEL_DATA", False),
             incrid = XInternAtom(display, "INCR", False);
@@ -47,12 +45,15 @@ bool get_image(Display *display, Window window, const char *fmtname, ImageData& 
         if (fmtid != incrid)
         {
             imageData.pixels = stbi_load_from_memory(result,
-                                                     (int)ressize, &imageData.width, &imageData.height, nullptr, 4);
+                                                     (int)ressize,
+                                                     &imageData.width, &imageData.height,
+                                                     nullptr,
+                                                     3);//paste image in rgb format
             XFree(result);
         }
         else
         {
-            //get all data
+            //get all data piece by piece
             uint8_t* data=nullptr;
             int totalSize=0;
             do {
@@ -76,10 +77,12 @@ bool get_image(Display *display, Window window, const char *fmtname, ImageData& 
 
 
             imageData.pixels = stbi_load_from_memory(data,
-                                                     totalSize, &imageData.width, &imageData.height, nullptr, 4);
+                                                     totalSize,
+                                                     &imageData.width, &imageData.height,
+                                                     nullptr,
+                                                     3);//paste image in rgb format
 
-            if(data)
-                delete[](data);
+            delete[](data);
         }
 
         return true;
@@ -87,22 +90,6 @@ bool get_image(Display *display, Window window, const char *fmtname, ImageData& 
     else // request failed, e.g. owner can't convert to the target format
         return false;
 }
-
-void test_paste()
-{
-    Display *display = XOpenDisplay(nullptr);
-    unsigned long color = BlackPixel(display, DefaultScreen(display));
-    Window window = XCreateSimpleWindow(display, DefaultRootWindow(display), 0,0, 1,1, 0, color, color);
-
-    ImageData imageData;
-
-    const char* formats[] = { "image/png", "image/jpeg", "image/jpeg", "image/bmp", "image/tiff" };
-
-    auto loaded = get_image(display, window, "image/png", imageData);
-    XDestroyWindow(display, window);
-    XCloseDisplay(display);
-}
-
 
 void _clipboard_x11_start_copy_loop()
 {
@@ -145,7 +132,6 @@ void _clipboard_x11_start_copy_loop()
                 _clipboard_x11_mutex.lock();
                 text = (unsigned char*)(_clipboard_x11_current_text.c_str());
                 size = _clipboard_x11_current_text.length();
-                _clipboard_x11_mutex.unlock();
 
                 if (event.xselectionrequest.selection != selection)
                     break;
@@ -184,6 +170,7 @@ void _clipboard_x11_start_copy_loop()
 
                 if ((R & 2) == 0)
                     XSendEvent (display, ev.requestor, 0, 0, (XEvent *)&ev);
+                _clipboard_x11_mutex.unlock();
                 break;
             case SelectionClear:
                 _clipboard_x11_stop_thread=true;
@@ -195,6 +182,9 @@ void _clipboard_x11_start_copy_loop()
     }
     _clipboard_x11_stop_thread=false;
     _clipboard_x11_thread_started=false;
+
+    XDestroyWindow(display, window);
+    XCloseDisplay(display);
 }
 
 void Clipboard::set_text(std::string text)
@@ -204,24 +194,45 @@ void Clipboard::set_text(std::string text)
     // save dialog gets very laggy and crashes with any input
     // so copy manually via xlib
 
-//    test_paste();
-
-    //start thread again, if it ended
-    init_platform();
-
-    _clipboard_x11_mutex.lock();
-    _clipboard_x11_current_text = text;
-    _clipboard_x11_mutex.unlock();
-}
-
-void Clipboard::init_platform()
-{
+    //start copy thread, if it's not running
     if(!_clipboard_x11_thread_started)
     {
         _clipboard_x11_thread_started= true;
         std::thread t(&_clipboard_x11_start_copy_loop);
         t.detach();
     }
+
+    _clipboard_x11_mutex.lock();
+    _clipboard_x11_current_text = text;
+    _clipboard_x11_mutex.unlock();
+}
+
+bool Clipboard::get_image(ImageData& imageData)
+{
+    Display *display = XOpenDisplay(nullptr);
+    unsigned long color = BlackPixel(display, DefaultScreen(display));
+    Window window = XCreateSimpleWindow(display, DefaultRootWindow(display), 0,0, 1,1, 0, color, color);
+
+    std::vector<const char*> formats{"image/png","image/jpeg","image/jpg","image/bmp","image/tiff" };
+
+    bool loaded=false;
+
+    for (auto& format : formats)
+    {
+        loaded = _clipboard_x11_get_image(display, window, format, imageData);
+        if(loaded)
+            break;
+    }
+
+    XDestroyWindow(display, window);
+    XCloseDisplay(display);
+
+    return loaded;
+}
+
+void Clipboard::init_platform()
+{
+
 }
 
 void Clipboard::cleanup_platform()

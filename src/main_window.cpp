@@ -5,6 +5,7 @@
 
 #include "main_window.h"
 #include "main_app.h"
+#include "clipboard.h"
 #include "imgui.h"
 
 #include "imgui_impl_glfw.h"
@@ -984,6 +985,9 @@ void MainWindow::render_side_panel()
     if (ImGui::Button("Reset", ImVec2(SettingsWidth/2-buttonMargin, 0)))
         reset_all();
 
+    if (ImGui::Button("Paste Image", ImVec2(SettingsWidth, 0)))
+        on_paste_image();
+
     ImGui::Separator();
 
     //render text export settings
@@ -1255,7 +1259,30 @@ void MainWindow::on_open_image()
         currentMode = ActionMode::MODE_POINTS;
     }
 
+    //TODO don't reset if image was not opened
     reset_all();
+}
+
+
+void MainWindow::on_paste_image()
+{
+
+    std::cout << "paste from buf\n";
+
+    ImageData imageData;
+
+    if(Clipboard::get().get_image(imageData))
+    {
+        image=std::make_shared<Image>(imageData);
+
+
+        curve=std::make_shared<CurveDetect>(image);
+        currentMode = ActionMode::MODE_POINTS;
+        reset_all();
+    } else
+    {
+        tinyfd_messageBox("Can't paste image", "Clipboard doesn't contain any valid image data\nTry again.", "ok", "error", 0);
+    }
 }
 
 

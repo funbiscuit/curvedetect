@@ -87,6 +87,52 @@ Image::Image(std::string path)
 
 }
 
+Image::Image(ImageData& imageData)
+{
+    if(!imageData.pixels)
+        return;
+
+    texture=0;
+
+    //create at most 10 mipmaps
+    images.resize(10);
+
+    width=imageData.width;
+    height=imageData.height;
+    image = new uint8_t[width*height*3];
+    memcpy(image, imageData.pixels, width*height*3);
+
+
+    images[0].pixels = new uint8_t[width*height];
+    images[0].width = width;
+    images[0].height = height;
+    texture = ImGui_ImplOpenGL3_CreateTexture(image, width, height, false, false);
+
+    snapCache.resize(width, height);
+
+    for (int col = 0; col < width; col++)
+    {
+        for (int row = 0; row < height; row++)
+        {
+            float r = *(image + 3*(row * width + col));
+            float g = *(image + 3*(row * width + col)+1);
+            float b = *(image + 3*(row * width + col)+2);
+
+            images[0].pixels[row * width + col]=uint8_t(0.2126f * r + 0.7152f * g + 0.0722f * b);
+        }
+    }
+
+    auto start=std::chrono::high_resolution_clock::now();
+
+    generate_mipmaps();
+
+    auto end=std::chrono::high_resolution_clock::now();
+    auto mseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << "create took: " << mseconds << "\n";
+
+
+}
+
 Image::~Image()
 {
     if(image)

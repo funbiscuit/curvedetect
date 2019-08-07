@@ -104,7 +104,8 @@ private:
 
     
     void on_open_image();
-    
+    void on_paste_image();
+
     
     void ImGui_PopDisableButton();
     
