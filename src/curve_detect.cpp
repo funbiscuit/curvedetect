@@ -151,29 +151,25 @@ bool CurveDetect::is_export_ready(int &out_Result)
     return out_Result == READY;
 }
 
-void CurveDetect::copy_to_clipboard(std::string columnSeparator,
+std::string CurveDetect::get_points_text(std::string columnSeparator,
                                     std::string lineEnding, char decimalSeparator)
 {
-    
     int out_Result;
     if (!is_export_ready(out_Result))
-        return;
+        return "";
 
-    update_subdiv();
-    
-    Vec2D RealPoint;
+    auto bundle = get_points_bundle();
+
     std::stringstream sstr;
-    //std::stringstream sstr;
-    
+
     std::string nums = "";
-    
+
     std::string tempColumnSeparator = columnSeparator;
     std::string tempLineEnding = lineEnding;
-    
-    
+
     //new line sequence that is needed by default notepad
     const char newLineSeq[3] = { char(0x0d), char(0x0a), '\0' };
-    
+
     for (size_t i = 0; i<tempColumnSeparator.size(); i++)
     {
         if (tempColumnSeparator[i] == '\n')
@@ -182,7 +178,7 @@ void CurveDetect::copy_to_clipboard(std::string columnSeparator,
             i++;//since we added one extra char
         }
     }
-    
+
     for (size_t i = 0; i<tempLineEnding.size(); i++)
     {
         if (tempLineEnding[i] == '\n')
@@ -191,23 +187,20 @@ void CurveDetect::copy_to_clipboard(std::string columnSeparator,
             i++;//since we added one extra char
         }
     }
-    
-    for (size_t kp = 0; kp < allPoints.size(); kp++)
-    {
-        RealPoint = image_point_to_real(allPoints[kp].imagePosition);
 
-        double_to_string(RealPoint.x, decimalSeparator, nums);
-        
+    for (size_t kp = 0; kp < bundle->allNum; ++kp)
+    {
+        double_to_string(bundle->allPointsReal[kp*2], decimalSeparator, nums);
+
         sstr << nums;
         sstr << tempColumnSeparator;
 
-        double_to_string(RealPoint.y, decimalSeparator, nums);
+        double_to_string(bundle->allPointsReal[kp*2+1], decimalSeparator, nums);
         sstr<< nums;
         sstr << tempLineEnding;
-        //sstr << newLineSeq;
     }
 
-    MainApp::get().copy_to_clipboard(sstr.str());
+    return sstr.str();
 }
 
 void CurveDetect::double_to_string(double num, char decimalSeparator, std::string &out_String)
@@ -222,72 +215,58 @@ void CurveDetect::double_to_string(double num, char decimalSeparator, std::strin
     //std::cout << out_String << "\n";
 }
 
-void CurveDetect::export_points(const char *path, bool asText)
+std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
 {
+    auto res=std::make_shared<PointsBundle>();
+
     update_subdiv();
-    
-    Vec2D realPoint;
 
-    auto allPointsImage=new double[allPoints.size()*2];
-    auto allPointsReal=new double[allPoints.size()*2];
-    
-    std::ofstream ofs;
-    
-    if(asText)
-        ofs.open(path);
+    size_t Nu=userPoints.size();
+    size_t Na=allPoints.size();
 
-    for (size_t kp = 0; kp < allPoints.size(); kp++)
+    res->allNum=Na;
+    res->userNum=Nu;
+
+    res->userPointsPixels=new double[Nu*2];
+    res->userPointsReal=new double[Nu*2];
+    res->allPointsPixels=new double[Na*2];
+    res->allPointsReal=new double[Na*2];
+
+
+    for (size_t i = 0; i < Na; ++i)
     {
-        allPointsImage[kp*2]=allPoints[kp].imagePosition.x;
-        allPointsImage[kp*2+1]=allPoints[kp].imagePosition.y;
-
-        realPoint = image_point_to_real(allPoints[kp].imagePosition);
-
-        allPointsReal[kp*2]=realPoint.x;
-        allPointsReal[kp*2+1]=realPoint.y;
-        
-        if (asText)
-            ofs << realPoint.x << "\t" << realPoint.y << "\n";
+        res->allPointsPixels[2*i]=allPoints[i].imagePosition.x;
+        res->allPointsPixels[2*i+1]=allPoints[i].imagePosition.y;
+        auto real=image_point_to_real(allPoints[i].imagePosition);
+        res->allPointsReal[2*i]=real.x;
+        res->allPointsReal[2*i+1]=real.y;
     }
-    
-    if (asText)
+    for (size_t i = 0; i < Nu; ++i)
     {
-        ofs.close();
-        delete[](allPointsImage);
-        delete[](allPointsReal);
-        return;
+        res->userPointsPixels[2*i]=userPoints[i].imagePosition.x;
+        res->userPointsPixels[2*i+1]=userPoints[i].imagePosition.y;
+        auto real=image_point_to_real(userPoints[i].imagePosition);
+        res->userPointsReal[2*i]=real.x;
+        res->userPointsReal[2*i+1]=real.y;
     }
 
-    auto userPointsImage=new double[userPoints.size()*2];
-    auto userPointsReal=new double[userPoints.size()*2];
+    return res;
+}
 
-    for (size_t kp = 0; kp < userPoints.size(); kp++)
-    {
-        userPointsImage[kp*2]=userPoints[kp].imagePosition.x;
-        userPointsImage[kp*2+1]=userPoints[kp].imagePosition.y;
-
-        realPoint = image_point_to_real(userPoints[kp].imagePosition);
-
-        userPointsReal[kp*2]=realPoint.x;
-        userPointsReal[kp*2+1]=realPoint.y;
-    }
-    
+void CurveDetect::export_points_mat_file(const char *path)
+{
+    auto bundle = get_points_bundle();
 
     auto writer = MatFileWriter::get(path);
 
     if (writer)
     {
-        writer->matrix("UserPointsPixels", userPointsImage, userPoints.size(), 2)
-                .matrix("SubdividedPointsPixels", allPointsImage, allPoints.size(), 2)
-                .matrix("UserPointsReal", userPointsReal, userPoints.size(), 2)
-                .matrix("SubdividedPointsReal", allPointsReal, allPoints.size(), 2)
+        writer->matrix("UserPointsPixels", bundle->userPointsPixels, bundle->userNum, 2)
+                .matrix("SubdividedPointsPixels", bundle->allPointsPixels, bundle->allNum, 2)
+                .matrix("UserPointsReal", bundle->userPointsReal, bundle->userNum, 2)
+                .matrix("SubdividedPointsReal", bundle->allPointsReal, bundle->allNum, 2)
                 .close();
     }
-
-    delete[](userPointsImage);
-    delete[](userPointsReal);
-    delete[](allPointsImage);
-    delete[](allPointsReal);
 }
 
 
@@ -733,3 +712,14 @@ void CurveDetect::set_scales(AxisScale xscale, AxisScale yscale)
     this->yscale = yscale;
 }
 
+PointsBundle::~PointsBundle()
+{
+//    if(userPointsPixels)
+//        delete[](userPointsPixels);
+//    if(userPointsReal)
+//        delete[](userPointsReal);
+//    if(allPointsPixels)
+//        delete[](allPointsPixels);
+//    if(allPointsReal)
+//        delete[](allPointsReal);
+}

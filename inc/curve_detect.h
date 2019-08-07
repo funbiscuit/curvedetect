@@ -8,6 +8,18 @@
 #include <image_elements.h>
 
 
+class PointsBundle
+{
+public:
+    ~PointsBundle();
+
+    int allNum=0;
+    int userNum=0;
+    double* userPointsPixels=nullptr;
+    double* userPointsReal=nullptr;
+    double* allPointsPixels=nullptr;
+    double* allPointsReal=nullptr;
+};
 
 
 class CurveDetect
@@ -68,8 +80,8 @@ public:
     bool is_export_ready(int &out_Result);
 
     //TODO actual export should be inside main app?
-    void export_points(const char *path, bool asText);
-    void copy_to_clipboard(std::string columnSeparator, std::string lineEnding, char decimalSeparator);
+    void export_points_mat_file(const char *path);
+    std::string get_points_text(std::string columnSeparator, std::string lineEnding, char decimalSeparator);
 
 
     void update_subdiv();
@@ -131,7 +143,8 @@ private:
      * @return
      */
     Vec2D image_point_to_real(const Vec2D &point);
-    
+
+    std::shared_ptr<PointsBundle> get_points_bundle();
     
     void double_to_string(double num, char decimalSeparator, std::string &out_String);
 };

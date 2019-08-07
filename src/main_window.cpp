@@ -15,6 +15,7 @@
 
 #include <GLFW/glfw3.h>
 #include <cmath>
+#include <fstream>
 
 #include "tinyfiledialogs.h"
 
@@ -1037,7 +1038,7 @@ void MainWindow::render_side_panel()
     ImGui::SameLine(SettingsWidth-inputWidth);
     ImGui::Combo("##dec-sep", &item2, items, 2);   // Combo using proper array. You can also pass a callback to retrieve array value, no need to create/copy an array just for that.
     
-    decimalSeparator = items[item2][0];
+    decimalSeparator = item2==0 ? '.' : ',';
     
     ImGui::PopItemWidth();
 
@@ -1045,7 +1046,10 @@ void MainWindow::render_side_panel()
         ImGui_PushDisableButton();
 
     if (ImGui::Button("Copy", ImVec2(SettingsWidth/2-buttonMargin, 0)) && bExportReady)
-        curve->copy_to_clipboard(columnSeparator, lineEnding, decimalSeparator);
+    {
+        auto text=curve->get_points_text(columnSeparator, lineEnding, decimalSeparator);
+        MainApp::get().copy_to_clipboard(text);
+    }
 
     ImGui::SameLine(0.f,buttonMargin*2);
 
@@ -1218,7 +1222,17 @@ void MainWindow::on_export_points()
     
     std::cout << "save: " << path << "\n";
 
-    curve->export_points(lTheSaveFileName, bUseTextFormat);
+    if(bUseTextFormat)
+    {
+        auto text=curve->get_points_text(columnSeparator, lineEnding, decimalSeparator);
+
+        std::ofstream ofs;
+        ofs.open(path);
+        ofs<<text;
+        ofs.close();
+    }
+    else
+        curve->export_points_mat_file(lTheSaveFileName);
 }
 
 
