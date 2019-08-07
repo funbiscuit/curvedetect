@@ -884,6 +884,7 @@ void MainWindow::render_side_panel()
     ImGui::Checkbox("Draw Subdivision Points", &bShowSubdivPoints);
     ImGui::Checkbox("Show Image", &bShowImage);
     ImGui::Checkbox("Show Binarization", &bShowBinarization);
+    ImGui::Checkbox("Invert Image", &bInvertImage);
     ImGui::Checkbox("Show Zoom Window", &bShowZoomWindow);
     //ImGui::Checkbox("Smooth Subdivision", &bSmoothPoints);
     
@@ -907,10 +908,12 @@ void MainWindow::render_side_panel()
         
         
         ImGui_ImplOpenGL3_SetBinarizationLevel(binLevel);
+        ImGui_ImplOpenGL3_SetInvertImage(bInvertImage);
 
         curve->set_subdiv_level(subdivLevel);
         curve->set_bin_level(binLevel);
-    
+        curve->set_invert_image(bInvertImage);
+
     
     
         //tune curve thickness

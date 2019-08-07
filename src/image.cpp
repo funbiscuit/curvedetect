@@ -278,6 +278,15 @@ void Image::set_curve_thickness(int thick)
     snapCache.set_curve_thick(curveThickness);
 }
 
+bool Image::set_inverted(bool invert)
+{
+    if(bInvertImage==invert)
+        return false;
+    bInvertImage=invert;
+    snapCache.invalidate();
+    return true;
+}
+
 bool Image::snap_to_closest(Vec2D &point, int binLevel)
 {
     if(!image)
@@ -294,8 +303,9 @@ bool Image::snap_to_closest(Vec2D &point, int binLevel)
     
     if(!is_pixel_inside(px, py))
         return false;
-    
-    if(images[0].pixels[py * width + px] < binLevel)
+    int val = images[0].pixels[py * width + px];
+    val = bInvertImage ? 255-val : val;
+    if(val < binLevel)
         return true;
 
     int minDist = side*side;
@@ -316,7 +326,11 @@ bool Image::snap_to_closest(Vec2D &point, int binLevel)
             int globalColumn = px - hside + column;
             bool isBlack = false;
             if (globalRow >= 0 && globalRow < height && globalColumn >= 0 && globalColumn < width)
-                isBlack = images[image_i].pixels[(globalRow/step) * (width/step) + globalColumn/step] < binLevel;
+            {
+                int val = images[image_i].pixels[(globalRow/step) * (width/step) + globalColumn/step];
+                val = bInvertImage ? 255-val : val;
+                isBlack = val < binLevel;
+            }
 
             if (isBlack)
             {
@@ -366,7 +380,7 @@ bool Image::snap_to_bary(Vec2D &point, int binLevel)
     {
         for (int ky = 0; ky <= 2 * hside; ky++)
         {
-            auto col = pixelsRegion[ky*side + kx];
+            int col = bInvertImage ? 255-pixelsRegion[ky*side + kx] : pixelsRegion[ky*side + kx];
             if (col < binLevel)
             {
                 baryMass += binLevel - col;

@@ -72,6 +72,7 @@ public:
     ImageHorizon get_horizon();
     
     void set_bin_level(int level);
+    void set_invert_image(bool invert);
     void set_subdiv_level(int subdiv);
     void set_curve_thickness(int thick);
     
@@ -94,6 +95,8 @@ private:
     // so if it didn't change we can update subdivision much faster
     int subdivBinLevel = -1;
     int binLevel;
+    bool bInvertImage = false;
+    bool subdivInvertImage = false;
     int subdivCurveThick = -1;
     int curveThick;
     int subdivLevel;

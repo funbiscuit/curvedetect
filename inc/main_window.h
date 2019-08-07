@@ -60,6 +60,7 @@ private:
     bool bShowSubdivPoints = true;
     bool bShowImage = true;
     bool bShowBinarization = false;
+    bool bInvertImage = false;
     bool bShowZoomWindow = false;
     bool bShowFps = false;
 

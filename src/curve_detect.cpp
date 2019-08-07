@@ -303,9 +303,11 @@ void CurveDetect::update_subdiv()
     //when fast update is true then only intervals where end positions change will be updated
     //everything else should be the same so we don't bother updating them
     bool isSorted = are_points_sorted();
-    bool fastUpdate = subdivBinLevel == binLevel && subdivCurveThick == curveThick && isSorted;
+    bool fastUpdate = subdivBinLevel == binLevel && subdivCurveThick == curveThick
+            && subdivInvertImage == bInvertImage && isSorted;
     subdivBinLevel = binLevel;
     subdivCurveThick = curveThick;
+    subdivInvertImage = bInvertImage;
     int userPointsCount = userPoints.size();
     
     if (userPointsCount < 2)
@@ -680,6 +682,14 @@ void CurveDetect::set_bin_level(int level)
     if(binLevel==level)
         return;
     binLevel=level;
+    update_subdiv();
+}
+
+void CurveDetect::set_invert_image(bool invert)
+{
+    if(!image->set_inverted(invert))
+        return;
+    bInvertImage = invert;
     update_subdiv();
 }
 

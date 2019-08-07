@@ -97,6 +97,7 @@
 // Data
 static int			g_ImageTexID = -1;
 static bool			g_ImageMakeBin = false;
+static bool			g_ImageInvert = false;
 static int			g_BinarizationLevel = 127;
 
 // OpenGL Data
@@ -105,6 +106,7 @@ static GLuint       g_FontTexture = 0;
 static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 
 static int			g_AttribLocationMakeBin = 0;
+static int			g_AttribLocationInvert = 0;
 static int			g_AttribLocationMakeGray = 0;
 static int			g_AttribLocationBinLevel = 0;
 
@@ -122,6 +124,11 @@ void ImGui_ImplOpenGL3_SetImageBin(int ID, bool makeBin)
 void ImGui_ImplOpenGL3_SetBinarizationLevel(int Level)
 {
     g_BinarizationLevel = Level;
+}
+
+void ImGui_ImplOpenGL3_SetInvertImage(bool inverted)
+{
+    g_ImageInvert = inverted;
 }
 
 
@@ -320,6 +327,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                     {
                         glUniform1i(g_AttribLocationMakeGray, 1);
                         glUniform1i(g_AttribLocationMakeBin, g_ImageMakeBin);
+                        glUniform1i(g_AttribLocationInvert, g_ImageInvert);
                         glUniform1f(g_AttribLocationBinLevel, float(g_BinarizationLevel) / 255.0f);
                     }
                     else
@@ -495,6 +503,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "uniform sampler2D Texture;\n"
         "uniform bool bMakeBin;\n"
         "uniform bool bMakeGray;\n"
+        "uniform bool bInvert;\n"
         "uniform float ColorLevel;\n"
         "in vec2 Frag_UV;\n"
         "in vec4 Frag_Color;\n"
@@ -503,6 +512,8 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "{\n"
         "	vec4 TexColor = texture( Texture, Frag_UV.st);\n"
         "	float gray = 0.216f*TexColor.x+0.7152f*TexColor.y+0.0722*TexColor.z;\n"
+        "	if(bInvert)\n"
+        "	    gray = 1.f - gray;\n"
         "	if(bMakeBin)\n"
         "	{\n"
         "		if(gray < ColorLevel)\n"
@@ -540,6 +551,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     CheckProgram(g_ShaderHandle, "shader program");
     
     g_AttribLocationMakeBin = glad_glGetUniformLocation(g_ShaderHandle, "bMakeBin");
+    g_AttribLocationInvert = glad_glGetUniformLocation(g_ShaderHandle, "bInvert");
     g_AttribLocationMakeGray = glad_glGetUniformLocation(g_ShaderHandle, "bMakeGray");
     g_AttribLocationBinLevel = glad_glGetUniformLocation(g_ShaderHandle, "ColorLevel");
     

@@ -16,6 +16,7 @@ public:
 
     void set_bin_level(int binLevel);
     void set_curve_thick(int thick);
+    void invalidate();
 
     bool snap(int px, int py, Vec2D& point);
 

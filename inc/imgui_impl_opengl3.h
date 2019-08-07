@@ -51,4 +51,5 @@ IMGUI_IMPL_API unsigned int ImGui_ImplOpenGL3_CreateTexture(unsigned char* pixel
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyTexture(unsigned int id);
 
 IMGUI_API void          ImGui_ImplOpenGL3_SetImageBin(int ID, bool makeBin);
+IMGUI_API void          ImGui_ImplOpenGL3_SetInvertImage(bool inverted);
 IMGUI_API void          ImGui_ImplOpenGL3_SetBinarizationLevel(int Level);

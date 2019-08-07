@@ -21,8 +21,7 @@ void SnapCache::set_bin_level(int binLevel)
 {
     if(cachedBinLevel != binLevel)
     {
-        snapCached.clear(); //this to make sure all values are false
-        snapCached.resize(width*height);
+        invalidate();
         cachedBinLevel = binLevel;
     }
 }
@@ -30,10 +29,15 @@ void SnapCache::set_curve_thick(int thick)
 {
     if(cachedCurveThick != thick)
     {
-        snapCached.clear(); //this to make sure all values are false
-        snapCached.resize(width*height);
+        invalidate();
         cachedCurveThick = thick;
     }
+}
+
+void SnapCache::invalidate()
+{
+    snapCached.clear(); //this to make sure all values are false
+    snapCached.resize(width*height);
 }
 
 void SnapCache::resize(int width, int height)
