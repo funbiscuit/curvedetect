@@ -37,7 +37,7 @@ private:
 
     ImColor colorDisabled = ImColor(200, 200, 200);
 
-    float zoomWindowSize;
+    float zoomWindowSize=200.f;
     int curveThickness=3;
     const int curveThicknessMin=2;
     const int curveThicknessMax=30;
@@ -48,7 +48,7 @@ private:
 
     ActionMode currentMode;
 
-    int zoomPixelHalfSide;
+    int zoomPixelHalfSide = 20;
 
 
     char decimalSeparator;
@@ -60,15 +60,19 @@ private:
     bool bShowSubdivPoints = true;
     bool bShowImage = true;
     bool bShowBinarization = false;
+    bool bShowTicks = true;
+    bool bShowSubTicks = false;
     bool bInvertImage = false;
     bool bShowZoomWindow = false;
     bool bShowFps = false;
 
+    bool bLogX = false;
+    bool bLogY = false;
 
 
     float minImageScale;
     float imageScale;
-    float maxImageScale;
+    const float maxImageScale = 5.f;
 
 
     ImVec2 imagePosition;
@@ -96,6 +100,7 @@ private:
     bool render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOrigin);
 
     void render_grid_lines(ImVec2 im_pos);
+    void render_grid_line(ImVec2 imPos, ImVec2 linePoint, ImVec2 lineDir, ImColor lineColor, const char* value=nullptr);
 
     void render_horizon(const ImVec2 &im_pos);
 

@@ -30,11 +30,6 @@ MainWindow::MainWindow()
 
     minImageScale = 1.0f;
     imageScale = 1.0f;
-    maxImageScale = 3.0f;
-
-    zoomPixelHalfSide = 30;
-
-    zoomWindowSize = 200.0f;
 
     decimalSeparator = '.';
     columnSeparator = "\t";
@@ -712,15 +707,49 @@ bool MainWindow::render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOri
     return false;
 }
 
-void MainWindow::render_grid_lines(ImVec2 im_pos)
+void MainWindow::render_grid_line(ImVec2 imPos, ImVec2 linePoint, ImVec2 lineDir, ImColor lineColor, const char* value)
 {
-    if(!curve)
-        return;
-
     ImVec2 WinPos = ImGui::GetWindowPos();
 
-
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+    ImVec2 LineStart, LineEnd, LabelPos;
+
+    ImVec2 LineMargin = ImVec2(10.0f, 10.0f);
+
+    float lineThick = value==nullptr ? 1.f : 2.f;
+
+    if (!extend_line(linePoint, lineDir, LineStart, LineEnd,
+                     ImVec2((float) image->get_width(), (float) image->get_height()) - LineMargin * 2, LineMargin))
+    {
+        LineStart = ImVec2(LineMargin.x, linePoint.y);
+        LineEnd = ImVec2(image->get_width() - LineMargin.x, linePoint.y);
+    }
+    LineStart = WinPos + imPos + LineStart*imageScale;
+    LineEnd = WinPos + imPos + LineEnd*imageScale;
+
+    draw_list->AddLine(LineStart, LineEnd, lineColor, lineThick);
+
+
+    if(value!= nullptr)
+    {
+        ImVec2 padding(5.f, 5.f);
+
+        ImVec2 sz = ImGui::CalcTextSize(value);
+        LabelPos = WinPos + imPos+ linePoint*imageScale-sz/2;
+        draw_list->AddRectFilled(LabelPos-padding, LabelPos+sz+padding, ImColor(255,255,255));
+
+        ImGui::SetCursorScreenPos(LabelPos);
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
+        ImGui::TextUnformatted(value);
+        ImGui::PopStyleColor();
+    }
+}
+
+void MainWindow::render_grid_lines(ImVec2 im_pos)
+{
+    if(!curve || !bShowTicks)
+        return;
 
     const auto tickColor = ImColor(128, 128, 128, 255);
     const auto tickHover = ImColor(152, 248, 59, 255);
@@ -736,14 +765,40 @@ void MainWindow::render_grid_lines(ImVec2 im_pos)
     auto& YTicks= curve->get_yticks();
 
     ImVec2 TargetDirX = CoordOriginTargetX - CoordOriginImg;
+    TargetDirX/=std::sqrt(TargetDirX.x*TargetDirX.x + TargetDirX.y*TargetDirX.y);
 
     ImVec2 TargetDirY;
     TargetDirY.x = TargetDirX.y;
     TargetDirY.y = -TargetDirX.x;
 
-    ImVec2 LineStart, LineEnd, LabelPos;
 
-    ImVec2 LineMargin = ImVec2(10.0f, 10.0f);
+    if(bShowSubTicks)
+    {
+        int N=10;
+        auto begin = XTicks[0].imagePosition;
+        auto end = XTicks[1].imagePosition;
+        for(int j=1; j<N; ++j)
+        {
+            double v = bLogX ? std::log(j)/std::log(10.0) : double(j)/N;
+            if(XTicks[0].tickValue>XTicks[1].tickValue)
+                v=1.0-v;
+            auto pos = begin + (end-begin)*v;
+
+            render_grid_line(im_pos, pos.to_imvec(), TargetDirY, tickColor);
+        }
+        begin = YTicks[0].imagePosition;
+        end = YTicks[1].imagePosition;
+        for(int j=1; j<N; ++j)
+        {
+            double v = bLogY ? std::log(j)/std::log(10.0) : double(j)/N;
+            if(YTicks[0].tickValue>YTicks[1].tickValue)
+                v=1.0-v;
+            auto pos = begin + (end-begin)*v;
+
+            render_grid_line(im_pos, pos.to_imvec(), TargetDirX, tickColor);
+        }
+    }
+
 
     //draw tick lines
     for (auto &tick : XTicks) {
@@ -757,32 +812,8 @@ void MainWindow::render_grid_lines(ImVec2 im_pos)
                 col = tickHover;
         }
 
-        ImVec2 XTickPosition= tick.imagePosition.to_imvec();
-
-        if (!extend_line(XTickPosition, TargetDirY, LineStart, LineEnd,
-                         ImVec2((float) image->get_width(), (float) image->get_height()) - LineMargin * 2, LineMargin))
-        {
-            LineStart = ImVec2(LineMargin.x, CoordOriginImg.y);
-            LineEnd = ImVec2(image->get_width() - LineMargin.x, CoordOriginImg.y);
-            //std::cout << "force horizontal\n";
-        }
-        LineStart = WinPos + im_pos + LineStart*imageScale;
-        LineEnd = WinPos + im_pos + LineEnd*imageScale;
-        LabelPos = WinPos + im_pos+ (tick.imagePosition * imageScale + Vec2D(10.f, 0.f)).to_imvec();
-
-        //draw_list->AddLine(ImVec2(TickPos, 0.0f)+WinPos, ImVec2(TickPos, canvas_sz.y)+WinPos, col, 1.0f);
-        draw_list->AddLine(LineStart, LineEnd, col, 2.0f);
-
-        ImVec2 padding(5.f, 5.f);
-
-        ImVec2 sz = ImGui::CalcTextSize(tick.tickValueStr.c_str());
-        draw_list->AddRectFilled(LabelPos-padding, LabelPos+sz+padding, ImColor(255,255,255));
-
-        //ImGui::SetCursorPos(ImVec2(TickPos+2.0f, CoordOriginScreen.y - WinPos.y+2.0f));
-        ImGui::SetCursorScreenPos(LabelPos);
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
-        ImGui::TextUnformatted(tick.tickValueStr.c_str());
-        ImGui::PopStyleColor();
+        render_grid_line(im_pos, tick.imagePosition.to_imvec(),
+                TargetDirY, col, tick.tickValueStr.c_str());
     }
     for (auto &tick : YTicks) {
         ImU32 col = tickColor;
@@ -795,38 +826,12 @@ void MainWindow::render_grid_lines(ImVec2 im_pos)
                 col = tickHover;
         }
 
-        ImVec2 YTickPosition= tick.imagePosition.to_imvec();
-
-        if (!extend_line(YTickPosition, TargetDirX, LineStart, LineEnd,
-                         ImVec2((float) image->get_width(), (float) image->get_height()) - LineMargin * 2, LineMargin))
-        {
-            LineStart = ImVec2(LineMargin.x, CoordOriginImg.y);
-            LineEnd = ImVec2(image->get_width() - LineMargin.x, CoordOriginImg.y);
-            //std::cout << "force horizontal\n";
-        }
-        LineStart = WinPos + im_pos + LineStart*imageScale;
-        LineEnd = WinPos + im_pos + LineEnd*imageScale;
-        LabelPos = WinPos + im_pos+ (tick.imagePosition * imageScale + Vec2D(0.f, 10.f)).to_imvec();
-
-        //draw_list->AddLine(ImVec2(TickPos, 0.0f)+WinPos, ImVec2(TickPos, canvas_sz.y)+WinPos, col, 1.0f);
-        draw_list->AddLine(LineStart, LineEnd, col, 2.0f);
-
-        ImVec2 padding(5.f, 5.f);
-
-        ImVec2 sz = ImGui::CalcTextSize(tick.tickValueStr.c_str());
-        draw_list->AddRectFilled(LabelPos-padding, LabelPos+sz+padding, ImColor(255,255,255));
-
-        ImGui::SetCursorScreenPos(LabelPos);
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
-        ImGui::TextUnformatted(tick.tickValueStr.c_str());
-        ImGui::PopStyleColor();
-
-        //draw_list->AddLine(ImVec2(0.0f, TickPos) + WinPos, ImVec2(canvas_sz.x, TickPos) + WinPos, col, 1.0f);
-// 		ImGui::SetCursorPos(ImVec2(CoordOriginScreen.x - WinPos.x + 2.0f, TickPos + 2.0f));
-// 		ImGui::PushStyleColor(ImGuiCol_Text, ImColor(0, 0, 0, 255));
-// 		ImGui::Text("%0.2f", YTicks[kp].z);
-// 		ImGui::PopStyleColor();
+        render_grid_line(im_pos, tick.imagePosition.to_imvec(),
+                         TargetDirX, col, tick.tickValueStr.c_str());
     }
+
+
+
 }
 
 void MainWindow::render_horizon(const ImVec2 &im_pos)
@@ -894,6 +899,7 @@ void MainWindow::render_side_panel()
 
     if (curve)
     {
+        bool prevShowSubTicks=bShowSubTicks;
         ImGui::TextUnformatted("Visualisation settings");
         ImGui::Checkbox("Subdivision", &bShowSubdivPoints);
         ImGui::SameLine(secondColumnX);
@@ -901,7 +907,14 @@ void MainWindow::render_side_panel()
         ImGui::Checkbox("Image", &bShowImage);
         ImGui::SameLine(secondColumnX);
         ImGui::Checkbox("Binarization", &bShowBinarization);
+        ImGui::Checkbox("Major grid", &bShowTicks);
+        ImGui::SameLine(secondColumnX);
+        ImGui::Checkbox("Minor grid", &bShowSubTicks);
         ImGui::Separator();
+
+        if(bShowSubTicks==prevShowSubTicks)
+            bShowSubTicks = bShowSubTicks && bShowTicks;
+        bShowTicks |= bShowSubTicks;
 
         ImGui::TextUnformatted("Curve settings");
 
@@ -963,6 +976,8 @@ void MainWindow::render_side_panel()
         ImGui::Combo("##xscale", &xscale, scalesX, 2);
         ImGui::SameLine(secondColumnX);
         ImGui::Combo("##yscale", &yscale, scalesY, 2);
+        bLogX=xscale==1;
+        bLogY=yscale==1;
 
         curve->set_scales(scales_enum[xscale], scales_enum[yscale]);
 
@@ -1330,75 +1345,33 @@ bool MainWindow::extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, 
 
     //x line: A*x+B*y+C=0		C=-A*x0-B*y0
     //y line: -B*x+A*y+C2=0;	C2=B*x0-A*y0
-    if (std::abs(B) > 1.0f && std::abs(A) > 1.0f && true) //line is NOT vertical and is NOT horizontal
-    {
-        float lefty, righty, topx, botx;
 
-        righty = (-C - A *RegionBR.x) / B;
-        lefty = (-C - A *RegionTL.x) / B;
-        botx = (-C - B *RegionBR.y) / A;
-        topx = (-C - B *RegionTL.y) / A;
+    float lefty, righty, topx, botx;
 
-        out_Start = ImVec2(RegionTL.x, lefty);
+    righty = (-C - A *RegionBR.x) / B;
+    lefty = (-C - A *RegionTL.x) / B;
+    botx = (-C - B *RegionBR.y) / A;
+    topx = (-C - B *RegionTL.y) / A;
 
-        if (lefty<RegionTL.y)
-            out_Start = ImVec2(topx, RegionTL.y);
-        if (lefty>RegionBR.y)
-            out_Start = ImVec2(botx, RegionBR.y);
+    out_Start = ImVec2(RegionTL.x, lefty);
 
-        out_End = ImVec2(RegionBR.x, righty);
-
-        if (righty<RegionTL.y)
-            out_End = ImVec2(topx, RegionTL.y);
-        if (righty>RegionBR.y)
-            out_End = ImVec2(botx, RegionBR.y);
-
-        if (B > 0.0f)
-        {
-            ImVec2 temp = out_Start;
-            out_Start = out_End;
-            out_End = temp;
-        }
-    }
-    else if (std::abs(B) < 2.0f && std::abs(A) > 1.0f) // line is vertical
-    {
-        float topx, botx;
-
-        botx = (-C - B *RegionBR.y) / A;
-        topx = (-C - B *RegionTL.y) / A;
-
+    if (lefty<RegionTL.y)
+        out_Start = ImVec2(topx, RegionTL.y);
+    if (lefty>RegionBR.y)
         out_Start = ImVec2(botx, RegionBR.y);
 
+    out_End = ImVec2(RegionBR.x, righty);
+
+    if (righty<RegionTL.y)
         out_End = ImVec2(topx, RegionTL.y);
+    if (righty>RegionBR.y)
+        out_End = ImVec2(botx, RegionBR.y);
 
-        if (A > 0.0f)
-        {
-            ImVec2 temp = out_Start;
-            out_Start = out_End;
-            out_End = temp;
-        }
-    }
-    else if (std::abs(A) < 2.0f && std::abs(B) > 1.0f) // line is horizontal
+    if (B > 0.0f)
     {
-        float lefty, righty;
-
-        righty = (-C - A *RegionBR.x) / B;
-        lefty = (-C - A *RegionTL.x) / B;
-
-        out_Start = ImVec2(RegionTL.x, lefty);
-
-        out_End = ImVec2(RegionBR.x, righty);
-
-        if (B > 0.0f)
-        {
-            ImVec2 temp = out_Start;
-            out_Start = out_End;
-            out_End = temp;
-        }
-    }
-    else
-    {
-        return false;
+        ImVec2 temp = out_Start;
+        out_Start = out_End;
+        out_End = temp;
     }
 
     return true;
