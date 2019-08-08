@@ -474,13 +474,18 @@ void MainWindow::render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos)
         {
             ImVec2 PointPos0 = segment.begin.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
 
+            bool prevSnapped = true;
             for(int i=1;i<segment.points.size();++i)
             {
                 const ImagePoint& point = segment.points[i];
                 ImVec2 PointPos1 = point.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
 
-                draw_list->AddLine(PointPos0, PointPos1, lineColor, 1.5f);
+                bool snapped = point.isSnapped || !point.isSubdivisionPoint;
+                ImU32 stroke = (prevSnapped && snapped) ? lineColor : subdivBadFill;
+
+                draw_list->AddLine(PointPos0, PointPos1, stroke, 1.5f);
                 PointPos0=PointPos1;
+                prevSnapped=snapped;
             }
         }
 

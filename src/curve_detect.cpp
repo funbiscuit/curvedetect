@@ -426,6 +426,8 @@ void CurveDetect::update_subdiv(bool fullUpdate)
             ++left;
             --right;
         }
+        segments[i].points[0]=leftPosNew;
+        segments[i].points[count]=rightPosNew;
     }
 }
 
