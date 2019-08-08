@@ -222,7 +222,15 @@ std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
     update_subdiv(true);
 
     size_t Nu=userPoints.size();
-    size_t Na=allPoints.size();
+
+    //we should have at least two user points (although it should be already checked)
+    if(Nu<2)
+        return res;
+
+    size_t Na=1;//we need to count begin point of first segment
+
+    for(auto& segment : segments)
+        Na+=segment.points.size()-1;
 
     res->allNum=Na;
     res->userNum=Nu;
@@ -233,14 +241,27 @@ std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
     res->allPointsReal=new double[Na*2];
 
 
-    for (size_t i = 0; i < Na; ++i)
+    int i=2;//we counted first point outside main loop
+    res->allPointsPixels[0]=segments[0].begin.imagePosition.x;
+    res->allPointsPixels[1]=segments[0].begin.imagePosition.y;
+    for(auto& segment : segments)
     {
-        res->allPointsPixels[2*i]=allPoints[i].imagePosition.x;
-        res->allPointsPixels[2*i+1]=allPoints[i].imagePosition.y;
-        auto real=image_point_to_real(allPoints[i].imagePosition);
-        res->allPointsReal[2*i]=real.x;
-        res->allPointsReal[2*i+1]=real.y;
+        //count all subdiv points and end point (begin point of each segmented is not counted
+        //since its the same as the end point of the previous segment. thats why begin point of
+        //first segment was counted outside loop
+        for(int j=1; j<segment.points.size(); ++j)
+        {
+            const auto& point = segment.points[j].imagePosition;
+            res->allPointsPixels[i]=point.x;
+            res->allPointsPixels[i+1]=point.y;
+            auto real=image_point_to_real(point);
+            res->allPointsReal[i]=real.x;
+            res->allPointsReal[i+1]=real.y;
+
+            i+=2;
+        }
     }
+
     for (size_t i = 0; i < Nu; ++i)
     {
         res->userPointsPixels[2*i]=userPoints[i].imagePosition.x;
@@ -309,70 +330,80 @@ void CurveDetect::update_subdiv(bool fullUpdate)
     
     if (userPointsCount < 2)
     {
-        allPoints.clear();
+        segments.clear();
         return;
     }
     if(!isSorted)
         sort_points();
-    
-    
-    //extra points for each two user points
-    int extraPoints = (1 << subdivLevel) - 1;//=(2^S)-1
 
-    //number of points we need to move from one border to mid point (excluding)
-    int extraPointsHalf = (1 << (subdivLevel-1));
 
-    int allPointsCount = (extraPoints + 1)*(userPointsCount - 1) + 1;
-
-    if (allPoints.size() != allPointsCount)
+    if (segments.size() != userPointsCount-1)
     {
-        allPoints.clear();
-        allPoints.resize(allPointsCount);
-        for(int i=0; i < userPointsCount; ++i)
-            allPoints[i*(extraPoints+1)].imagePosition = userPoints[i].imagePosition;
+        segments.clear();
+        segments.resize(userPointsCount-1);
         fastUpdate=false;
     }
 
-    bool forceSubdiv = false;
+    //subdiv is used on the whole curve. So two curves with same length but different number
+    //of user points will have about the same total number of points (if subdiv level is the same)
+    double totalDist=0;
+    for (int i = 0; i < userPointsCount-1; ++i)
+        totalDist+=(userPoints[i].imagePosition-userPoints[i+1].imagePosition).norm();
 
-    int step =extraPoints + 1;
+    int minStep=int(totalDist)>>subdivLevel;
+    if(minStep<1)
+        minStep=1;
+
+    bool forceSubdiv = false;
+    //each segment (line between user points) will be subdivided with Ni points
+    //Ni is calculated based on distance between points. Bigger distance - more points are needed
     for (int i = 0; i < userPointsCount-1; ++i)
     {
-        //check if we need to subdivide this segment
-
-        int left = i*step;
-        int right = left + step;
-
-        Vec2D leftPos = allPoints[left].imagePosition;
-        Vec2D rightPos = allPoints[right].imagePosition;
-        const Vec2D& leftPosNew = userPoints[i].imagePosition;
-        const Vec2D& rightPosNew = userPoints[i+1].imagePosition;
-
+        const auto& leftPosNew = userPoints[i];
+        const auto& rightPosNew = userPoints[i+1];
+        Vec2D leftPos = leftPosNew.imagePosition;
+        Vec2D rightPos = rightPosNew.imagePosition;
 
         //check that both ends didnt move (if it is allowed to check this)
-        if(!forceSubdiv && fastUpdate && leftPos==leftPosNew && rightPos == rightPosNew)
+        if(!forceSubdiv && fastUpdate
+            && leftPos == segments[i].begin.imagePosition
+            && rightPos == segments[i].end.imagePosition)
             continue;
         else
         {
-            forceSubdiv = !(rightPos == rightPosNew);
-            allPoints[left].imagePosition = leftPosNew;
-            allPoints[right].imagePosition = rightPosNew;
+            forceSubdiv = !(rightPos == segments[i].end.imagePosition);
         }
 
-        for(int j=1; j<= extraPointsHalf; ++j)
-        {
-            leftPos = allPoints[left].imagePosition;
-            rightPos = allPoints[right].imagePosition;
+        segments[i].begin=leftPosNew;
+        segments[i].end=rightPosNew;
 
-            auto& nextLeft = allPoints[left+1];
+        double dist = (leftPos-rightPos).norm();
+        int count = (int)(dist/minStep);
+        if(count<1)
+            count=1;
+        int left = 0;
+        int right = count;
+        int extraPointsHalf = (count-1)/2;
+
+        segments[i].points.resize(count+1);
+
+        segments[i].points[0]=leftPosNew;
+        segments[i].points[count]=rightPosNew;
+
+        for(int j=0; j<= extraPointsHalf; ++j)
+        {
+            leftPos = segments[i].points[left].imagePosition;
+            rightPos = segments[i].points[right].imagePosition;
+
+            auto& nextLeft = segments[i].points[left+1];
 
             nextLeft.imagePosition = leftPos + (rightPos-leftPos)/double(right-left);
             nextLeft.isSnapped = snap(nextLeft.imagePosition);
             nextLeft.isSubdivisionPoint = true;
 
-            if(j!=extraPointsHalf)
+            if(j!=extraPointsHalf || count%2!=0)
             {
-                auto& nextRight = allPoints[right-1];
+                auto& nextRight = segments[i].points[right-1];
                 nextRight.imagePosition = rightPos - (rightPos-leftPos)/double(right-left);
                 nextRight.isSnapped = snap(nextRight.imagePosition);
                 nextRight.isSubdivisionPoint = true;
@@ -463,7 +494,7 @@ Vec2D CurveDetect::image_point_to_real(const Vec2D &point)
 void CurveDetect::reset_all()
 {
     userPoints.clear();
-    allPoints.clear();
+    segments.clear();
     
     xticks.resize(2);
     yticks.resize(2);
@@ -653,9 +684,9 @@ void CurveDetect::check_horizon()
     }
 }
 
-const std::vector<ImagePoint> CurveDetect::get_all_points()
+const std::vector<CurveSegment> CurveDetect::get_segments()
 {
-    return allPoints;
+    return segments;
 }
 
 const std::vector<ImagePoint> CurveDetect::get_user_points()

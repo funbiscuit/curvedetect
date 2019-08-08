@@ -41,8 +41,8 @@ private:
     int curveThickness=3;
     const int curveThicknessMin=2;
     const int curveThicknessMax=30;
-    int subdivLevel=8;
-    const int maxSubdivLevel=8;
+    int subdivLevel=10;
+    const int maxSubdivLevel=10;
     int binLevel=127;
     
     

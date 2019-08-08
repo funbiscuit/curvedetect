@@ -5,6 +5,7 @@
 #include <string>
 #include <imgui.h>
 #include <cstdint>
+#include <cmath>
 
 
 class Vec2D
@@ -33,6 +34,10 @@ public:
     inline double norm2()
     {
         return x*x + y*y;
+    }
+    inline double norm()
+    {
+        return std::sqrt(x*x + y*y);
     }
 };
 static inline bool operator==(const Vec2D& lhs, const Vec2D& rhs)  { return lhs.x==rhs.x && lhs.y==rhs.y; }

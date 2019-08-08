@@ -21,6 +21,15 @@ public:
     double* allPointsReal=nullptr;
 };
 
+class CurveSegment
+{
+public:
+    //begin and end are user points. for adjacent segments end[i]==begin[i+1]
+    ImagePoint begin;
+    ImagePoint end;
+    std::vector<ImagePoint> points; //subdivided points, begin and end are included
+};
+
 
 class CurveDetect
 {
@@ -63,8 +72,8 @@ public:
     void backup_selected_tick();
 
     void check_horizon();
-    
-    const std::vector<ImagePoint> get_all_points();
+
+    const std::vector<CurveSegment> get_segments();
     const std::vector<ImagePoint> get_user_points();
     std::vector<ImageTickLine>& get_xticks();
     std::vector<ImageTickLine>& get_yticks();
@@ -112,8 +121,7 @@ private:
     ImageHorizon::HorizonPoint selectedOrigin = ImageHorizon::NONE;
     
     std::vector<ImagePoint> userPoints; //position of user points (pixels)
-    std::vector<ImagePoint> allPoints; //position of all points (pixels) both user and generated
-
+    std::vector<CurveSegment> segments;
 
     AxisScale xscale = LINEAR;
     AxisScale yscale = LINEAR;

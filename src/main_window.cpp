@@ -444,15 +444,15 @@ void MainWindow::render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos)
 {
     if(!curve)
         return;
-    
+
     ImVec2 WinPos = ImGui::GetWindowPos();
-    
-    
+
+
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    
+
     uint64_t selectedId= curve->get_selected_id();
     uint64_t hoveredId= curve->get_hovered_id(ImageElement::POINT);
-    auto& allPoints= curve->get_all_points();
+    auto& segments= curve->get_segments();
     auto& userPoints= curve->get_user_points();
 
     float subdivSize = 8.f;
@@ -468,33 +468,48 @@ void MainWindow::render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos)
     double subdivSpacing = subdivSize;
 
     //draw lines between subdivided points
-    if (allPoints.size() > 1)
+    if (!segments.empty())
     {
-        ImVec2 LastDrawnPos = allPoints[0].imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
-        for (size_t kp = 0; kp < allPoints.size() - 1; kp++)
+        for(auto& segment : segments)
         {
-            ImVec2 PointPos0 = allPoints[kp].imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
-            ImVec2 PointPos1 = allPoints[kp + 1].imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
+            ImVec2 PointPos0 = segment.begin.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
 
-            draw_list->AddLine(PointPos0, PointPos1, lineColor, 1.5f);
-
-            ImU32 fill = allPoints[kp].isSnapped ? subdivFill : subdivBadFill;
-
-            double dist1 = Vec2D(PointPos0-LastDrawnPos).norm2();
-
-            if (bShowSubdivPoints)
+            for(int i=1;i<segment.points.size();++i)
             {
-                if(dist1>subdivSpacing*subdivSpacing)
-                {
-                    draw_list->AddCircleFilled(PointPos0, subdivSize*0.5f, fill);
-                    draw_list->AddCircle(PointPos0, subdivSize*0.5f, pointStroke);
-                    LastDrawnPos = PointPos0;
+                const ImagePoint& point = segment.points[i];
+                ImVec2 PointPos1 = point.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
+
+                draw_list->AddLine(PointPos0, PointPos1, lineColor, 1.5f);
+                PointPos0=PointPos1;
+            }
+        }
+
+        //used to limit number of drawn points (so points are not drawn on top of each other)
+        ImVec2 LastDrawnPos = segments[0].begin.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
+        if (bShowSubdivPoints)
+        {
+            for (auto &segment : segments) {
+                for (int i = 1; i < segment.points.size(); ++i) {
+                    const ImagePoint &point = segment.points[i];
+                    ImVec2 PointPos1 = point.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
+
+                    ImU32 fill = point.isSnapped ? subdivFill : subdivBadFill;
+
+                    double dist1 = Vec2D(PointPos1 - LastDrawnPos).norm2();
+
+                    if (point.isSubdivisionPoint && (dist1 > subdivSpacing * subdivSpacing))
+                    {
+                        draw_list->AddCircleFilled(PointPos1, subdivSize * 0.5f, fill);
+                        draw_list->AddCircle(PointPos1, subdivSize * 0.5f, pointStroke);
+                        LastDrawnPos = PointPos1;
+                    }
                 }
+
             }
         }
     }
-    
-    
+
+
     //TODO maybe not needed
     //if we are pressing button - draw a line from press location to snapped point
 //    if (SelectedItem >= 0 && ImGui::IsMouseDown(0) && CurrentMode == ActionMode1_AddPoints
