@@ -219,7 +219,7 @@ std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
 {
     auto res=std::make_shared<PointsBundle>();
 
-    update_subdiv();
+    update_subdiv(true);
 
     size_t Nu=userPoints.size();
     size_t Na=allPoints.size();
@@ -298,16 +298,13 @@ bool CurveDetect::are_points_sorted()
     });
 }
 
-void CurveDetect::update_subdiv()
+void CurveDetect::update_subdiv(bool fullUpdate)
 {
     //when fast update is true then only intervals where end positions change will be updated
     //everything else should be the same so we don't bother updating them
     bool isSorted = are_points_sorted();
-    bool fastUpdate = subdivBinLevel == binLevel && subdivCurveThick == curveThick
-            && subdivInvertImage == bInvertImage && isSorted;
-    subdivBinLevel = binLevel;
-    subdivCurveThick = curveThick;
-    subdivInvertImage = bInvertImage;
+    bool fastUpdate = !fullUpdate && isSorted;
+
     int userPointsCount = userPoints.size();
     
     if (userPointsCount < 2)
@@ -467,7 +464,6 @@ void CurveDetect::reset_all()
 {
     userPoints.clear();
     allPoints.clear();
-    subdivBinLevel = -1;
     
     xticks.resize(2);
     yticks.resize(2);
@@ -530,7 +526,7 @@ void CurveDetect::add_point(Vec2D pos)
     userPoints.emplace_back(pos);
     selectedPoint = userPoints.back().id;
     snap_selected();
-    update_subdiv();
+    update_subdiv(true);
 }
 
 bool CurveDetect::select_hovered(int selectionFilter)
@@ -607,12 +603,12 @@ void CurveDetect::delete_selected()
         }
         selectedPoint = 0;
         hoveredPoint = 0;
-        update_subdiv();
+        update_subdiv(true);
     }
     else if(selectedOrigin)
     {
         reset_horizon();
-        update_subdiv();
+        update_subdiv(true);
     }
 }
 
@@ -682,15 +678,14 @@ void CurveDetect::set_bin_level(int level)
     if(binLevel==level)
         return;
     binLevel=level;
-    update_subdiv();
+    update_subdiv(true);
 }
 
 void CurveDetect::set_invert_image(bool invert)
 {
     if(!image->set_inverted(invert))
         return;
-    bInvertImage = invert;
-    update_subdiv();
+    update_subdiv(true);
 }
 
 
@@ -699,16 +694,14 @@ void CurveDetect::set_subdiv_level(int subdiv)
     if(subdivLevel==subdiv)
         return;
     subdivLevel=subdiv;
-    update_subdiv();
+    update_subdiv(true);
 }
 
 void CurveDetect::set_curve_thickness(int thick)
 {
-    if(curveThick==thick)
+    if(!image->set_curve_thickness(thick))
         return;
-    curveThick=thick;
-    image->set_curve_thickness(thick);
-    update_subdiv();
+    update_subdiv(true);
 }
 
 

@@ -85,20 +85,13 @@ public:
     std::string get_points_text(std::string columnSeparator, std::string lineEnding, char decimalSeparator);
 
 
-    void update_subdiv();
+    void update_subdiv(bool fullUpdate=false);
 
     
 private:
     std::shared_ptr<Image> image;
-    
-    // binarization level that was used to calculate current subdivision
-    // so if it didn't change we can update subdivision much faster
-    int subdivBinLevel = -1;
+
     int binLevel;
-    bool bInvertImage = false;
-    bool subdivInvertImage = false;
-    int subdivCurveThick = -1;
-    int curveThick;
     int subdivLevel;
     
     //TODO use snap distance (from image) instead

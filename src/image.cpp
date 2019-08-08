@@ -270,12 +270,13 @@ bool Image::snap(Vec2D &pos, int binLevel)
     }
 }
 
-void Image::set_curve_thickness(int thick)
+bool Image::set_curve_thickness(int thick)
 {
     if(curveThickness==thick)
-        return;
+        return false;
     curveThickness=thick;
     snapCache.set_curve_thick(curveThickness);
+    return true;
 }
 
 bool Image::set_inverted(bool invert)

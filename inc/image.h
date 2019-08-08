@@ -37,7 +37,7 @@ public:
 
     bool snap(Vec2D &pos, int binLevel);
 
-    void set_curve_thickness(int thick);
+    bool set_curve_thickness(int thick);
     bool set_inverted(bool inverted);
 
 private:
