@@ -882,46 +882,48 @@ void MainWindow::render_horizon(const ImVec2 &im_pos)
 void MainWindow::render_side_panel()
 {
     float SettingsWidth = 250.0f;
+    float columnMargin = 3.f;
+    float secondColumnX = SettingsWidth/2+columnMargin;
 
 
     ImGui::BeginChild("SettingsWindow", ImVec2(SettingsWidth, 0));
 
-    ImVec2 CurPos = ImGui::GetCursorPos();
-
-    ImGui::SetCursorPosY(CurPos.y + 3.0f);
-    ImGui::Text("Subdivision:");
-    ImGui::SameLine();
-    ImGui::SetCursorPosY(CurPos.y);
-
-    CurPos = ImGui::GetCursorPos();
-
-    ImGui::PushItemWidth(SettingsWidth - CurPos.x);
-    ImGui::SliderInt("##subdiv_slider", &subdivLevel, 0, maxSubdivLevel);
-    ImGui::PopItemWidth();
 
 
-
-    ImGui::Checkbox("Draw Subdivision Points", &bShowSubdivPoints);
-    ImGui::Checkbox("Show Image", &bShowImage);
-    ImGui::Checkbox("Show Binarization", &bShowBinarization);
-    ImGui::Checkbox("Invert Image", &bInvertImage);
-    ImGui::Checkbox("Show Zoom Window", &bShowZoomWindow);
-    //ImGui::Checkbox("Smooth Subdivision", &bSmoothPoints);
 
 
     if (curve)
     {
+        ImGui::TextUnformatted("Visualisation settings");
+        ImGui::Checkbox("Subdivision", &bShowSubdivPoints);
+        ImGui::SameLine(secondColumnX);
+        ImGui::Checkbox("Zoom", &bShowZoomWindow);
+        ImGui::Checkbox("Image", &bShowImage);
+        ImGui::SameLine(secondColumnX);
+        ImGui::Checkbox("Binarization", &bShowBinarization);
+        ImGui::Separator();
+
+        ImGui::TextUnformatted("Curve settings");
+
+        ImVec2 CurPos = ImGui::GetCursorPos();
+        ImGui::SetCursorPosY(CurPos.y + 3.0f);
+        ImGui::Text("Subdivision:");
+        ImGui::SameLine(secondColumnX);
+        ImGui::SetCursorPosY(CurPos.y);
+
+        ImGui::PushItemWidth(SettingsWidth - secondColumnX);
+        ImGui::SliderInt("##subdiv_slider", &subdivLevel, 0, maxSubdivLevel);
+        ImGui::PopItemWidth();
+
+
         CurPos = ImGui::GetCursorPos();
 
         ImGui::SetCursorPosY(CurPos.y + 3.0f);
-        //ImGui::Text("Bin. level");
         ImGui::Text("Threshold: ");
-        ImGui::SameLine();
+        ImGui::SameLine(secondColumnX);
         ImGui::SetCursorPosY(CurPos.y);
 
-        CurPos = ImGui::GetCursorPos();
-
-        ImGui::PushItemWidth(SettingsWidth - CurPos.x);
+        ImGui::PushItemWidth(SettingsWidth - secondColumnX);
         ImGui::SliderInt("##bin-level", &binLevel, 0, 255);
 
         ImGui::PopItemWidth();
@@ -940,147 +942,119 @@ void MainWindow::render_side_panel()
         CurPos = ImGui::GetCursorPos();
 
         ImGui::SetCursorPosY(CurPos.y + 3.0f);
-        ImGui::Text("Curve thickness: ");
-        ImGui::SameLine();
+        ImGui::Text("Thickness: ");
+        ImGui::SameLine(secondColumnX);
         ImGui::SetCursorPosY(CurPos.y);
-        CurPos = ImGui::GetCursorPos();
-        ImGui::PushItemWidth(SettingsWidth - CurPos.x);
+        ImGui::PushItemWidth(SettingsWidth - secondColumnX);
         ImGui::SliderInt("##curve-thick", &curveThickness, curveThicknessMin, curveThicknessMax);
         ImGui::PopItemWidth();
         curve->set_curve_thickness(curveThickness);
 
 
 
-
-
-
-        CurPos = ImGui::GetCursorPos();
-        ImGui::SetCursorPosY(CurPos.y + 3.0f);
-        //ImGui::Text("Bin. level");
-        ImGui::Text("Scale: ");
-        ImGui::SameLine();
-
-
-        ImGui::SetCursorPosY(CurPos.y);
-
-        CurPos = ImGui::GetCursorPos();
-
-        float NewScale = imageScale;
-
-        ImGui::PushItemWidth(SettingsWidth - CurPos.x);
-        ImGui::SliderFloat("##image-scale", &NewScale, minImageScale, maxImageScale, "%.2f");
-        ImGui::PopItemWidth();
-
-
-        //ImVec2 PrevHoveredPixel = (MousePos - WinPos - imagePosition) / imageScale;
-        if (NewScale != imageScale)
-        {
-            //TODO keep center in place
-            imageScale = NewScale;
-            //imagePosition = MousePos - HoveredPixel*imageScale - WinPos;
-        }
-
-        float scale_width=120.f;
+        float scale_width=SettingsWidth-secondColumnX;
         ImGui::PushItemWidth(scale_width);
-        const char* scales[] = { "linear", "logarithmic" };
+        const char* scalesX[] = { "linear X", "log X" };
+        const char* scalesY[] = { "linear Y", "log Y" };
         const CurveDetect::AxisScale scales_enum[] ={
                 CurveDetect::LINEAR, CurveDetect::LOG };
         static int xscale = 0;
         static int yscale = 0;
-        ImGui::TextUnformatted("X Scale:");
-        ImGui::SameLine(SettingsWidth-scale_width);
-        ImGui::Combo("##xscale", &xscale, scales, 2);
-
-        ImGui::TextUnformatted("Y Scale:");
-        ImGui::SameLine(SettingsWidth-scale_width);
-        ImGui::Combo("##yscale", &yscale, scales, 2);
+        ImGui::Combo("##xscale", &xscale, scalesX, 2);
+        ImGui::SameLine(secondColumnX);
+        ImGui::Combo("##yscale", &yscale, scalesY, 2);
 
         curve->set_scales(scales_enum[xscale], scales_enum[yscale]);
 
+        ImGui::Checkbox("Invert Image", &bInvertImage);
+        ImGui::SameLine(secondColumnX);
+
+        if (ImGui::Button("Reset", ImVec2(SettingsWidth-secondColumnX, 0)))
+            reset_all();
+        ImGui::Separator();
     }
 
-    float buttonMargin = 3.f;
-
-    if (ImGui::Button("Open", ImVec2(SettingsWidth/2-buttonMargin, 0)))
+    if (ImGui::Button("Open", ImVec2(SettingsWidth/2-columnMargin, 0)))
         on_open_image();
 
-    ImGui::SameLine(0.f,buttonMargin*2);
+    ImGui::SameLine(0.f,columnMargin*2);
 
-    if (ImGui::Button("Reset", ImVec2(SettingsWidth/2-buttonMargin, 0)))
-        reset_all();
-
-    if (ImGui::Button("Paste Image", ImVec2(SettingsWidth, 0)))
+    if (ImGui::Button("Paste", ImVec2(SettingsWidth/2-columnMargin, 0)))
         on_paste_image();
 
-    ImGui::Separator();
-
-    //render text export settings
-
-    int out_Result;
-    bool bExportReady = curve ? curve->is_export_ready(out_Result) : false;
-
-    static char edit_buf_col_sep[10];
-    static char edit_buf_line_end[10];
-
-    std::string edit_str;
-
-    edit_str = escape(columnSeparator);
-    edit_str.copy(edit_buf_col_sep, 8);
-
-    float inputWidth=90.f;
-
-    ImGui::PushItemWidth(inputWidth);
-    ImGui::TextUnformatted("Column separator");
-    ImGui::SameLine(SettingsWidth-inputWidth);
-    ImGui::InputText("##col-sep", edit_buf_col_sep, 6);
-
-    edit_str = edit_buf_col_sep;
-    columnSeparator = unescape(edit_str);
-
-    if (columnSeparator.size() == 0)
-        columnSeparator = " ";
-
-
-    edit_str = escape(lineEnding);
-    edit_str.copy(edit_buf_line_end, 8);
-
-    ImGui::TextUnformatted("Line ending");
-    ImGui::SameLine(SettingsWidth-inputWidth);
-    ImGui::InputText("##line-end", edit_buf_line_end, 6);
-
-    edit_str = edit_buf_line_end;
-    lineEnding = unescape(edit_str);
-
-    if (lineEnding.size() == 0)
-        lineEnding = " ";
-
-
-    const char* items[] = { "dot", "comma" };
-    static int item2 = 0;
-    ImGui::TextUnformatted("Decimal separator");
-    ImGui::SameLine(SettingsWidth-inputWidth);
-    ImGui::Combo("##dec-sep", &item2, items, 2);   // Combo using proper array. You can also pass a callback to retrieve array value, no need to create/copy an array just for that.
-
-    decimalSeparator = item2==0 ? '.' : ',';
-
-    ImGui::PopItemWidth();
-
-    if(!bExportReady)
-        ImGui_PushDisableButton();
-
-    if (ImGui::Button("Copy", ImVec2(SettingsWidth/2-buttonMargin, 0)) && bExportReady)
+    if (curve)
     {
-        auto text=curve->get_points_text(columnSeparator, lineEnding, decimalSeparator);
-        MainApp::get().copy_to_clipboard(text);
+        ImGui::Separator();
+        ImGui::TextUnformatted("Text export settings");
+
+        //render text export settings
+
+        int out_Result;
+        bool bExportReady = curve ? curve->is_export_ready(out_Result) : false;
+
+        static char edit_buf_col_sep[10];
+        static char edit_buf_line_end[10];
+
+        std::string edit_str;
+
+        edit_str = escape(columnSeparator);
+        edit_str.copy(edit_buf_col_sep, 8);
+
+        float inputWidth=SettingsWidth-secondColumnX;
+
+        ImGui::PushItemWidth(inputWidth);
+        ImGui::TextUnformatted("Column separator");
+        ImGui::SameLine(secondColumnX);
+        ImGui::InputText("##col-sep", edit_buf_col_sep, 6);
+
+        edit_str = edit_buf_col_sep;
+        columnSeparator = unescape(edit_str);
+
+        if (columnSeparator.size() == 0)
+            columnSeparator = " ";
+
+
+        edit_str = escape(lineEnding);
+        edit_str.copy(edit_buf_line_end, 8);
+
+        ImGui::TextUnformatted("Line ending");
+        ImGui::SameLine(secondColumnX);
+        ImGui::InputText("##line-end", edit_buf_line_end, 6);
+
+        edit_str = edit_buf_line_end;
+        lineEnding = unescape(edit_str);
+
+        if (lineEnding.size() == 0)
+            lineEnding = " ";
+
+
+        const char* items[] = { "dot", "comma" };
+        static int item2 = 0;
+        ImGui::TextUnformatted("Decimal separator");
+        ImGui::SameLine(secondColumnX);
+        ImGui::Combo("##dec-sep", &item2, items, 2);   // Combo using proper array. You can also pass a callback to retrieve array value, no need to create/copy an array just for that.
+
+        decimalSeparator = item2==0 ? '.' : ',';
+
+        ImGui::PopItemWidth();
+
+        if(!bExportReady)
+            ImGui_PushDisableButton();
+
+        if (ImGui::Button("Copy", ImVec2(SettingsWidth/2-columnMargin, 0)) && bExportReady)
+        {
+            auto text=curve->get_points_text(columnSeparator, lineEnding, decimalSeparator);
+            MainApp::get().copy_to_clipboard(text);
+        }
+
+        ImGui::SameLine(0.f,columnMargin*2);
+
+        if (ImGui::Button("Export", ImVec2(SettingsWidth/2-columnMargin, 0)) && bExportReady)
+            on_export_points();
+
+        if(!bExportReady)
+            ImGui_PopDisableButton();
     }
-
-    ImGui::SameLine(0.f,buttonMargin*2);
-
-    if (ImGui::Button("Export", ImVec2(SettingsWidth/2-buttonMargin, 0)) && bExportReady)
-        on_export_points();
-
-    if(!bExportReady)
-        ImGui_PopDisableButton();
 
 
     ImGui::Separator();
@@ -1094,7 +1068,7 @@ void MainWindow::render_hints_panel()
 {
     if(!curve)
     {
-        ImGui::TextUnformatted("Open image to begin");
+        ImGui::TextUnformatted("Open/paste image to begin");
         return;
     }
 
