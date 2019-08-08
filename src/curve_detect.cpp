@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <map>
 
 #include <algorithm>
 #include <cmath>
@@ -232,8 +233,6 @@ std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
     for(auto& segment : segments)
         Na+=segment.points.size()-1;
 
-    res->allNum=Na;
-    res->userNum=Nu;
 
     res->userPointsPixels=new double[Nu*2];
     res->userPointsReal=new double[Nu*2];
@@ -244,6 +243,9 @@ std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
     int i=2;//we counted first point outside main loop
     res->allPointsPixels[0]=segments[0].begin.imagePosition.x;
     res->allPointsPixels[1]=segments[0].begin.imagePosition.y;
+
+    std::map<std::pair<double, double>, bool> included;
+
     for(auto& segment : segments)
     {
         //count all subdiv points and end point (begin point of each segmented is not counted
@@ -252,12 +254,22 @@ std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
         for(int j=1; j<segment.points.size(); ++j)
         {
             const auto& point = segment.points[j].imagePosition;
+
+            auto key = std::pair<double, double>(point.x, point.y);
+            if(included.find(key)!=included.end())
+            {
+                //there was a point with the same pixel coordinates - skip it
+                --Na;
+                continue;
+            }
+
             res->allPointsPixels[i]=point.x;
             res->allPointsPixels[i+1]=point.y;
             auto real=image_point_to_real(point);
             res->allPointsReal[i]=real.x;
             res->allPointsReal[i+1]=real.y;
 
+            included.insert(std::pair<std::pair<double, double>, bool>(key, true));
             i+=2;
         }
     }
@@ -270,6 +282,8 @@ std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
         res->userPointsReal[2*i]=real.x;
         res->userPointsReal[2*i+1]=real.y;
     }
+    res->allNum=Na;
+    res->userNum=Nu;
 
     return res;
 }
