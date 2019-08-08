@@ -16,11 +16,11 @@
 MainApp::MainApp()
 {
     window = nullptr;
-    
+
     m_width = 600;
     m_height = 400;
-    
-    
+
+
     bShouldUseIMGUICursor = false;
 }
 
@@ -33,9 +33,9 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
         return false;
     }
     printf("OpenGL %d.%d\n", GLVersion.major, GLVersion.minor);
-    
+
     glad_glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    
+
     window = wnd;
 
     //load app icons
@@ -53,11 +53,11 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
     ImGui::StyleColorsLight();
 //    ImGui::StyleColorsDark();
 //    ImGui::StyleColorsClassic();
-    
+
     // Setup Platform/Renderer bindings
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
-    
+
     ImFontConfig config;
     config.OversampleH = 3;
     config.OversampleV = 2;
@@ -75,7 +75,7 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
     io.Fonts->Build();
 
     ImGui::GetIO().IniFilename = nullptr;
-    
+
     glfwGetWindowSize(window, &m_width, &m_height);
     mainWindow.on_resize(m_width, m_height);
 
@@ -83,9 +83,9 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
     glfwSetKeyCallback(window, on_key_callback);
 
     set_use_imgui_cursor(false);
-    
+
     mainWindow.init();
-    
+
     std::cout << "init successful\n";
     return true;
 }
@@ -103,9 +103,9 @@ void MainApp::on_window_resize(GLFWwindow *wnd, int width, int height)
 void MainApp::on_key_callback(GLFWwindow *wnd, int key, int scancode, int action, int mods)
 {
     MainApp& inst = get();
-    
+
     ImGui_ImplGlfw_KeyCallback(wnd, key, scancode, action, mods);
-    
+
     if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL)
     {
         inst.bCtrlPressed = action != GLFW_RELEASE;
@@ -167,21 +167,21 @@ void MainApp::on_key_callback(GLFWwindow *wnd, int key, int scancode, int action
 void MainApp::new_frame()
 {
     ImVec4 clear_color = ImVec4(0.9f, 0.9f, 0.9f, 1.00f);
-    
+
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    
+
     mainWindow.on_render();
-    
+
     bEnterReleased = false;
-    
+
     // Rendering
     ImGui::Render();
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
-    
+
     glad_glViewport(0, 0, display_w, display_h);
     glad_glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
     glad_glClear(GL_COLOR_BUFFER_BIT);
@@ -198,9 +198,9 @@ MainApp& MainApp::get()
 void MainApp::set_use_imgui_cursor(bool bShowCursor)
 {
     bool showNativeCursor = (!bShowCursor || !bShouldUseIMGUICursor);
-    
+
     ImGui::GetIO().MouseDrawCursor = bShowCursor && bShouldUseIMGUICursor;
-    
+
     glfwSetInputMode(window, GLFW_CURSOR, showNativeCursor ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_HIDDEN);
 }
 

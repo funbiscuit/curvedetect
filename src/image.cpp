@@ -44,7 +44,7 @@ ImageData::~ImageData()
 Image::Image(std::string path)
 {
     texture=0;
-    
+
     //create at most 10 mipmaps
     images.resize(10);
 
@@ -58,7 +58,7 @@ Image::Image(std::string path)
         texture = ImGui_ImplOpenGL3_CreateTexture(image, width, height, false, false);
 
         snapCache.resize(width, height);
-    
+
         for (int col = 0; col < width; col++)
         {
             for (int row = 0; row < height; row++)
@@ -74,7 +74,7 @@ Image::Image(std::string path)
         auto start=std::chrono::high_resolution_clock::now();
 
         generate_mipmaps();
-        
+
         auto end=std::chrono::high_resolution_clock::now();
         auto mseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         std::cout << "create took: " << mseconds << "\n";
@@ -152,17 +152,17 @@ void Image::generate_mipmaps()
         int w1=images[i-1].width;
         int w2=w1/2;
         int h2=images[i-1].height/2;
-        
+
         if(w2<10 || h2<10)
         {
             images.resize(i);
             break;
         }
-        
+
         images[i].pixels = new uint8_t[w2*h2];
         images[i].width = w2;
         images[i].height = h2;
-    
+
         for (int col = 0; col < w2; col++)
         {
             for (int row = 0; row < h2; row++)
@@ -172,11 +172,11 @@ void Image::generate_mipmaps()
                 images[i].pixels[row * w2 + col]=std::min(a, b);
             }
         }
-        
+
     }
-    
-    
-    
+
+
+
 }
 
 
@@ -200,21 +200,21 @@ bool Image::is_pixel_inside(int px, int py)
 {
     if (!is_loaded() || px < 0 || py < 0)
         return false;
-    
+
     return (px < width && py < height);
-    
+
 }
 
 bool Image::update_pixel_region(int &px, int &py, int hside)
 {
-    
+
     if (!is_pixel_inside(px, py))
         return false;
-    
+
     int localX, localY;
     localX = localY = hside;
     int side = hside*2+1;
-    
+
     if (px < hside)
     {
         localX = px;
@@ -225,7 +225,7 @@ bool Image::update_pixel_region(int &px, int &py, int hside)
         localY = py;
         py = hside;
     }
-    
+
     if (px >= width-hside)
     {
         localX = 2 * hside + 1 - width + px;
@@ -238,7 +238,7 @@ bool Image::update_pixel_region(int &px, int &py, int hside)
     }
 
     pixelsRegion.resize(side*side);
-    
+
     for (int kx = px - hside; kx <= px + hside; kx++)
     {
         for (int ky = py - hside; ky <= py + hside; ky++)
@@ -246,10 +246,10 @@ bool Image::update_pixel_region(int &px, int &py, int hside)
             pixelsRegion[(ky - py + hside)*side + kx - px + hside] = images[0].pixels[ky * width + kx];
         }
     }
-    
+
     px = localX;
     py = localY;
-    
+
     return true;
 }
 
@@ -301,7 +301,7 @@ bool Image::snap_to_closest(Vec2D &point, int binLevel)
 
     int px = (int) std::round(point.x);
     int py = (int) std::round(point.y);
-    
+
     if(!is_pixel_inside(px, py))
         return false;
     int val = images[0].pixels[py * width + px];

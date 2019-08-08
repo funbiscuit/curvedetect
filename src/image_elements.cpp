@@ -54,7 +54,7 @@ void ImageTickLine::filter_value(std::string &str, bool finalFilter)
         min=true;
     }
     while(finalFilter && !str.empty() &&
-    (str.back()=='.' || str.back()=='-' || (dot && str.back()=='0')))
+          (str.back()=='.' || str.back()=='-' || (dot && str.back()=='0')))
     {
         if(str.back()=='.')
             dot=false;

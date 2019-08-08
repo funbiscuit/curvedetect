@@ -24,25 +24,25 @@ MainWindow::MainWindow()
     width=1024;
     height=720;
     toolbar_width=280;
-    
+
     currentMode = MODE_POINTS;
-    
-    
+
+
     minImageScale = 1.0f;
     imageScale = 1.0f;
     maxImageScale = 3.0f;
-    
+
     zoomPixelHalfSide = 30;
-    
+
     zoomWindowSize = 200.0f;
-    
+
     decimalSeparator = '.';
     columnSeparator = "\t";
     lineEnding = "\n";
-    
+
     image = nullptr;
     curve = nullptr;
-    
+
 }
 
 
@@ -72,11 +72,11 @@ void MainWindow::on_render()
 //    ImGui::Begin("Area", nullptr, window_flags);
 //    render_area();
 //    ImGui::End();
-    
-    
+
+
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2((float)width, (float)height));// , ImGuiSetCond_FirstUseEver);
-    
+
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     if (ImGui::Begin("Main Window", nullptr, window_flags))
     {
@@ -84,7 +84,7 @@ void MainWindow::on_render()
         ImGui::End();
     }
     ImGui::PopStyleVar();
-    
+
 }
 
 void MainWindow::init()
@@ -107,13 +107,13 @@ void MainWindow::render_main_window()
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
     render_side_panel();
-    
+
     ImGui::SameLine();
-    
-    
+
+
     ImGui::BeginGroup();
-    
-    
+
+
     // Create our canvas
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
@@ -138,16 +138,16 @@ void MainWindow::render_main_window()
     render_horizon(imagePosition);
     render_grid_lines(imagePosition);
     render_points(imageScale, imagePosition, MousePos);
-    
+
     ImVec2 ZoomOrigin;
-    
+
     if (image && bShowZoomWindow && render_zoom_window(canvas_sz, ZoomOrigin))
     {
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
         float zoomedScale = zoomWindowSize/ float(2 * zoomPixelHalfSide + 1);
-        
+
         ImVec2 zoomedImPos = ZoomOrigin -hoveredImagePixel*zoomedScale-WinPos;
-        
+
         ImVec2 ZoomWnd = ImVec2(zoomWindowSize, zoomWindowSize);
 
         //TODO add ticks and horizon
@@ -155,23 +155,23 @@ void MainWindow::render_main_window()
         draw_list->PushClipRect(ZoomOrigin- ZoomWnd*0.5f, ZoomOrigin+ ZoomWnd*0.5f, true);
         render_points(zoomedScale, zoomedImPos, ZoomOrigin);
         draw_list->PopClipRect();
-        
+
     }
-    
-    
-    
-    
+
+
+
+
     // Draw context menu
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
     if (ImGui::BeginPopup("context_menu"))
     {
         bIsContextMenuOpened = true;
         bIsReadyForAction = false;
-        
+
         const char* items[]={"[1] Points","[2] Grid",
                              "[3] Horizon"};
         ActionMode modes[]={MODE_POINTS,MODE_GRID,MODE_HORIZON};
-        
+
         for(int j=0;j<3;++j)
         {
             if (ImGui::MenuItem(items[j], nullptr, currentMode == modes[j], true))
@@ -179,9 +179,9 @@ void MainWindow::render_main_window()
                 currentMode = modes[j];
                 bIsReadyForAction = true;
             }
-            
+
         }
-        
+
         ImGui::EndPopup();
     }
     else
@@ -192,9 +192,9 @@ void MainWindow::render_main_window()
 
 
     render_tick_config_popup();
-    
-    
-    
+
+
+
     ImGui::EndChild();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
@@ -412,7 +412,7 @@ void MainWindow::process_input()
         if (ImGui::IsMouseReleased(0))
         {
             on_mouse_up(0);
-            
+
             bIsMouseDownFirst = true;
         }
         if(ImGui::IsMouseDoubleClicked(0))
@@ -420,18 +420,18 @@ void MainWindow::process_input()
             on_mouse_double_click(0);
             bIsMouseDownFirst = true;
         }
-        
+
         // Open context menu
         if (ImGui::IsMouseClicked(1))
         {
             ImGui::OpenPopup("context_menu");
         }
-        
+
     }
-    
+
     if(curve)
         curve->check_horizon();
-    
+
     if (ImGui::IsMouseReleased(0) && !bIsContextMenuOpened)
     {
         bIsReadyForAction = true;
@@ -552,54 +552,54 @@ void MainWindow::render_tick_config_popup()
 {
     if(!curve)
         return;
-    
+
     static bool bTickInputAutoFocus = true;
-    
+
     static bool bTickConfigInit = true;
-    
+
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
     if (ImGui::BeginPopupModal("TickConfig", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        
+
         if (ImGui::IsMouseDown(0))
         {
             bTickInputAutoFocus = false;
         }
-        
+
         //ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 5));
         ImGui::Text("Enter value for this tick line");
         ImGui::Separator();
-        
+
         static std::string tickVal = "0";
         char buf[65];
-    
+
         auto selected=(ImageTickLine*) curve->get_selected();
         auto& XTicks= curve->get_xticks();
         auto& YTicks= curve->get_yticks();
-    
+
         if (bTickConfigInit && selected)
         {
             tickVal = selected->tickValueStr;
             ImageTickLine::filter_value(tickVal, false);
-            
+
             bTickConfigInit = false;
         }
-        
+
         //ImGui::RadioButton("X (vertical)", &TickType, 0);
         //ImGui::RadioButton("Y (horizontal)", &TickType, 1);
         //if (bTickInputAutoFocus)//set focus to float only when we just opened the window
         //	ImGui::SetKeyboardFocusHere(0);
-        
+
         if (!ImGui::IsAnyItemActive())
             ImGui::SetKeyboardFocusHere();
 
         strcpy(buf,tickVal.c_str());
         ImGui::InputText("Value", buf, 30, ImGuiInputTextFlags_CallbackAlways, &onTickInput);
         tickVal=buf;
-        
+
         auto& app= MainApp::get();
-        
+
         if (ImGui::Button("OK", ImVec2(120, 0)) || app.is_enter_up())
         {
             ImageTickLine::filter_value(tickVal, true);
@@ -612,7 +612,7 @@ void MainWindow::render_tick_config_popup()
             bTickConfigInit = true;
             ImGui::CloseCurrentPopup();
         }
-        
+
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2(120, 0)))
         {
@@ -621,14 +621,14 @@ void MainWindow::render_tick_config_popup()
                 selected->restore_backup();
 
             curve->deselect_all();
-            
+
             bTickConfigInit = true;
             ImGui::CloseCurrentPopup();
         }
-        
+
         ImGui::EndPopup();
-        
-        
+
+
     }
     else
     {
@@ -644,45 +644,45 @@ bool MainWindow::render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOri
 
     ImVec2 WinPos = ImGui::GetWindowPos();
     ImVec2 MousePos = ImGui::GetMousePos();
-    
+
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    
+
     float im_width = float(image->get_width())*imageScale;
     float im_height = float(image->get_height())*imageScale;
-    
+
     float im_aspect = im_height / im_width;
-    
-    
+
+
     ImVec2 ZoomUV0, ZoomUV1, ZoomPos, ZoomWndOffset;
     float ZoomRectBorder = 5.0f;
-    
+
     ZoomWndOffset = ImVec2(15.f, 15.f);
     ZoomPos = MousePos+ZoomWndOffset;
-    
+
     if (ZoomPos.x + zoomWindowSize + ZoomRectBorder * 2 - WinPos.x > canvas_sz.x)
         ZoomPos.x = MousePos.x - (zoomWindowSize + ZoomRectBorder * 2);
 
     if (ZoomPos.y + zoomWindowSize + ZoomRectBorder * 2 - WinPos.y > canvas_sz.y)
         ZoomPos.y = MousePos.y - (zoomWindowSize + ZoomRectBorder * 2);
-    
+
     if (ZoomPos.x - ZoomRectBorder * 2 - WinPos.x < 0)
         ZoomPos.x = ZoomRectBorder * 2 + WinPos.x;
-    
+
     if (ZoomPos.y - ZoomRectBorder * 2 - WinPos.y < 0)
         ZoomPos.y = ZoomRectBorder * 2 + WinPos.y;
 
     ZoomUV0 = hoveredImagePixel;
     ZoomUV0.x /= image->get_width();
     ZoomUV0.y /= image->get_height();
-    
+
     out_ZoomOrigin = ZoomPos + ImVec2(zoomWindowSize*0.5f,zoomWindowSize*0.5f);
-    
+
     float ZoomUVsideU = float(2 * zoomPixelHalfSide + 1) / float(image->get_width());
-    
-    
+
+
     ZoomUV0 -= ImVec2(ZoomUVsideU, ZoomUVsideU / im_aspect)*0.5f;
     ZoomUV1 = ZoomUV0 + ImVec2(ZoomUVsideU, ZoomUVsideU / im_aspect);
-    
+
     //draw zoom window
     if (ImGui::is_mouse_hovering_window())
     {
@@ -690,20 +690,20 @@ bool MainWindow::render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOri
         draw_list->AddRectFilled(ZoomPos - ImVec2(ZoomRectBorder, ZoomRectBorder),
                                  ZoomPos + ImVec2(ZoomRectBorder+ zoomWindowSize, ZoomRectBorder+ zoomWindowSize),
                                  ZoomBgColor, 5.0f);
-        
+
         GLuint texID = image->get_texture();
         draw_list->AddImage((void *)(intptr_t)(texID), ZoomPos,
                             ZoomPos + ImVec2(zoomWindowSize,zoomWindowSize), ZoomUV0, ZoomUV1);
-        
+
         ImU32 CrossColor = ImColor(120, 120, 120, 220);
         draw_list->AddLine(ImVec2(zoomWindowSize*0.5f, 0.f) + ZoomPos,
                            ImVec2(zoomWindowSize*0.5f, zoomWindowSize) + ZoomPos, CrossColor);
         draw_list->AddLine(ImVec2(0.f, zoomWindowSize*0.5f) + ZoomPos,
                            ImVec2(zoomWindowSize, zoomWindowSize*0.5f) + ZoomPos, CrossColor);
-        
+
         return true;
     }
-    
+
     return false;
 }
 
@@ -711,17 +711,17 @@ void MainWindow::render_grid_lines(ImVec2 im_pos)
 {
     if(!curve)
         return;
-    
+
     ImVec2 WinPos = ImGui::GetWindowPos();
-    
-    
+
+
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
     const auto tickColor = ImColor(128, 128, 128, 255);
     const auto tickHover = ImColor(152, 248, 59, 255);
     const auto tickSel = ImColor(59, 155, 59, 255);
 
-    
+
     auto horizon= curve->get_horizon();
     auto CoordOriginImg= horizon.imagePosition.to_imvec();
     auto CoordOriginTargetX= horizon.target.imagePosition.to_imvec();
@@ -729,17 +729,17 @@ void MainWindow::render_grid_lines(ImVec2 im_pos)
     uint64_t selectedId= curve->get_selected_id();
     auto& XTicks= curve->get_xticks();
     auto& YTicks= curve->get_yticks();
-    
+
     ImVec2 TargetDirX = CoordOriginTargetX - CoordOriginImg;
-    
+
     ImVec2 TargetDirY;
     TargetDirY.x = TargetDirX.y;
     TargetDirY.y = -TargetDirX.x;
-    
+
     ImVec2 LineStart, LineEnd, LabelPos;
-    
+
     ImVec2 LineMargin = ImVec2(10.0f, 10.0f);
-    
+
     //draw tick lines
     for (auto &tick : XTicks) {
         ImU32 col = tickColor;
@@ -751,9 +751,9 @@ void MainWindow::render_grid_lines(ImVec2 im_pos)
             else if (tick.id == hoveredId && !selectedId)
                 col = tickHover;
         }
-        
+
         ImVec2 XTickPosition= tick.imagePosition.to_imvec();
-        
+
         if (!extend_line(XTickPosition, TargetDirY, LineStart, LineEnd,
                          ImVec2((float) image->get_width(), (float) image->get_height()) - LineMargin * 2, LineMargin))
         {
@@ -791,7 +791,7 @@ void MainWindow::render_grid_lines(ImVec2 im_pos)
         }
 
         ImVec2 YTickPosition= tick.imagePosition.to_imvec();
-        
+
         if (!extend_line(YTickPosition, TargetDirX, LineStart, LineEnd,
                          ImVec2((float) image->get_width(), (float) image->get_height()) - LineMargin * 2, LineMargin))
         {
@@ -815,7 +815,7 @@ void MainWindow::render_grid_lines(ImVec2 im_pos)
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
         ImGui::TextUnformatted(tick.tickValueStr.c_str());
         ImGui::PopStyleColor();
-        
+
         //draw_list->AddLine(ImVec2(0.0f, TickPos) + WinPos, ImVec2(canvas_sz.x, TickPos) + WinPos, col, 1.0f);
 // 		ImGui::SetCursorPos(ImVec2(CoordOriginScreen.x - WinPos.x + 2.0f, TickPos + 2.0f));
 // 		ImGui::PushStyleColor(ImGuiCol_Text, ImColor(0, 0, 0, 255));
@@ -828,9 +828,9 @@ void MainWindow::render_horizon(const ImVec2 &im_pos)
 {
     if(!curve || currentMode != MODE_HORIZON)
         return;
-    
+
     ImVec2 WinPos = ImGui::GetWindowPos();
-    
+
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
     auto horizon= curve->get_horizon();
@@ -846,7 +846,7 @@ void MainWindow::render_horizon(const ImVec2 &im_pos)
 
     auto CoordOriginImg= horizon.imagePosition.to_imvec();
     auto CoordOriginTargetX= horizon.target.imagePosition.to_imvec();
-    
+
     ImVec2 CoordOriginScreen = CoordOriginImg*imageScale + im_pos + WinPos;
     ImVec2 CoordTargetScreen = CoordOriginTargetX*imageScale + im_pos + WinPos;
 
@@ -877,8 +877,8 @@ void MainWindow::render_horizon(const ImVec2 &im_pos)
 void MainWindow::render_side_panel()
 {
     float SettingsWidth = 250.0f;
-    
-    
+
+
     ImGui::BeginChild("SettingsWindow", ImVec2(SettingsWidth, 0));
 
     ImVec2 CurPos = ImGui::GetCursorPos();
@@ -893,35 +893,35 @@ void MainWindow::render_side_panel()
     ImGui::PushItemWidth(SettingsWidth - CurPos.x);
     ImGui::SliderInt("##subdiv_slider", &subdivLevel, 0, maxSubdivLevel);
     ImGui::PopItemWidth();
-    
-    
-    
+
+
+
     ImGui::Checkbox("Draw Subdivision Points", &bShowSubdivPoints);
     ImGui::Checkbox("Show Image", &bShowImage);
     ImGui::Checkbox("Show Binarization", &bShowBinarization);
     ImGui::Checkbox("Invert Image", &bInvertImage);
     ImGui::Checkbox("Show Zoom Window", &bShowZoomWindow);
     //ImGui::Checkbox("Smooth Subdivision", &bSmoothPoints);
-    
-    
+
+
     if (curve)
     {
         CurPos = ImGui::GetCursorPos();
-        
+
         ImGui::SetCursorPosY(CurPos.y + 3.0f);
         //ImGui::Text("Bin. level");
         ImGui::Text("Threshold: ");
         ImGui::SameLine();
         ImGui::SetCursorPosY(CurPos.y);
-        
+
         CurPos = ImGui::GetCursorPos();
-        
+
         ImGui::PushItemWidth(SettingsWidth - CurPos.x);
         ImGui::SliderInt("##bin-level", &binLevel, 0, 255);
-        
+
         ImGui::PopItemWidth();
-        
-        
+
+
         ImGui_ImplOpenGL3_SetBinarizationLevel(binLevel);
         ImGui_ImplOpenGL3_SetInvertImage(bInvertImage);
 
@@ -929,11 +929,11 @@ void MainWindow::render_side_panel()
         curve->set_bin_level(binLevel);
         curve->set_invert_image(bInvertImage);
 
-    
-    
+
+
         //tune curve thickness
         CurPos = ImGui::GetCursorPos();
-        
+
         ImGui::SetCursorPosY(CurPos.y + 3.0f);
         ImGui::Text("Curve thickness: ");
         ImGui::SameLine();
@@ -943,30 +943,30 @@ void MainWindow::render_side_panel()
         ImGui::SliderInt("##curve-thick", &curveThickness, curveThicknessMin, curveThicknessMax);
         ImGui::PopItemWidth();
         curve->set_curve_thickness(curveThickness);
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
         CurPos = ImGui::GetCursorPos();
         ImGui::SetCursorPosY(CurPos.y + 3.0f);
         //ImGui::Text("Bin. level");
         ImGui::Text("Scale: ");
         ImGui::SameLine();
-        
-        
+
+
         ImGui::SetCursorPosY(CurPos.y);
-        
+
         CurPos = ImGui::GetCursorPos();
-        
+
         float NewScale = imageScale;
-        
+
         ImGui::PushItemWidth(SettingsWidth - CurPos.x);
         ImGui::SliderFloat("##image-scale", &NewScale, minImageScale, maxImageScale, "%.2f");
         ImGui::PopItemWidth();
-        
-        
+
+
         //ImVec2 PrevHoveredPixel = (MousePos - WinPos - imagePosition) / imageScale;
         if (NewScale != imageScale)
         {
@@ -974,7 +974,7 @@ void MainWindow::render_side_panel()
             imageScale = NewScale;
             //imagePosition = MousePos - HoveredPixel*imageScale - WinPos;
         }
-        
+
         float scale_width=120.f;
         ImGui::PushItemWidth(scale_width);
         const char* scales[] = { "linear", "logarithmic" };
@@ -991,11 +991,11 @@ void MainWindow::render_side_panel()
         ImGui::Combo("##yscale", &yscale, scales, 2);
 
         curve->set_scales(scales_enum[xscale], scales_enum[yscale]);
-        
+
     }
-    
+
     float buttonMargin = 3.f;
-    
+
     if (ImGui::Button("Open", ImVec2(SettingsWidth/2-buttonMargin, 0)))
         on_open_image();
 
@@ -1010,15 +1010,15 @@ void MainWindow::render_side_panel()
     ImGui::Separator();
 
     //render text export settings
-    
+
     int out_Result;
     bool bExportReady = curve ? curve->is_export_ready(out_Result) : false;
-    
+
     static char edit_buf_col_sep[10];
     static char edit_buf_line_end[10];
-    
+
     std::string edit_str;
-    
+
     edit_str = escape(columnSeparator);
     edit_str.copy(edit_buf_col_sep, 8);
 
@@ -1028,36 +1028,36 @@ void MainWindow::render_side_panel()
     ImGui::TextUnformatted("Column separator");
     ImGui::SameLine(SettingsWidth-inputWidth);
     ImGui::InputText("##col-sep", edit_buf_col_sep, 6);
-    
+
     edit_str = edit_buf_col_sep;
     columnSeparator = unescape(edit_str);
-    
+
     if (columnSeparator.size() == 0)
         columnSeparator = " ";
-    
-    
+
+
     edit_str = escape(lineEnding);
     edit_str.copy(edit_buf_line_end, 8);
 
     ImGui::TextUnformatted("Line ending");
     ImGui::SameLine(SettingsWidth-inputWidth);
     ImGui::InputText("##line-end", edit_buf_line_end, 6);
-    
+
     edit_str = edit_buf_line_end;
     lineEnding = unescape(edit_str);
-    
+
     if (lineEnding.size() == 0)
         lineEnding = " ";
-    
-    
+
+
     const char* items[] = { "dot", "comma" };
     static int item2 = 0;
     ImGui::TextUnformatted("Decimal separator");
     ImGui::SameLine(SettingsWidth-inputWidth);
     ImGui::Combo("##dec-sep", &item2, items, 2);   // Combo using proper array. You can also pass a callback to retrieve array value, no need to create/copy an array just for that.
-    
+
     decimalSeparator = item2==0 ? '.' : ',';
-    
+
     ImGui::PopItemWidth();
 
     if(!bExportReady)
@@ -1076,12 +1076,12 @@ void MainWindow::render_side_panel()
 
     if(!bExportReady)
         ImGui_PopDisableButton();
-    
-    
+
+
     ImGui::Separator();
 
     render_hints_panel();
-    
+
     ImGui::EndChild();
 }
 
@@ -1158,42 +1158,42 @@ void MainWindow::render_hints_panel()
 
 void MainWindow::on_export_points()
 {
-    
+
     int out_Result;
     if (!curve || !curve->is_export_ready(out_Result))
         return;
-    
+
     char const * lFilterPatterns[2] = { "*.txt", "*.mat" };
-    
+
     std::string path="data.txt";
-    
+
     const char* lTheSaveFileName = tinyfd_saveFileDialog(
             "Choose a save file",
             path.c_str(),
             2,
             lFilterPatterns,
             NULL);
-    
-    
+
+
     if (!lTheSaveFileName)
     {
         return;
     }
-    
+
     path = lTheSaveFileName;
-    
+
     std::cout << "save: " << path << "\n";
-    
+
     size_t dot_ind = path.find_last_of('.');
-    
+
     bool bUseTextFormat = true;
-    
+
     if (dot_ind != std::string::npos)
     {
         std::string ext = path.substr(dot_ind, path.size() - dot_ind);
-        
+
         std::cout << "extension: " << ext << "\n";
-        
+
         if (ext.compare(".txt") == 0)
         {
             std::cout << "text format\n";
@@ -1207,7 +1207,7 @@ void MainWindow::on_export_points()
         {
             path.erase(dot_ind, path.size() - dot_ind);
             path.append(".txt");
-            
+
             if (!tinyfd_messageBox(
                     "Error",
                     "You selected unknown format\nSave file as *.txt?",
@@ -1218,13 +1218,13 @@ void MainWindow::on_export_points()
                 on_export_points();
                 return;
             }
-            
+
         }
     }
     else
     {
         path.append(".txt");
-        
+
         if (!tinyfd_messageBox(
                 "Error",
                 "You selected unknown format\nSave file as *.txt?",
@@ -1235,9 +1235,9 @@ void MainWindow::on_export_points()
             on_export_points();
             return;
         }
-        
+
     }
-    
+
     std::cout << "save: " << path << "\n";
 
     if(bUseTextFormat)
@@ -1258,9 +1258,9 @@ void MainWindow::on_open_image()
 {
     char const * filename;
     char const * lFilterPatterns[3] = { "*.png", "*.jpg", "*.bmp" };
-    
+
     std::string path;
-    
+
     filename = tinyfd_openFileDialog(
             "Choose an Image",
             path.c_str(),
@@ -1268,17 +1268,17 @@ void MainWindow::on_open_image()
             lFilterPatterns,
             NULL,
             0);
-    
+
     if (!filename)
         return;
-    
-    
+
+
     path = filename;
-    
+
     std::cout << "open: "<<filename<<"\n";
-    
+
     image=std::make_shared<Image>(path);
-    
+
     if(!image->is_loaded())
     {
         tinyfd_messageBox("Can't open image", "Opened file is not an image.\nTry again.", "ok", "error", 0);
@@ -1321,12 +1321,12 @@ void MainWindow::on_paste_image()
 void MainWindow::reset_all()
 {
     imageScale = 0.0f;
-    
+
     if (curve)
     {
         curve->reset_all();
     }
-    
+
 }
 
 
@@ -1335,45 +1335,45 @@ bool MainWindow::extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, 
 {
     out_Start = Point;
     out_End = Point + Direction;
-    
-    
+
+
     if (std::abs(Direction.x) + std::abs(Direction.y)<0.0001f)
     {
         return false;
     }
-    
+
     float A = Direction.y;
     float B = -Direction.x;
     float C = -A*Point.x - B*Point.y;
     float C2 = B*Point.x - A*Point.y;
-    
+
     ImVec2 RegionBR = RegionTL + RegionSize;//bottom-right corner
-    
+
     //x line: A*x+B*y+C=0		C=-A*x0-B*y0
     //y line: -B*x+A*y+C2=0;	C2=B*x0-A*y0
     if (std::abs(B) > 1.0f && std::abs(A) > 1.0f && true) //line is NOT vertical and is NOT horizontal
     {
         float lefty, righty, topx, botx;
-        
+
         righty = (-C - A *RegionBR.x) / B;
         lefty = (-C - A *RegionTL.x) / B;
         botx = (-C - B *RegionBR.y) / A;
         topx = (-C - B *RegionTL.y) / A;
-        
+
         out_Start = ImVec2(RegionTL.x, lefty);
-        
+
         if (lefty<RegionTL.y)
             out_Start = ImVec2(topx, RegionTL.y);
         if (lefty>RegionBR.y)
             out_Start = ImVec2(botx, RegionBR.y);
-        
+
         out_End = ImVec2(RegionBR.x, righty);
-        
+
         if (righty<RegionTL.y)
             out_End = ImVec2(topx, RegionTL.y);
         if (righty>RegionBR.y)
             out_End = ImVec2(botx, RegionBR.y);
-        
+
         if (B > 0.0f)
         {
             ImVec2 temp = out_Start;
@@ -1384,14 +1384,14 @@ bool MainWindow::extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, 
     else if (std::abs(B) < 2.0f && std::abs(A) > 1.0f) // line is vertical
     {
         float topx, botx;
-        
+
         botx = (-C - B *RegionBR.y) / A;
         topx = (-C - B *RegionTL.y) / A;
-        
+
         out_Start = ImVec2(botx, RegionBR.y);
-        
+
         out_End = ImVec2(topx, RegionTL.y);
-        
+
         if (A > 0.0f)
         {
             ImVec2 temp = out_Start;
@@ -1402,14 +1402,14 @@ bool MainWindow::extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, 
     else if (std::abs(A) < 2.0f && std::abs(B) > 1.0f) // line is horizontal
     {
         float lefty, righty;
-        
+
         righty = (-C - A *RegionBR.x) / B;
         lefty = (-C - A *RegionTL.x) / B;
-        
+
         out_Start = ImVec2(RegionTL.x, lefty);
-        
+
         out_End = ImVec2(RegionBR.x, righty);
-        
+
         if (B > 0.0f)
         {
             ImVec2 temp = out_Start;
@@ -1421,7 +1421,7 @@ bool MainWindow::extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, 
     {
         return false;
     }
-    
+
     return true;
 }
 
@@ -1453,7 +1453,7 @@ std::string MainWindow::unescape(const std::string& s)
         }
         res += c;
     }
-    
+
     return res;
 }
 
@@ -1464,7 +1464,7 @@ std::string MainWindow::escape(const std::string& s)
     while (it != s.end())
     {
         char c = *it++;
-        
+
         switch (c)
         {
             case '\\':
@@ -1485,9 +1485,9 @@ std::string MainWindow::escape(const std::string& s)
                 // invalid escape sequence - skip it. alternatively you can copy it as is, throw an exception...
                 continue;
         }
-        
+
     }
-    
+
     return res;
 }
 

@@ -19,9 +19,9 @@
 CurveDetect::CurveDetect(std::shared_ptr<Image> image) : horizon(Vec2D(100,100))
 {
     this->image=image;
-    
+
     binLevel = 127;
-    
+
     subdivLevel = 3;
 }
 
@@ -147,12 +147,12 @@ bool CurveDetect::is_export_ready(int &out_Result)
         out_Result |= PIXEL_OVERLAP_Y_GRID;
     else if (yticks[0].tickValue == yticks[1].tickValue)
         out_Result |= VALUE_OVERLAP_Y_GRID;
-    
+
     return out_Result == READY;
 }
 
 std::string CurveDetect::get_points_text(std::string columnSeparator,
-                                    std::string lineEnding, char decimalSeparator)
+                                         std::string lineEnding, char decimalSeparator)
 {
     int out_Result;
     if (!is_export_ready(out_Result))
@@ -206,12 +206,12 @@ std::string CurveDetect::get_points_text(std::string columnSeparator,
 void CurveDetect::double_to_string(double num, char decimalSeparator, std::string &out_String)
 {
     out_String = std::to_string(num);
-    
+
     if (decimalSeparator == '.')
         std::replace(out_String.begin(), out_String.end(), ',', '.');
     else if (decimalSeparator == ',')
         std::replace(out_String.begin(), out_String.end(), '.', ',');
-    
+
     //std::cout << out_String << "\n";
 }
 
@@ -327,7 +327,7 @@ void CurveDetect::update_subdiv(bool fullUpdate)
     bool fastUpdate = !fullUpdate && isSorted;
 
     int userPointsCount = userPoints.size();
-    
+
     if (userPointsCount < 2)
     {
         segments.clear();
@@ -366,8 +366,8 @@ void CurveDetect::update_subdiv(bool fullUpdate)
 
         //check that both ends didnt move (if it is allowed to check this)
         if(!forceSubdiv && fastUpdate
-            && leftPos == segments[i].begin.imagePosition
-            && rightPos == segments[i].end.imagePosition)
+           && leftPos == segments[i].begin.imagePosition
+           && rightPos == segments[i].end.imagePosition)
             continue;
         else
         {
@@ -423,11 +423,11 @@ bool CurveDetect::snap(Vec2D &pos)
 Vec2D CurveDetect::image_point_to_real(const Vec2D &point)
 {
     Vec2D RealPoint;
-    
+
     //this function should be called after check that
     //we can really calculate real points
     //so all x and y ticks are defined
-    
+
     Vec2D Scale, Offset;
 
     //if scale is not linear, we will need to change tick values so it is linear and then convert point
@@ -448,18 +448,18 @@ Vec2D CurveDetect::image_point_to_real(const Vec2D &point)
     auto dir1=horizon.target.imagePosition-horizon.imagePosition;
     auto dxtick=xticks[0].imagePosition-xticks[1].imagePosition;
     auto dytick=yticks[0].imagePosition-yticks[1].imagePosition;
-    
+
     Scale.x = (x0 - x1) / dxtick.x;
     Scale.y = (y0 - y1) / dytick.y;
 
     Offset.x = x1 - xticks[1].X()*Scale.x;
     Offset.y = y1 - yticks[1].Y()*Scale.y;
-    
+
     //xticks[1].z + (ImagePoint.x- xticks[1].x)*Scale.x
-    
+
     RealPoint.x = Offset.x + point.x*Scale.x;
     RealPoint.y = Offset.y + point.y*Scale.y;
-    
+
     //for deriving a and b
     double det1 = dxtick.x*dir1.x + dxtick.y*dir1.y;
 
@@ -467,26 +467,26 @@ Vec2D CurveDetect::image_point_to_real(const Vec2D &point)
     double det2 = -dytick.x*dir1.y + dytick.y*dir1.x;
 
     double a, b, c, d, e, f;
-    
+
     a =  (x0 - x1)*dir1.x / det1;
     b =  (x0 - x1)*dir1.y / det1;
-    
+
     c = -(y0 - y1)*dir1.y / det2;
     d =  (y0 - y1)*dir1.x / det2;
-    
+
     e = x0 - a*xticks[0].X() - b*xticks[0].Y();
     f = y0 - c*yticks[0].X() - d*yticks[0].Y();
-    
+
     RealPoint.x = a*point.x + b*point.y + e;
     RealPoint.y = c*point.x + d*point.y + f;
-    
+
     if(xscale==LOG)
         RealPoint.x=std::exp(RealPoint.x);
 
     if(yscale==LOG)
         RealPoint.y=std::exp(RealPoint.y);
 
-    
+
     return RealPoint;
 }
 
@@ -495,7 +495,7 @@ void CurveDetect::reset_all()
 {
     userPoints.clear();
     segments.clear();
-    
+
     xticks.resize(2);
     yticks.resize(2);
 
@@ -503,14 +503,14 @@ void CurveDetect::reset_all()
     xticks[1].set_value("1");
     yticks[0].set_value("0");
     yticks[1].set_value("1");
-    
+
     if (image)
     {
         xticks[0].imagePosition.x = image->get_width()*0.2;
         xticks[0].imagePosition.y = image->get_height()*0.5;
         xticks[1].imagePosition.x = image->get_width()*0.8;
         xticks[1].imagePosition.y = image->get_height()*0.5;
-    
+
         yticks[0].imagePosition.x = image->get_width()*0.5;
         yticks[0].imagePosition.y = image->get_height()*0.8;
         yticks[1].imagePosition.x = image->get_width()*0.5;
@@ -520,7 +520,7 @@ void CurveDetect::reset_all()
     deselect_all();
 
     reset_horizon();
-    
+
 }
 void CurveDetect::reset_horizon()
 {

@@ -51,23 +51,23 @@ int init()
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
-    
+
     glfwSetWindowSizeLimits(window, 800, 500, GLFW_DONT_CARE, GLFW_DONT_CARE);
-    
+
     MainApp& app = MainApp::get();
     if(!app.init(window, glsl_version))
     {
         std::cout << "Can't initialize application\n";
         return -1;
     }
-    
+
     auto start=std::chrono::high_resolution_clock::now();
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
         // Poll and handle events (inputs, window resize, etc.)
         glfwPollEvents();
-    
+
         app.new_frame();
 
         glfwSwapBuffers(window);
@@ -80,7 +80,7 @@ int init()
 //            end=std::chrono::high_resolution_clock::now();
 //            mseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 //        }
-    
+
         //if we updated very fast - sleep a little bit
         if (mseconds < minMillis)
         {

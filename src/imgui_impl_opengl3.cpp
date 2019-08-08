@@ -198,12 +198,12 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     float T = draw_data->DisplayPos.y;
     float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
     const float ortho_projection[4][4] =
-    {
-        { 2.0f/(R-L),   0.0f,         0.0f,   0.0f },
-        { 0.0f,         2.0f/(T-B),   0.0f,   0.0f },
-        { 0.0f,         0.0f,        -1.0f,   0.0f },
-        { (R+L)/(L-R),  (T+B)/(B-T),  0.0f,   1.0f },
-    };
+            {
+                    { 2.0f/(R-L),   0.0f,         0.0f,   0.0f },
+                    { 0.0f,         2.0f/(T-B),   0.0f,   0.0f },
+                    { 0.0f,         0.0f,        -1.0f,   0.0f },
+                    { (R+L)/(L-R),  (T+B)/(B-T),  0.0f,   1.0f },
+            };
     glad_glUseProgram(g_ShaderHandle);
     glad_glUniform1i(g_AttribLocationTex, 0);
     glad_glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
@@ -322,7 +322,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                         glad_glScissor((int)clip_rect.x, (int)(fb_height - clip_rect.w), (int)(clip_rect.z - clip_rect.x), (int)(clip_rect.w - clip_rect.y));
                     else
                         glad_glScissor((int)clip_rect.x, (int)clip_rect.y, (int)clip_rect.z, (int)clip_rect.w); // Support for GL 4.5 rarely used glad_glClipControl(GL_UPPER_LEFT)
-    
+
                     if (g_ImageTexID == (intptr_t)pcmd->TextureId)
                     {
                         glUniform1i(g_AttribLocationMakeGray, 1);
@@ -335,7 +335,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                         glUniform1i(g_AttribLocationMakeGray, 0);
                         glUniform1i(g_AttribLocationMakeBin, 0);
                     }
-                    
+
                     // Bind texture, Draw
                     glad_glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
 #if IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX
@@ -414,7 +414,7 @@ unsigned int ImGui_ImplOpenGL3_CreateTexture(unsigned char* pixels, int width, i
     glad_glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glad_glGenTextures(1, &texture);
     glad_glBindTexture(GL_TEXTURE_2D, texture);
-    
+
     glad_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, smooth ? GL_LINEAR : GL_NEAREST);
     glad_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, smooth ? GL_LINEAR : GL_NEAREST);
 #ifdef GL_UNPACK_ROW_LENGTH
@@ -485,50 +485,50 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     int glsl_version = 130;
 
     const GLchar* vertex_shader =
-        "uniform mat4 ProjMtx;\n"
-        "in vec2 Position;\n"
-        "in vec2 UV;\n"
-        "in vec4 Color;\n"
-        "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Frag_UV = UV;\n"
-        "    Frag_Color = Color;\n"
-        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-        "}\n";
+            "uniform mat4 ProjMtx;\n"
+            "in vec2 Position;\n"
+            "in vec2 UV;\n"
+            "in vec4 Color;\n"
+            "out vec2 Frag_UV;\n"
+            "out vec4 Frag_Color;\n"
+            "void main()\n"
+            "{\n"
+            "    Frag_UV = UV;\n"
+            "    Frag_Color = Color;\n"
+            "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
+            "}\n";
 
     //simple shader that accounts for binarization of image
     const GLchar* fragment_shader =
-        "uniform sampler2D Texture;\n"
-        "uniform bool bMakeBin;\n"
-        "uniform bool bMakeGray;\n"
-        "uniform bool bInvert;\n"
-        "uniform float ColorLevel;\n"
-        "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Color;\n"
-        "out vec4 Out_Color;\n"
-        "void main()\n"
-        "{\n"
-        "	vec4 TexColor = texture( Texture, Frag_UV.st);\n"
-        "	float gray = 0.216f*TexColor.x+0.7152f*TexColor.y+0.0722*TexColor.z;\n"
-        "	if(bInvert)\n"
-        "	    gray = 1.f - gray;\n"
-        "	if(bMakeBin)\n"
-        "	{\n"
-        "		if(gray < ColorLevel)\n"
-        "		{\n"
-        "			TexColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
-        "		}\n"
-        "		else\n"
-        "		{\n"
-        "			TexColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
-        "		}\n"
-        "	}\n"
-        "	else if (bMakeGray)\n"
-        "	    TexColor = vec4(gray, gray, gray, 1.0f);\n"
-        "	Out_Color = Frag_Color * TexColor;\n"
-        "}\n";
+            "uniform sampler2D Texture;\n"
+            "uniform bool bMakeBin;\n"
+            "uniform bool bMakeGray;\n"
+            "uniform bool bInvert;\n"
+            "uniform float ColorLevel;\n"
+            "in vec2 Frag_UV;\n"
+            "in vec4 Frag_Color;\n"
+            "out vec4 Out_Color;\n"
+            "void main()\n"
+            "{\n"
+            "	vec4 TexColor = texture( Texture, Frag_UV.st);\n"
+            "	float gray = 0.216f*TexColor.x+0.7152f*TexColor.y+0.0722*TexColor.z;\n"
+            "	if(bInvert)\n"
+            "	    gray = 1.f - gray;\n"
+            "	if(bMakeBin)\n"
+            "	{\n"
+            "		if(gray < ColorLevel)\n"
+            "		{\n"
+            "			TexColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+            "		}\n"
+            "		else\n"
+            "		{\n"
+            "			TexColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
+            "		}\n"
+            "	}\n"
+            "	else if (bMakeGray)\n"
+            "	    TexColor = vec4(gray, gray, gray, 1.0f);\n"
+            "	Out_Color = Frag_Color * TexColor;\n"
+            "}\n";
 
 
     // Create shaders
@@ -549,12 +549,12 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glad_glAttachShader(g_ShaderHandle, g_FragHandle);
     glad_glLinkProgram(g_ShaderHandle);
     CheckProgram(g_ShaderHandle, "shader program");
-    
+
     g_AttribLocationMakeBin = glad_glGetUniformLocation(g_ShaderHandle, "bMakeBin");
     g_AttribLocationInvert = glad_glGetUniformLocation(g_ShaderHandle, "bInvert");
     g_AttribLocationMakeGray = glad_glGetUniformLocation(g_ShaderHandle, "bMakeGray");
     g_AttribLocationBinLevel = glad_glGetUniformLocation(g_ShaderHandle, "ColorLevel");
-    
+
     g_AttribLocationTex = glad_glGetUniformLocation(g_ShaderHandle, "Texture");
     g_AttribLocationProjMtx = glad_glGetUniformLocation(g_ShaderHandle, "ProjMtx");
     g_AttribLocationVtxPos = glad_glGetAttribLocation(g_ShaderHandle, "Position");

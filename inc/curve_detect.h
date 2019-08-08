@@ -96,7 +96,7 @@ public:
 
     void update_subdiv(bool fullUpdate=false);
 
-    
+
 private:
     std::shared_ptr<Image> image;
 
