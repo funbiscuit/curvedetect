@@ -426,6 +426,12 @@ void CurveDetect::update_subdiv(bool fullUpdate)
             ++left;
             --right;
         }
+        //TODO should use the same input data and not alter it during loop
+        for(int j=1; j<= count; ++j)
+        {
+            segments[i].points[j].imagePosition+=(segments[i].points[j-1].imagePosition+segments[i].points[j+1].imagePosition);
+            segments[i].points[j].imagePosition/=3;
+        }
         segments[i].points[0]=leftPosNew;
         segments[i].points[count]=rightPosNew;
     }
