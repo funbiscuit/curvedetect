@@ -47,6 +47,7 @@ Image::Image(std::string path)
 
     //create at most 10 mipmaps
     images.resize(10);
+    images_inv.resize(10);
 
     image = stbi_load(path.c_str(), &width, &height, nullptr, 3);
 
@@ -80,7 +81,10 @@ Image::Image(std::string path)
         std::cout << "create took: " << mseconds << "\n";
     }
     else
+    {
         images.clear();
+        images_inv.clear();
+    }
 
 
 
@@ -96,6 +100,7 @@ Image::Image(ImageData& imageData)
 
     //create at most 10 mipmaps
     images.resize(10);
+    images_inv.resize(10);
 
     width=imageData.width;
     height=imageData.height;
@@ -138,6 +143,7 @@ Image::~Image()
     if(image)
         delete(image);
     images.clear();
+    images_inv.clear();
 //    if(imagePixels)
 //        delete(imagePixels);
     //TODO SIGSEGV if destroying after window close
@@ -147,29 +153,62 @@ Image::~Image()
 
 void Image::generate_mipmaps()
 {
+    images_inv[0].pixels = new uint8_t[width*height];
+    images_inv[0].width = width;
+    images_inv[0].height = height;
+    //copy original image
+    for (int col = 0; col < width; ++col)
+        for (int row = 0; row < height; ++row)
+            images_inv[0].pixels[row * width + col]=
+                    (uint8_t)(255-images[0].pixels[row * width + col]);
+
+
     for(int i=1;i<images.size();++i)
     {
-        int w1=images[i-1].width;
+        const auto& original = images[i-1];
+        auto& nextNormal = images[i];
+        auto& nextInverted = images_inv[i];
+
+        int w1=original.width;
         int w2=w1/2;
-        int h2=images[i-1].height/2;
+        int h2=original.height/2;
 
         if(w2<10 || h2<10)
         {
             images.resize(i);
+            images_inv.resize(i);
             break;
         }
 
-        images[i].pixels = new uint8_t[w2*h2];
-        images[i].width = w2;
-        images[i].height = h2;
+        nextNormal.pixels = new uint8_t[w2*h2];
+        nextNormal.width = w2;
+        nextNormal.height = h2;
+        nextInverted.pixels = new uint8_t[w2*h2];
+        nextInverted.width = w2;
+        nextInverted.height = h2;
 
         for (int col = 0; col < w2; col++)
         {
             for (int row = 0; row < h2; row++)
             {
-                uint8_t a = std::min(images[i-1].pixels[2*row*w1 + 2*col], images[i-1].pixels[2*row*w1+2*col+1]);
-                uint8_t b = std::min(images[i-1].pixels[(2*row+1)*w1 + 2*col], images[i-1].pixels[(2*row+1)*w1+2*col+1]);
-                images[i].pixels[row * w2 + col]=std::min(a, b);
+                auto a = original.pixels[2*row*w1 + 2*col];
+                auto b = original.pixels[(2*row+1)*w1 + 2*col];
+                auto c = original.pixels[2*row*w1 + 2*col + 1];
+                auto d = original.pixels[(2*row+1)*w1 + 2*col +1];
+
+                uint8_t min1, min2, max1, max2;
+                if(a<b)
+                    min1=a, max1=b;
+                else
+                    min1=b, max1=a;
+
+                if(c<d)
+                    min2=c, max2=d;
+                else
+                    min2=d, max2=c;
+
+                nextNormal.pixels[row * w2 + col]=min1<min2 ? min1 : min2;
+                nextInverted.pixels[row * w2 + col]=(uint8_t)(255- (max1>max2 ? max1 : max2) );
             }
         }
 
@@ -239,11 +278,13 @@ bool Image::update_pixel_region(int &px, int &py, int hside)
 
     pixelsRegion.resize(side*side);
 
+    auto& data = bInvertImage ? images_inv : images;
+
     for (int kx = px - hside; kx <= px + hside; kx++)
     {
         for (int ky = py - hside; ky <= py + hside; ky++)
         {
-            pixelsRegion[(ky - py + hside)*side + kx - px + hside] = images[0].pixels[ky * width + kx];
+            pixelsRegion[(ky - py + hside)*side + kx - px + hside] = data[0].pixels[ky * width + kx];
         }
     }
 
@@ -304,8 +345,8 @@ bool Image::snap_to_closest(Vec2D &point, int binLevel)
 
     if(!is_pixel_inside(px, py))
         return false;
-    int val = images[0].pixels[py * width + px];
-    val = bInvertImage ? 255-val : val;
+    auto& data = bInvertImage ? images_inv : images;
+    int val = data[0].pixels[py * width + px];
     if(val < binLevel)
         return true;
 
@@ -327,11 +368,7 @@ bool Image::snap_to_closest(Vec2D &point, int binLevel)
             int globalColumn = px - hside + column;
             bool isBlack = false;
             if (globalRow >= 0 && globalRow < height && globalColumn >= 0 && globalColumn < width)
-            {
-                int val = images[image_i].pixels[(globalRow/step) * (width/step) + globalColumn/step];
-                val = bInvertImage ? 255-val : val;
-                isBlack = val < binLevel;
-            }
+                isBlack = data[image_i].pixels[(globalRow/step) * (width/step) + globalColumn/step] < binLevel;
 
             if (isBlack)
             {
@@ -381,7 +418,7 @@ bool Image::snap_to_bary(Vec2D &point, int binLevel)
     {
         for (int ky = 0; ky <= 2 * hside; ky++)
         {
-            int col = bInvertImage ? 255-pixelsRegion[ky*side + kx] : pixelsRegion[ky*side + kx];
+            int col = pixelsRegion[ky*side + kx];
             if (col < binLevel)
             {
                 baryMass += binLevel - col;

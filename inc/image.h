@@ -42,6 +42,7 @@ public:
 
 private:
     std::vector<ImageData> images;
+    std::vector<ImageData> images_inv;
     unsigned char* image;
     
     
