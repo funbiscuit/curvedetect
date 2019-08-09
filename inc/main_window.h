@@ -118,6 +118,7 @@ private:
     void ImGui_PushDisableButton();
 
 
+    void on_reset();
     void reset_all();
 
     void on_export_points();

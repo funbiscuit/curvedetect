@@ -54,7 +54,9 @@ public:
 
     CurveDetect(std::shared_ptr<Image> image);
     
+    bool can_reset();
     void reset_all();
+    bool can_reset_horizon();
     void reset_horizon();
     void update_hovered(Vec2D hoveredImagePos);
 

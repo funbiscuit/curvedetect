@@ -512,6 +512,39 @@ Vec2D CurveDetect::image_point_to_real(const Vec2D &point)
     return RealPoint;
 }
 
+bool CurveDetect::can_reset()
+{
+    if(!userPoints.empty())
+        return true;
+
+    if(xticks[0].tickValueStr!="0" || xticks[1].tickValueStr!="1")
+        return true;
+    if(yticks[0].tickValueStr!="0" || yticks[1].tickValueStr!="1")
+        return true;
+
+    if (image)
+    {
+        if(xticks[0].imagePosition.x != image->get_width()*0.2)
+            return true;
+        if(xticks[0].imagePosition.y != image->get_height()*0.5)
+            return true;
+        if(xticks[1].imagePosition.x != image->get_width()*0.8)
+            return true;
+        if(xticks[1].imagePosition.y != image->get_height()*0.5)
+            return true;
+
+        if(yticks[0].imagePosition.x != image->get_width()*0.5)
+            return true;
+        if(yticks[0].imagePosition.y != image->get_height()*0.8)
+            return true;
+        if(yticks[1].imagePosition.x != image->get_width()*0.5)
+            return true;
+        if(yticks[1].imagePosition.y != image->get_height()*0.2)
+            return true;
+    }
+
+    return can_reset_horizon();
+}
 
 void CurveDetect::reset_all()
 {
@@ -557,6 +590,29 @@ void CurveDetect::reset_horizon()
         horizon.target.imagePosition.x=image->get_width()*0.9;
         horizon.target.imagePosition.y=image->get_height()*0.5;
     }
+}
+
+bool CurveDetect::can_reset_horizon()
+{
+    if (image)
+    {
+        if(horizon.imagePosition.x!=image->get_width()*0.1)
+            return true;
+        if(horizon.imagePosition.y!=image->get_height()*0.5)
+            return true;
+        if(horizon.target.imagePosition.x!=image->get_width()*0.9)
+            return true;
+        if(horizon.target.imagePosition.y!=image->get_height()*0.5)
+            return true;
+    } else
+    {
+        if(horizon.target.imagePosition.x!=horizon.imagePosition.x + 100.0)
+            return true;
+        if(horizon.target.imagePosition.y!=horizon.imagePosition.y)
+            return true;
+    }
+
+    return false;
 }
 
 void CurveDetect::snap_selected()

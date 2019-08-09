@@ -984,8 +984,14 @@ void MainWindow::render_side_panel()
         ImGui::Checkbox("Invert Image", &bInvertImage);
         ImGui::SameLine(secondColumnX);
 
-        if (ImGui::Button("Reset", ImVec2(SettingsWidth-secondColumnX, 0)))
-            reset_all();
+        bool resetPossible = curve->can_reset();
+
+        if(!resetPossible)
+            ImGui_PushDisableButton();
+        if (ImGui::Button("Reset", ImVec2(SettingsWidth-secondColumnX, 0)) && resetPossible)
+            on_reset();
+        if(!resetPossible)
+            ImGui_PopDisableButton();
         ImGui::Separator();
     }
 
@@ -1311,6 +1317,18 @@ void MainWindow::on_paste_image()
     }
 }
 
+void MainWindow::on_reset()
+{
+    if (tinyfd_messageBox(
+            "Warning",
+            "This will remove all input data\nAre you sure?",
+            "yesno",
+            "question",
+            1))
+    {
+        reset_all();
+    }
+}
 
 void MainWindow::reset_all()
 {
