@@ -6,7 +6,7 @@ of your graph to digital data.
 
 `curvedetect` uses OpenGL 3.0 for rendering so it is required to run it.
 
-Tested with Manjaro Linux (gcc) and Windows 7/10 x64 (mingw-gcc and msvc)
+Tested with Manjaro Linux (gcc) and Windows 7/10 x64 (mingw-gcc and msvc14)
 
 
 
@@ -73,10 +73,12 @@ No MinGW DLLs are required to launch executable (static linking is used).
 2. Create build folder (name it as you like, e.g. `build`) in project root directory
 3. Launch Cmake GUI, set source path to project root and set build path to your
 created build folder (e.g. `build`)
-4. Click `Configure`, after it's done, click `Generate`
-5. Open generated solution (`curvedetect.sln`) inside build folder
-6. Select desired build type (e.g. `Release`) an build
-7. Builded binary should be in build folder inside folder with name of build type
+4. Click `Configure`, select desired generator (tested with Visual Studio 14 2015, but should work with later versions)
+and press `Finish`. Don't forget to set desired build architecture (Win32 or x64)
+5. After configuring is done, click `Generate`
+6. Open generated solution (`curvedetect.sln`) inside build folder
+7. Select desired build type (e.g. `Release`) an build
+8. Builded binary should be in build folder inside folder with name of build type
 (e.g. `Release`)
 
 Basic usage
@@ -86,8 +88,16 @@ Run the binary `curvedetect` and open desired image.
 
 Work mode is changed from context menu (right click on opened image and select Points, Grid or Horizon).
 
-It is better to enable "Show binarization" and tune binarization level in such way that you see you curve while
-background is white.
+It is better to enable "Show binarization" and tune binarization level in such way that you see you curve as thick
+as possible while background is white. If your image doesn't have big resolution and curve is very thin
+(few pixels thick) it's recommended to manually resize your image to bigger resolution in any image editor
+and open it again.
+
+Tune thickness of curve. It should be about the same as actual thickness of curve on the image.
+For example, if you have high dpi image, your curve might be 20 pixels thick. If you leave curve thickness at 3 (default),
+snapping will be not accurate and you can see that if you zoom in. Points will not be at the center of curve. When you
+increase curve thickness, subdivided points will start moving towards the center of curve and finally will be positioned
+at its center.
 
 If image is rotated - choose horizon and change default horizontal line to horizontal line of image.
 
@@ -99,25 +109,22 @@ curve (hold ctrl to snap point to black pixel in black-white image). By default 
 a lot of extra points between manually added ones. Subdivided points are automatically snapped to black pixels. But you
 can decrease subdivision if you don't want extra points.
 
-For more accuracy of snapping tune curve thickness. It should be about the same as actual thickness of curve on the image.
-For example, if you have high dpi image, your curve might be 20 pixels thick. If you leave curve thickness at 3 (default),
-snapping will be not accurate and you can see that if you zoom in. Points will not be at the center of curve. When you
-increase curve thickness, subdivided points will start towards the center of curve and finally will be positioned
-at its center.
-
 After you added all points and you see a correct curve - export it. You can copy to clipboard in text format or export
 to file. Export is supported only to Matlab (.mat) format and text formats (any other extension).
+
+If X or Y axis has logarithmic scale you should set it as such before exporting or you will get wrong results. You can
+turn on displaying of minor grid to see automatic grid.
 
 Examples
 --------
 In `examples` directory you can find result of processing two images of the same curve:
 `y=x^2+50*x*sin(x/10); x=0:100`
-First sample is the rotated screenshot of this curve, second sample is photo of curve, that was tuned in image editor.
-Tuning was just color correction, levels and a bit of blur. On verification images blue solid line - original,
-red dashed line - processed with curvedetect. Even for data from photo of graph relative error is less than 5% and this
-error mainly comes from perspective distortions by phone camera.
+First sample is the screenshot of this curve, second sample is photo of curve, taken from ~30cm distance (so camera
+doesn't focus on pixels). On verification images blue solid line - original, red dashed line - processed with
+curvedetect. Both screenshot and photo give relatively similar error - about 6% in maximum. But over the whole range
+of X values data from screenshot is more precise than from photo. Due to perspective distortions by phone camera.
 
-Dependencies
+Acknowledgements
 ------------
 Curve Detect uses following open source software and resources:
 
