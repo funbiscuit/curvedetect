@@ -84,7 +84,7 @@ and press `Finish`. Don't forget to set desired build architecture (Win32 or x64
 Basic usage
 -----------
 
-Run the binary `curvedetect` and open desired image. 
+Run the binary `curvedetect` and open desired image (or paste it from clipboard).
 
 Work mode is changed from context menu (right click on opened image and select Points, Grid or Horizon).
 
