@@ -40,7 +40,7 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
 
     //load app icons
     auto images= Resources::get().get_app_icons();
-    glfwSetWindowIcon(window, images.size(), &images[0]);
+    glfwSetWindowIcon(window, (int) images.size(), &images[0]);
 
 
 

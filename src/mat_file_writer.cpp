@@ -177,10 +177,10 @@ MatFileWriter& MatFileWriter::matrix(const char *name, const void* first, Number
 	if(transposed)
 		data=transposed;
 
-	uint32_t name_size = strlen(name) * sizeof(char);
+	auto name_size = (uint32_t) strlen(name) * sizeof(char);
 
 	//add padding bytes
-	name_size += get_padding(name_size);
+	name_size += get_padding((uint32_t)name_size);
 
 	auto dataCount = static_cast<uint32_t>(rows * cols);
 	uint32_t dataTotalSize = dataCount * dataItemSize;
@@ -379,7 +379,7 @@ void MatFileWriter::write_data_element(int type, const void* data, int dataItemS
 	*/
 	uint32_t paddingBytes = get_padding(N);
 
-	for (int i = 0; i<paddingBytes; i++)
+	for (uint32_t i = 0; i<paddingBytes; ++i)
 		putc(0x00, outFile);
 }
 

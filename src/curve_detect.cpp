@@ -222,16 +222,16 @@ std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
 
     update_subdiv(true);
 
-    size_t Nu=userPoints.size();
+    auto Nu=(int) userPoints.size();
 
     //we should have at least two user points (although it should be already checked)
     if(Nu<2)
         return res;
 
-    size_t Na=1;//we need to count begin point of first segment
+    int Na=1;//we need to count begin point of first segment
 
     for(auto& segment : segments)
-        Na+=segment.points.size()-1;
+        Na+=(int) segment.points.size()-1;
 
 
     res->userPointsPixels=new double[Nu*2];
@@ -340,7 +340,7 @@ void CurveDetect::update_subdiv(bool fullUpdate)
     bool isSorted = are_points_sorted();
     bool fastUpdate = !fullUpdate && isSorted;
 
-    int userPointsCount = userPoints.size();
+    auto userPointsCount = (int) userPoints.size();
 
     if (userPointsCount < 2)
     {

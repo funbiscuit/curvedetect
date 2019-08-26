@@ -17,4 +17,4 @@ BEGIN
     VALUE "Translation", 0x409, 1252
   END
 END
-id ICON "icon.ico"
+id ICON "icons/icon.ico"

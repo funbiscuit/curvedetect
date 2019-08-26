@@ -14,7 +14,7 @@
 
 uint32_t bit_pos(uint32_t val)
 {
-    return std::bitset<32>(val-1).count();
+    return (uint32_t) std::bitset<32>(val-1).count();
 }
 
 // Round up to lower power of 2 (return x>>1 if it's already a power of 2)

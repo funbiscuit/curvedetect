@@ -200,8 +200,8 @@ void MainWindow::render_image(ImVec2 canvasSize)
 {
     if(image)
     {
-        float im_width = image->get_width();
-        float im_height = image->get_height();
+        auto im_width = (float) image->get_width();
+        auto im_height = (float) image->get_height();
 
         GLuint texID = image->get_texture();
 
@@ -541,9 +541,9 @@ int onTickInput(ImGuiInputTextCallbackData *data)
     std::string tickVal = data->Buf;
     ImageTickLine::filter_value(tickVal, false);
     strcpy(data->Buf,tickVal.c_str());
-    data->BufTextLen=tickVal.length();
+    data->BufTextLen=(int)tickVal.length();
     if(data->CursorPos>tickVal.length())
-        data->CursorPos=tickVal.length();
+        data->CursorPos=(int)tickVal.length();
     data->BufDirty=true;
     return 0;
 }
