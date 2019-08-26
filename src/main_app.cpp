@@ -69,9 +69,12 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
     builder.AddRanges(io.Fonts->GetGlyphRangesCyrillic());
     builder.BuildRanges(&ranges);
 
+    float scale;
+    glfwGetWindowContentScale(window, &scale, nullptr);
     uint32_t fontDataSize;
     auto fontData = Resources::get().get_font_data(fontDataSize);
-    io.Fonts->AddFontFromMemoryTTF(fontData, fontDataSize, 18.f, &config, ranges.Data);
+    // imgui will not modify font data but it has to be non-const
+    io.Fonts->AddFontFromMemoryTTF((void*)fontData, fontDataSize, scale*18.f, &config, ranges.Data);
     io.Fonts->Build();
 
     ImGui::GetIO().IniFilename = nullptr;

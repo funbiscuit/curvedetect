@@ -7,3 +7,6 @@
 [submodule "libs/imgui"]
 	path = libs/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "libs/resource-builder"]
+	path = libs/resource-builder
+	url = https://bitbucket.org/funbiscuit/resource-builder

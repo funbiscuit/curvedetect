@@ -25,7 +25,7 @@ public:
      * @param size
      * @return
      */
-    void* get_font_data(uint32_t& size);
+    const uint8_t* get_font_data(uint32_t& size);
 };
 
 #endif //CURVEDETECT_RESOURCES_H

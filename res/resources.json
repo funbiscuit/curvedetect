@@ -1,0 +1,8 @@
+{
+  "resources": [
+    "./icons/*.png",
+    "./opensans-regular.ttf"
+  ],
+  "output" : "build",
+  "project_name" : "curvedetect"
+}

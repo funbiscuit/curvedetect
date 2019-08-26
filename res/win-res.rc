@@ -18,9 +18,3 @@ BEGIN
   END
 END
 id ICON "icon.ico"
-appIconPng256 RCDATA "icon_256.png"
-appIconPng128 RCDATA "icon_128.png"
-appIconPng64 RCDATA "icon_64.png"
-appIconPng32 RCDATA "icon_32.png"
-appIconPng16 RCDATA "icon_16.png"
-openSansFont RCDATA "opensans-regular.ttf"
