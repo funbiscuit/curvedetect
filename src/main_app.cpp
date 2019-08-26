@@ -71,6 +71,8 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
 
     float scale;
     glfwGetWindowContentScale(window, &scale, nullptr);
+    if(scale<1.f)
+        scale=1.f;
     uint32_t fontDataSize;
     auto fontData = Resources::get().get_font_data(fontDataSize);
     // imgui will not modify font data but it has to be non-const
