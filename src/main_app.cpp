@@ -90,7 +90,7 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
 
     set_use_imgui_cursor(false);
 
-    mainWindow.init();
+    mainWindow.init(scale);
 
     std::cout << "init successful\n";
     return true;

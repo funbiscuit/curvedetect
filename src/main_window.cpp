@@ -23,7 +23,6 @@ MainWindow::MainWindow()
 {
     width=1024;
     height=720;
-    toolbar_width=280;
 
     currentMode = MODE_POINTS;
 
@@ -82,13 +81,14 @@ void MainWindow::on_render()
 
 }
 
-void MainWindow::init()
+void MainWindow::init(float _fontScale)
 {
 #ifndef NDEBUG
     image=std::make_shared<Image>("../img/test.png");
     curve=std::make_shared<CurveDetect>(image);
     curve->reset_all();
 #endif
+    fontScale = _fontScale;
 }
 
 void MainWindow::on_resize(int w, int h)
@@ -886,14 +886,17 @@ void MainWindow::render_horizon(const ImVec2 &im_pos)
 
 void MainWindow::render_side_panel()
 {
-    float SettingsWidth = 250.0f;
-    float columnMargin = 3.f;
+    float SettingsWidth = fontScale*250.0f;
+    float columnMargin = fontScale*3.f;
     float secondColumnX = SettingsWidth/2+columnMargin;
 
-
-    ImGui::BeginChild("SettingsWindow", ImVec2(SettingsWidth, 0));
-
-
+    static bool scrollbarShown = false;
+    auto size = ImVec2(SettingsWidth, 0.f);
+    if(scrollbarShown)
+        size.x+=22.f;
+    ImGui::BeginChild("SettingsWindow", size);
+    scrollbarShown =ImGui::GetScrollMaxY()>0;
+    auto pos = ImGui::GetCursorScreenPos();
 
 
 
@@ -910,7 +913,9 @@ void MainWindow::render_side_panel()
         ImGui::Checkbox("Major grid", &bShowTicks);
         ImGui::SameLine(secondColumnX);
         ImGui::Checkbox("Minor grid", &bShowSubTicks);
+        ImGui::PushClipRect(pos,ImVec2(pos.x+SettingsWidth,(float)height),true);
         ImGui::Separator();
+        ImGui::PopClipRect();
 
         if(bShowSubTicks==prevShowSubTicks)
             bShowSubTicks = bShowSubTicks && bShowTicks;
@@ -919,7 +924,7 @@ void MainWindow::render_side_panel()
         ImGui::TextUnformatted("Curve settings");
 
         ImVec2 CurPos = ImGui::GetCursorPos();
-        ImGui::SetCursorPosY(CurPos.y + 3.0f);
+        ImGui::SetCursorPosY(CurPos.y + fontScale*3.0f);
         ImGui::Text("Subdivision:");
         ImGui::SameLine(secondColumnX);
         ImGui::SetCursorPosY(CurPos.y);
@@ -931,7 +936,7 @@ void MainWindow::render_side_panel()
 
         CurPos = ImGui::GetCursorPos();
 
-        ImGui::SetCursorPosY(CurPos.y + 3.0f);
+        ImGui::SetCursorPosY(CurPos.y + fontScale*3.0f);
         ImGui::Text("Threshold: ");
         ImGui::SameLine(secondColumnX);
         ImGui::SetCursorPosY(CurPos.y);
@@ -954,7 +959,7 @@ void MainWindow::render_side_panel()
         //tune curve thickness
         CurPos = ImGui::GetCursorPos();
 
-        ImGui::SetCursorPosY(CurPos.y + 3.0f);
+        ImGui::SetCursorPosY(CurPos.y + fontScale*3.0f);
         ImGui::Text("Thickness: ");
         ImGui::SameLine(secondColumnX);
         ImGui::SetCursorPosY(CurPos.y);
@@ -992,7 +997,9 @@ void MainWindow::render_side_panel()
             on_reset();
         if(!resetPossible)
             ImGui_PopDisableButton();
+        ImGui::PushClipRect(pos,ImVec2(pos.x+SettingsWidth,(float)height),true);
         ImGui::Separator();
+        ImGui::PopClipRect();
     }
 
     if (ImGui::Button("Open", ImVec2(SettingsWidth/2-columnMargin, 0)))
@@ -1005,7 +1012,9 @@ void MainWindow::render_side_panel()
 
     if (curve)
     {
+        ImGui::PushClipRect(pos,ImVec2(pos.x+SettingsWidth,(float)height),true);
         ImGui::Separator();
+        ImGui::PopClipRect();
         ImGui::TextUnformatted("Text export settings");
 
         //render text export settings
@@ -1078,7 +1087,9 @@ void MainWindow::render_side_panel()
     }
 
 
+    ImGui::PushClipRect(pos,ImVec2(pos.x+SettingsWidth,(float)height),true);
     ImGui::Separator();
+    ImGui::PopClipRect();
 
     render_hints_panel();
 

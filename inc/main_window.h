@@ -27,10 +27,10 @@ public:
     void on_render();
     void on_resize(int w, int h);
 
-    void init();
+    void init(float _fontScale);
 
 private:
-    float toolbar_width;
+    float fontScale;
     std::shared_ptr<Image> image;
     std::shared_ptr<CurveDetect> curve;
 
