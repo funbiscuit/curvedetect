@@ -10,3 +10,6 @@
 [submodule "libs/resource-builder"]
 	path = libs/resource-builder
 	url = https://bitbucket.org/funbiscuit/resource-builder
+[submodule "libs/tfd"]
+	path = libs/tfd
+	url = http://git.code.sf.net/p/tinyfiledialogs/code
