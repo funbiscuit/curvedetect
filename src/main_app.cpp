@@ -100,6 +100,9 @@ void MainApp::on_window_resize(GLFWwindow *wnd, int width, int height)
     inst.m_width = width;
     inst.m_height = height;
     inst.mainWindow.on_resize(width, height);
+
+    inst.new_frame();
+    glfwSwapBuffers(wnd);
 }
 
 
