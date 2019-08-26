@@ -139,3 +139,17 @@ stb, public domain, https://github.com/nothings/stb
 tiny file dialogs, zlib license, https://sourceforge.net/projects/tinyfiledialogs/
 
 Open Sans font, Apache license, https://www.fontsquirrel.com/fonts/open-sans
+
+Mirrors
+-------
+
+This project is hosted at
+
+Bitbucket https://bitbucket.org/funbiscuit/curvedetect-cpp
+
+Github https://github.com/funbiscuit/curvedetect
+
+License
+-------
+
+This project is licensed under MIT license (see LICENSE.txt)
