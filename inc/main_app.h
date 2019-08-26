@@ -24,7 +24,7 @@ public:
 
     bool init(GLFWwindow* window, const char* glsl_version);
 
-    void new_frame();
+    bool new_frame();
 
     static MainApp& get();
 
@@ -33,6 +33,8 @@ public:
     bool is_enter_up(){return bEnterReleased;}
 
 private:
+    const int RENDER_FRAMES_MAX=20;
+    int renderFrames = RENDER_FRAMES_MAX;
 
     bool bEnterReleased;
 
@@ -40,6 +42,9 @@ private:
 
     static void on_window_resize(GLFWwindow *wnd, int width, int height);
     static void on_key_callback(GLFWwindow *wnd, int key, int scancode, int action, int mods);
+    static void on_mouse_button_callback(GLFWwindow *wnd, int button, int action, int mods);
+    static void on_cursor_pos_callback(GLFWwindow *wnd, double xpos, double ypos);
+    static void on_scroll_callback(GLFWwindow *wnd, double xoffset, double yoffset);
 
     bool bShouldUseIMGUICursor;
 

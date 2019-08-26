@@ -84,6 +84,9 @@ bool MainApp::init(GLFWwindow *wnd, const char* glsl_version)
 
     glfwSetWindowSizeCallback(window, on_window_resize);
     glfwSetKeyCallback(window, on_key_callback);
+    glfwSetCursorPosCallback(window, on_cursor_pos_callback);
+    glfwSetMouseButtonCallback(window, on_mouse_button_callback);
+    glfwSetScrollCallback(window, on_scroll_callback);
 
     set_use_imgui_cursor(false);
 
@@ -101,6 +104,7 @@ void MainApp::on_window_resize(GLFWwindow *wnd, int width, int height)
     inst.m_height = height;
     inst.mainWindow.on_resize(width, height);
 
+    inst.renderFrames = inst.RENDER_FRAMES_MAX;
     inst.new_frame();
     glfwSwapBuffers(wnd);
 }
@@ -109,6 +113,7 @@ void MainApp::on_window_resize(GLFWwindow *wnd, int width, int height)
 void MainApp::on_key_callback(GLFWwindow *wnd, int key, int scancode, int action, int mods)
 {
     MainApp& inst = get();
+    inst.renderFrames = inst.RENDER_FRAMES_MAX;
 
     ImGui_ImplGlfw_KeyCallback(wnd, key, scancode, action, mods);
 
@@ -158,8 +163,31 @@ void MainApp::on_key_callback(GLFWwindow *wnd, int key, int scancode, int action
     }
 }
 
-void MainApp::new_frame()
+void MainApp::on_cursor_pos_callback(GLFWwindow *wnd, double xpos, double ypos)
 {
+    MainApp& inst = get();
+    inst.renderFrames = inst.RENDER_FRAMES_MAX;
+}
+
+void MainApp::on_scroll_callback(GLFWwindow *wnd, double xoffset, double yoffset)
+{
+    ImGui_ImplGlfw_ScrollCallback(wnd, xoffset, yoffset);
+    MainApp& inst = get();
+    inst.renderFrames = inst.RENDER_FRAMES_MAX;
+}
+
+void MainApp::on_mouse_button_callback(GLFWwindow *wnd, int button, int action, int mods)
+{
+    MainApp& inst = get();
+    inst.renderFrames = inst.RENDER_FRAMES_MAX;
+    ImGui_ImplGlfw_MouseButtonCallback(wnd, button, action, mods);
+}
+
+bool MainApp::new_frame()
+{
+    if(renderFrames<=0)
+        return false;
+    --renderFrames;
     ImVec4 clear_color = ImVec4(0.9f, 0.9f, 0.9f, 1.00f);
 
     // Start the Dear ImGui frame
@@ -180,6 +208,8 @@ void MainApp::new_frame()
     glad_glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
     glad_glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    return true;
 }
 
 MainApp& MainApp::get()
