@@ -280,13 +280,13 @@ void MainWindow::render_image(ImVec2 canvasSize)
 
 void MainWindow::on_mouse_down(int btn)
 {
-    auto& app= MainApp::get();
+    ImGuiIO& io = ImGui::GetIO();
     if (btn == 0)
     {
         switch (currentMode)
         {
             case MODE_POINTS:
-                if (app.is_ctrl_down())
+                if (io.KeyCtrl)
                     curve->add_point(Vec2D(hoveredImagePixel));
                 else
                     curve->select_hovered(ImageElement::POINT);
@@ -346,14 +346,14 @@ void MainWindow::on_mouse_double_click(int btn)
 
 void MainWindow::on_mouse_drag(int btn)
 {
-    auto& app= MainApp::get();
+    ImGuiIO& io = ImGui::GetIO();
     if (btn == 0 && curve)
     {
         deleteOnRelease = false;
 
         if(curve->move_selected(Vec2D(hoveredImagePixel)))
         {
-            if(app.is_ctrl_down())
+            if(io.KeyCtrl)
                 curve->snap_selected();
 
             if(currentMode == MODE_POINTS || currentMode == MODE_HORIZON)
@@ -366,28 +366,28 @@ void MainWindow::on_mouse_drag(int btn)
 
 void MainWindow::process_input()
 {
+    ImGuiIO& io = ImGui::GetIO();
     auto& app= MainApp::get();
     static bool bIsMouseDownFirst = true;
     static ImVec2 lastMousePos = ImGui::GetMousePos();
-    static bool prevCtrl = app.is_ctrl_down();
+    static bool prevCtrl = io.KeyCtrl;
     ImVec2 delta = ImGui::GetMousePos()-lastMousePos;
-    bool moving = (std::abs(delta.x)+std::abs(delta.y))>0.f || prevCtrl != app.is_ctrl_down();
+    bool moving = (std::abs(delta.x)+std::abs(delta.y))>0.f || prevCtrl != io.KeyCtrl;
 
 
     if (ImGui::IsWindowFocused())
     {
-        ImGuiIO& io = ImGui::GetIO();
         ActionMode modes[]={MODE_POINTS,MODE_GRID,MODE_HORIZON};
 
         for(int j=0;j<3;++j)
             if (io.KeysDown[GLFW_KEY_1+j] || io.KeysDown[GLFW_KEY_KP_1+j])
                 currentMode = modes[j];
 
-        if(io.KeysDown[GLFW_KEY_F] && io.KeysDownDurationPrev[GLFW_KEY_F]==0.f)
+        if(io.KeysDown[GLFW_KEY_F] && io.KeysDownDurationPrev[GLFW_KEY_F]==0.f && io.KeyCtrl)
             bShowFps = !bShowFps;
 
         if(curve && curve->get_selected_id()==0)
-            deleteOnRelease = app.is_shift_down();
+            deleteOnRelease = io.KeyShift;
     }
 
     if (curve && ImGui::is_mouse_hovering_window() && !bIsContextMenuOpened && bIsReadyForAction)
@@ -432,7 +432,7 @@ void MainWindow::process_input()
         bIsReadyForAction = true;
     }
     lastMousePos+=delta;
-    prevCtrl = app.is_ctrl_down();
+    prevCtrl = io.KeyCtrl;
 }
 
 void MainWindow::render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos)
@@ -1123,7 +1123,9 @@ void MainWindow::render_hints_panel()
 
     bool snap = curve ? curve->get_selected_id()!=0 : false;
 
-    if (app.is_ctrl_down())
+    ImGuiIO& io = ImGui::GetIO();
+
+    if (io.KeyCtrl)
         modifierStr = snap ? "(snap)" : "(new)";
     else if (deleteOnRelease)
         modifierStr = "(delete)";

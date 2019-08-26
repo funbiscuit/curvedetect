@@ -112,19 +112,7 @@ void MainApp::on_key_callback(GLFWwindow *wnd, int key, int scancode, int action
 
     ImGui_ImplGlfw_KeyCallback(wnd, key, scancode, action, mods);
 
-    if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL)
-    {
-        inst.bCtrlPressed = action != GLFW_RELEASE;
-    }
-    else if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT)
-    {
-        inst.bShiftPressed = action != GLFW_RELEASE;
-    }
-    else if (key == GLFW_KEY_LEFT_ALT || key == GLFW_KEY_RIGHT_ALT)
-    {
-        inst.bAltPressed = action != GLFW_RELEASE;
-    }
-    else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER)
+    if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER)
     {
         inst.bEnterReleased = (action == GLFW_RELEASE);
     }

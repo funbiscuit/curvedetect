@@ -30,16 +30,10 @@ public:
 
     void copy_to_clipboard(const std::string& text);
 
-    bool is_ctrl_down(){return bCtrlPressed;}
-    bool is_shift_down(){return bShiftPressed;}
-    bool is_alt_down(){return bAltPressed;}
     bool is_enter_up(){return bEnterReleased;}
 
 private:
 
-    bool bCtrlPressed;
-    bool bShiftPressed;
-    bool bAltPressed;
     bool bEnterReleased;
 
     MainWindow mainWindow;
