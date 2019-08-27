@@ -7,9 +7,9 @@
 [submodule "libs/imgui"]
 	path = libs/imgui
 	url = https://github.com/ocornut/imgui.git
-[submodule "libs/resource-builder"]
-	path = libs/resource-builder
-	url = https://bitbucket.org/funbiscuit/resource-builder
 [submodule "libs/tfd"]
 	path = libs/tfd
 	url = http://git.code.sf.net/p/tinyfiledialogs/code
+[submodule "libs/resource-builder"]
+	path = libs/resource-builder
+	url = https://github.com/funbiscuit/resource-builder.git
