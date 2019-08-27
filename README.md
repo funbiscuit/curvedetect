@@ -138,6 +138,8 @@ stb, public domain, https://github.com/nothings/stb
 
 tiny file dialogs, zlib license, https://sourceforge.net/projects/tinyfiledialogs/
 
+resource-builder, MIT license, https://github.com/funbiscuit/resource-builder.git
+
 Open Sans font, Apache license, https://www.fontsquirrel.com/fonts/open-sans
 
 Mirrors
