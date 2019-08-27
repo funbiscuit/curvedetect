@@ -163,7 +163,7 @@ void Image::generate_mipmaps()
                     (uint8_t)(255-images[0].pixels[row * width + col]);
 
 
-    for(int i=1;i<images.size();++i)
+    for(size_t i=1;i<images.size();++i)
     {
         const auto& original = images[i-1];
         auto& nextNormal = images[i];

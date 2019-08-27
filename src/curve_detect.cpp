@@ -189,7 +189,7 @@ std::string CurveDetect::get_points_text(std::string columnSeparator,
         }
     }
 
-    for (size_t kp = 0; kp < bundle->allNum; ++kp)
+    for (int kp = 0; kp < bundle->allNum; ++kp)
     {
         double_to_string(bundle->allPointsReal[kp*2], decimalSeparator, nums);
 
@@ -251,7 +251,7 @@ std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
         //count all subdiv points and end point (begin point of each segmented is not counted
         //since its the same as the end point of the previous segment. thats why begin point of
         //first segment was counted outside loop
-        for(int j=1; j<segment.points.size(); ++j)
+        for(size_t j=1; j<segment.points.size(); ++j)
         {
             const auto& point = segment.points[j].imagePosition;
 
@@ -274,7 +274,7 @@ std::shared_ptr<PointsBundle> CurveDetect::get_points_bundle()
         }
     }
 
-    for (size_t i = 0; i < Nu; ++i)
+    for (int i = 0; i < Nu; ++i)
     {
         res->userPointsPixels[2*i]=userPoints[i].imagePosition.x;
         res->userPointsPixels[2*i+1]=userPoints[i].imagePosition.y;

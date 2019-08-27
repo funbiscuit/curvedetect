@@ -37,6 +37,11 @@ file(GLOB all_SRCS
         ${PROJECT_SOURCE_DIR}/libs/tfd/tinyfiledialogs.c
         )
 
+if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    add_definitions(-D_SCL_SECURE_NO_WARNINGS)
+endif()
+
 if( WIN32 )
     add_executable(${PROJECT_NAME} ${all_SRCS}
             ${PROJECT_SOURCE_DIR}/res/win-res.rc
@@ -47,7 +52,6 @@ if( WIN32 )
         if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
             set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -static -mwindows")
         elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-            add_definitions(-D_CRT_SECURE_NO_WARNINGS)
             set_target_properties(${PROJECT_NAME} PROPERTIES
                     LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
                     )

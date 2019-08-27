@@ -470,7 +470,7 @@ void MainWindow::render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos)
             ImVec2 PointPos0 = segment.begin.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
 
             bool prevSnapped = true;
-            for(int i=1;i<segment.points.size();++i)
+            for(size_t i=1;i<segment.points.size();++i)
             {
                 const ImagePoint& point = segment.points[i];
                 ImVec2 PointPos1 = point.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
@@ -489,7 +489,7 @@ void MainWindow::render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos)
         if (bShowSubdivPoints)
         {
             for (auto &segment : segments) {
-                for (int i = 1; i < segment.points.size(); ++i) {
+                for (size_t i = 1; i < segment.points.size(); ++i) {
                     const ImagePoint &point = segment.points[i];
                     ImVec2 PointPos1 = point.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
 
@@ -542,7 +542,7 @@ int onTickInput(ImGuiInputTextCallbackData *data)
     ImageTickLine::filter_value(tickVal, false);
     strcpy(data->Buf,tickVal.c_str());
     data->BufTextLen=(int)tickVal.length();
-    if(data->CursorPos>tickVal.length())
+    if(data->CursorPos>(int)tickVal.length())
         data->CursorPos=(int)tickVal.length();
     data->BufDirty=true;
     return 0;

@@ -145,7 +145,7 @@ Mirrors
 
 This project is hosted at
 
-Bitbucket https://bitbucket.org/funbiscuit/curvedetect-cpp
+Bitbucket https://bitbucket.org/funbiscuit/curvedetect
 
 Github https://github.com/funbiscuit/curvedetect
 
