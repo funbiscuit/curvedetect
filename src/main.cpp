@@ -7,6 +7,7 @@
 #include <imgui.h>
 #include <main_window.h>
 #include <main_app.h>
+#include <portable-file-dialogs.h>
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
@@ -19,7 +20,14 @@ int init()
 
     /* Initialize the library */
     if (!glfwInit())
+    {
+        pfd::message("Runtime error",
+                     "Failed to initialize GLFW.",
+                     pfd::choice::ok,
+                     pfd::icon::error).result();
+        std::cout << "Can't init GLFW\n";
         return -1;
+    }
 
 
     // Decide GL+GLSL versions
@@ -45,6 +53,11 @@ int init()
     if (!window)
     {
         glfwTerminate();
+        pfd::message("Runtime error",
+                     "Failed to create window.\nIs OpenGL 3 supported on your system?",
+                     pfd::choice::ok,
+                     pfd::icon::error).result();
+        std::cout << "Can't create window\n";
         return -1;
     }
 
@@ -57,6 +70,10 @@ int init()
     MainApp& app = MainApp::get();
     if(!app.init(window, glsl_version))
     {
+        pfd::message("Runtime error",
+                     "Can't initialize application.\nIs OpenGL 3 supported on your system?",
+                     pfd::choice::ok,
+                     pfd::icon::error).result();
         std::cout << "Can't initialize application\n";
         return -1;
     }
