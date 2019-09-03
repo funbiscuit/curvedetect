@@ -11,6 +11,7 @@
 #include "imgui_impl_opengl3.h"
 #include <bitset>
 #include <algorithm>
+#include <portable-file-dialogs.h>
 
 uint32_t bit_pos(uint32_t val)
 {
@@ -49,7 +50,12 @@ Image::Image(std::string path)
     images.resize(10);
     images_inv.resize(10);
 
-    image = stbi_load(path.c_str(), &width, &height, nullptr, 3);
+#if _WIN32
+    auto file = _wfopen(pfd::internal::str2wstr(path).c_str(), L"rb");
+#else
+    auto file = fopen(path.c_str(), "rb");
+#endif
+    image = stbi_load_from_file(file, &width, &height, nullptr, 3);
 
     if(image)
     {

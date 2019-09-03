@@ -21,7 +21,7 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/inc
         ${PROJECT_SOURCE_DIR}/res/build/include
         ${PROJECT_SOURCE_DIR}/libs/imgui
-        ${PROJECT_SOURCE_DIR}/libs/tfd
+        ${PROJECT_SOURCE_DIR}/libs/portable-file-dialogs
         ${PROJECT_SOURCE_DIR}/libs/stb
         ${PROJECT_SOURCE_DIR}
 )
@@ -34,7 +34,6 @@ file(GLOB all_SRCS
         ${PROJECT_SOURCE_DIR}/res/build/src/resources.cpp
         ${PROJECT_SOURCE_DIR}/glad/src/glad.c
         ${PROJECT_SOURCE_DIR}/libs/imgui/*.cpp
-        ${PROJECT_SOURCE_DIR}/libs/tfd/tinyfiledialogs.c
         )
 
 if(MSVC)

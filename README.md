@@ -136,7 +136,7 @@ Dear ImGui, MIT license, https://github.com/ocornut/imgui
 
 stb, public domain, https://github.com/nothings/stb
 
-tiny file dialogs, zlib license, https://sourceforge.net/projects/tinyfiledialogs/
+portable file dialogs, WTFPL, https://github.com/samhocevar/portable-file-dialogs.git
 
 resource-builder, MIT license, https://github.com/funbiscuit/resource-builder.git
 

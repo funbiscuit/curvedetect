@@ -17,7 +17,7 @@
 #include <cmath>
 #include <fstream>
 
-#include "tinyfiledialogs.h"
+#include "portable-file-dialogs.h"
 
 MainWindow::MainWindow()
 {
@@ -1176,24 +1176,12 @@ void MainWindow::on_export_points()
     if (!curve || !curve->is_export_ready(out_Result))
         return;
 
-    char const * lFilterPatterns[2] = { "*.txt", "*.mat" };
+    auto path = pfd::save_file("Choose a save file", "",
+            {"Text file (.txt)", "*.txt",
+             "Matlab file (.mat)", "*.mat"}).result();
 
-    std::string path="data.txt";
-
-    const char* lTheSaveFileName = tinyfd_saveFileDialog(
-            "Choose a save file",
-            path.c_str(),
-            2,
-            lFilterPatterns,
-            NULL);
-
-
-    if (!lTheSaveFileName)
-    {
+    if (path.empty())
         return;
-    }
-
-    path = lTheSaveFileName;
 
     std::cout << "save: " << path << "\n";
 
@@ -1207,48 +1195,39 @@ void MainWindow::on_export_points()
 
         std::cout << "extension: " << ext << "\n";
 
-        if (ext.compare(".txt") == 0)
+        if (ext == ".txt")
         {
             std::cout << "text format\n";
         }
-        else if (ext.compare(".mat") == 0)
+        else if (ext == ".mat")
         {
             bUseTextFormat = false;
             std::cout << "mat format\n";
         }
         else
         {
-            path.erase(dot_ind, path.size() - dot_ind);
-            path.append(".txt");
+            auto m = pfd::message("Unknown format",
+                                  "You selected unknown format\nSave file as text?",
+                                  pfd::choice::yes_no_cancel,
+                                  pfd::icon::question).result();
 
-            if (!tinyfd_messageBox(
-                    "Error",
-                    "You selected unknown format\nSave file as *.txt?",
-                    "yesno",
-                    "question",
-                    1))
-            {
+            if (m==pfd::button::no)
                 on_export_points();
+            if (m!=pfd::button::yes)
                 return;
-            }
-
         }
     }
     else
     {
-        path.append(".txt");
+        auto m = pfd::message("Unknown format",
+                              "You selected unknown format\nSave file as text?",
+                              pfd::choice::yes_no_cancel,
+                              pfd::icon::question).result();
 
-        if (!tinyfd_messageBox(
-                "Error",
-                "You selected unknown format\nSave file as *.txt?",
-                "yesno",
-                "question",
-                1))
-        {
+        if (m==pfd::button::no)
             on_export_points();
+        if (m!=pfd::button::yes)
             return;
-        }
-
     }
 
     std::cout << "save: " << path << "\n";
@@ -1263,43 +1242,37 @@ void MainWindow::on_export_points()
         ofs.close();
     }
     else
-        curve->export_points_mat_file(lTheSaveFileName);
+        curve->export_points_mat_file(path.c_str());
 }
 
 
 void MainWindow::on_open_image()
 {
-    char const * filename;
-    char const * lFilterPatterns[3] = { "*.png", "*.jpg", "*.bmp" };
+    auto files = pfd::open_file("Choose an Image", "",
+                                      {"Image Files (*.png, *.jpg, *.jpeg, *.bmp)",
+                                       "*.png *.jpg *.jpeg *.bmp"}).result();
 
-    std::string path;
-
-    filename = tinyfd_openFileDialog(
-            "Choose an Image",
-            path.c_str(),
-            3,
-            lFilterPatterns,
-            NULL,
-            0);
-
-    if (!filename)
+    if (files.empty())
         return;
 
 
-    path = filename;
+    auto path = files.front();
 
-    std::cout << "open: "<<filename<<"\n";
+    std::cout << "open: "<<path<<"\n";
 
-    image=std::make_shared<Image>(path);
+    auto newImage = std::make_shared<Image>(path);
 
-    if(!image->is_loaded())
+    if(!newImage->is_loaded())
     {
-        tinyfd_messageBox("Can't open image", "Opened file is not an image.\nTry again.", "ok", "error", 0);
-        image= nullptr;
-        curve= nullptr;
+        pfd::message("Can't open image",
+                              "Opened file is not an image.\nTry again.",
+                              pfd::choice::ok,
+                              pfd::icon::error).result();
+        return;
     }
     else
     {
+        image = newImage;
         curve=std::make_shared<CurveDetect>(image);
         currentMode = ActionMode::MODE_POINTS;
     }
@@ -1326,18 +1299,20 @@ void MainWindow::on_paste_image()
         reset_all();
     } else
     {
-        tinyfd_messageBox("Can't paste image", "Clipboard doesn't contain any valid image data\nTry again.", "ok", "error", 0);
+        pfd::message("Can't paste image",
+                     "Clipboard doesn't contain any valid image data\nTry again.",
+                     pfd::choice::ok,
+                     pfd::icon::error).result();
     }
 }
 
 void MainWindow::on_reset()
 {
-    if (tinyfd_messageBox(
-            "Warning",
-            "This will remove all input data\nAre you sure?",
-            "yesno",
-            "question",
-            1))
+    auto m = pfd::message("Reset data",
+                 "This will remove all input data\nAre you sure?",
+                 pfd::choice::yes_no,
+                 pfd::icon::question).result();
+    if (m == pfd::button::yes)
     {
         reset_all();
     }
