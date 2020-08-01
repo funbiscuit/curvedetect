@@ -4,5 +4,5 @@
     "./opensans-regular.ttf"
   ],
   "output" : "build",
-  "project_name" : "curvedetect"
+  "project_name" : "CurvedetectRes"
 }

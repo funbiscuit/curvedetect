@@ -3,7 +3,6 @@
 #define CURVEDETECT_IMAGE_ELEMENTS_H
 
 #include <string>
-#include <imgui.h>
 #include <cstdint>
 #include <cmath>
 

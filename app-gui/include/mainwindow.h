@@ -3,10 +3,18 @@
 #define CURVEDETECT_MAINWINDOW_H
 
 #include <memory>
-#include "image.h"
-#include "curve_detect.h"
-#include "imgui.h"
 
+#include <QMainWindow>
+
+//#include "image.h"
+//#include "curve_detect.h"
+
+QT_BEGIN_NAMESPACE
+class QGroupBox;
+class QVBoxLayout;
+QT_END_NAMESPACE
+
+class CurveView;
 
 enum ActionMode
 {
@@ -17,7 +25,7 @@ enum ActionMode
 };
 
 
-class MainWindow
+class MainWindow : public QMainWindow
 {
 public:
     int width;
@@ -30,12 +38,20 @@ public:
     void init(float _fontScale);
 
 private:
+    QVBoxLayout* sidePanelLayout = nullptr;
+
+    QGroupBox* viewSettings = nullptr;
+    QGroupBox* curveSettings = nullptr;
+    QGroupBox* fileGroup = nullptr;
+
+    CurveView* curveView = nullptr;
+
     float fontScale;
-    std::shared_ptr<Image> image;
-    std::shared_ptr<CurveDetect> curve;
+//    std::shared_ptr<Image> image;
+//    std::shared_ptr<CurveDetect> curve;
 
 
-    ImColor colorDisabled = ImColor(200, 200, 200);
+//    ImColor colorDisabled = ImColor(200, 200, 200);
 
     float zoomWindowSize=200.f;
     int curveThickness=3;
@@ -75,17 +91,18 @@ private:
     const float maxImageScale = 5.f;
 
 
-    ImVec2 imagePosition;
-    ImVec2 hoveredImagePixel;
+//    ImVec2 imagePosition;
+//    ImVec2 hoveredImagePixel;
 
     bool bIsContextMenuOpened = false;
     bool bIsReadyForAction = true;
 
     bool deleteOnRelease = false;
 
+    void createSidePanel();
 
     void render_main_window();
-    void render_image(ImVec2 canvasSize);
+//    void render_image(ImVec2 canvasSize);
 
     void process_input();
     void on_mouse_down(int btn);
@@ -93,16 +110,16 @@ private:
     void on_mouse_double_click(int btn);
     void on_mouse_drag(int btn);
 
-    void render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos);
+//    void render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos);
 
     void render_tick_config_popup();
 
-    bool render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOrigin);
+//    bool render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOrigin);
 
-    void render_grid_lines(ImVec2 im_pos);
-    void render_grid_line(ImVec2 imPos, ImVec2 linePoint, ImVec2 lineDir, ImColor lineColor, const char* value=nullptr);
+//    void render_grid_lines(ImVec2 im_pos);
+//    void render_grid_line(ImVec2 imPos, ImVec2 linePoint, ImVec2 lineDir, ImColor lineColor, const char* value=nullptr);
 
-    void render_horizon(const ImVec2 &im_pos);
+//    void render_horizon(const ImVec2 &im_pos);
 
 
     void render_side_panel();
@@ -126,8 +143,8 @@ private:
     //tries to make a full line inside of specified region
     //that goes through specified point and points at specified direction
     //outputs result to out_Start and out_End
-    bool extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, ImVec2 &out_End, ImVec2 RegionSize,
-                     ImVec2 RegionTL = ImVec2(0.0f, 0.0f));
+//    bool extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, ImVec2 &out_End, ImVec2 RegionSize,
+//                     ImVec2 RegionTL = ImVec2(0.0f, 0.0f));
 
 
 

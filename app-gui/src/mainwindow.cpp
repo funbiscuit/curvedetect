@@ -2,26 +2,37 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
-#include "main_window.h"
-#include "main_app.h"
-#include "clipboard.h"
-#include "imgui.h"
-
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-#include "imgui_helpers.h"
-#include "glad/glad.h"
-
-#include <GLFW/glfw3.h>
 #include <cmath>
 #include <fstream>
 
+#include <QtWidgets>
+
 #include "portable-file-dialogs.h"
+
+#include "mainwindow.h"
+#include "curveview.h"
+//#include "main_app.h"
+//#include "clipboard.h"
+
+
 
 MainWindow::MainWindow()
 {
-    width=1024;
+    setMinimumSize(600, 400);
+
+    auto mainLayout = new QHBoxLayout;
+
+    auto window = new QWidget();
+    window->setLayout(mainLayout);
+    setCentralWidget(window);
+
+    createSidePanel();
+    mainLayout->addLayout(sidePanelLayout);
+
+    curveView = new CurveView();
+    mainLayout->addWidget(curveView, 1);
+
+    width=1280;
     height=720;
 
     currentMode = MODE_POINTS;
@@ -34,59 +45,147 @@ MainWindow::MainWindow()
     columnSeparator = "\t";
     lineEnding = "\n";
 
-    image = nullptr;
-    curve = nullptr;
+//    image = nullptr;
+//    curve = nullptr;
 
+}
+
+
+void MainWindow::createSidePanel()
+{
+
+//    QGroupBox* viewSettings = nullptr;
+//    QGroupBox* curveSettings = nullptr;
+//    QGroupBox* fileGroup = nullptr;
+
+    sidePanelLayout = new QVBoxLayout();
+
+    fileGroup = new QGroupBox("Open/Export");
+    auto fileLayout = new QGridLayout();
+    fileGroup->setLayout(fileLayout);
+
+    auto openBtn = new QPushButton("Open");
+    auto pasteBtn = new QPushButton("Paste");
+    auto columnSep = new QLineEdit("\\t");
+    auto lineEnd = new QLineEdit("\\n");
+    auto decimalSep = new QComboBox();
+    decimalSep->insertItem(0, "dot");
+    decimalSep->insertItem(1, "comma");
+    auto copyBtn = new QPushButton("Copy");
+    auto exportBtn = new QPushButton("Export");
+
+    //TODO prettify layout
+    fileLayout->addWidget(openBtn,0,0);
+    fileLayout->addWidget(pasteBtn,0,1);
+    fileLayout->addWidget(new QLabel("Text export settings"), 1,0,1,2);
+    fileLayout->addWidget(new QLabel("Column separator"), 2,0);
+    fileLayout->addWidget(columnSep, 2,1);
+    fileLayout->addWidget(new QLabel("Line ending"), 3,0);
+    fileLayout->addWidget(lineEnd, 3,1);
+    fileLayout->addWidget(new QLabel("Decimal separator"), 4,0);
+    fileLayout->addWidget(decimalSep, 4,1);
+    fileLayout->addWidget(copyBtn,5,0);
+    fileLayout->addWidget(exportBtn,5,1);
+
+
+    // view settings
+    viewSettings = new QGroupBox("View");
+    auto viewLayout = new QGridLayout();
+    viewSettings->setLayout(viewLayout);
+
+    auto subdivCheck = new QCheckBox("Subdivision");
+    auto zoomCheck = new QCheckBox("Zoom");
+    auto imageCheck = new QCheckBox("Image");
+    auto binCheck = new QCheckBox("Binarization");
+    auto majGridCheck = new QCheckBox("Major grid");
+    auto minGridCheck = new QCheckBox("Minor grid");
+
+    viewLayout->addWidget(subdivCheck,0,0);
+    viewLayout->addWidget(zoomCheck,0,1);
+    viewLayout->addWidget(imageCheck,1,0);
+    viewLayout->addWidget(binCheck,1,1);
+    viewLayout->addWidget(majGridCheck,2,0);
+    viewLayout->addWidget(minGridCheck,2,1);
+
+
+    // curve settings
+    curveSettings = new QGroupBox("Curve");
+    auto curveLayout = new QGridLayout();
+    curveSettings->setLayout(curveLayout);
+
+    auto subdivLabel = new QLabel("Subdivision");
+    auto subdivSlider = new QSlider(Qt::Horizontal);
+    subdivSlider->setMaximum(10);
+    subdivSlider->setValue(5);
+
+    auto threshLabel = new QLabel("Threshold");
+    auto threshSlider = new QSlider(Qt::Horizontal);
+    threshSlider->setMaximum(255);
+    threshSlider->setValue(127);
+
+    auto thickLabel = new QLabel("Thickness");
+    auto thickSlider = new QSlider(Qt::Horizontal);
+    thickSlider->setMaximum(30);
+    thickSlider->setMinimum(2);
+    thickSlider->setValue(3);
+
+    auto xScaleCB = new QComboBox();
+    xScaleCB->insertItem(0, "linear X");
+    xScaleCB->insertItem(1, "log X");
+    auto yScaleCB = new QComboBox();
+    yScaleCB->insertItem(0, "linear Y");
+    yScaleCB->insertItem(1, "log Y");
+
+    auto invertCheck = new QCheckBox("Invert Image");
+    auto resetBtn = new QPushButton("Reset");
+
+    curveLayout->addWidget(subdivLabel,0,0);
+    curveLayout->addWidget(subdivSlider,0,1);
+    curveLayout->addWidget(threshLabel,1,0);
+    curveLayout->addWidget(threshSlider,1,1);
+    curveLayout->addWidget(thickLabel,2,0);
+    curveLayout->addWidget(thickSlider,2,1);
+    curveLayout->addWidget(xScaleCB,3,0);
+    curveLayout->addWidget(yScaleCB,3,1);
+    curveLayout->addWidget(invertCheck,4,0);
+    curveLayout->addWidget(resetBtn,4,1);
+
+
+    auto helpArea = new QTextEdit();
+    helpArea->setText("Open or paste new image");
+    helpArea->setReadOnly(true);
+
+    sidePanelLayout->addWidget(viewSettings,0);
+    sidePanelLayout->addWidget(curveSettings,0);
+    sidePanelLayout->addWidget(fileGroup,0);
+    sidePanelLayout->addWidget(helpArea,1);
 }
 
 
 void MainWindow::on_render()
 {
 
-    ImGuiWindowFlags window_flags = 0;
-    window_flags |= ImGuiWindowFlags_NoTitleBar;
-//    if (no_scrollbar)       window_flags |= ImGuiWindowFlags_NoScrollbar;
-//    if (!no_menu)           window_flags |= ImGuiWindowFlags_MenuBar;
-    window_flags |= ImGuiWindowFlags_NoMove;
-    window_flags |= ImGuiWindowFlags_NoResize;
-    window_flags |= ImGuiWindowFlags_NoCollapse;
-//    if (no_nav)             window_flags |= ImGuiWindowFlags_NoNav;
-    window_flags |= ImGuiWindowFlags_NoBackground;
-    window_flags |= ImGuiWindowFlags_NoSavedSettings;
-    window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+
 
 //    ImGui::SetNextWindowPos(ImVec2(0, 0));
-//    ImGui::SetNextWindowSize(ImVec2(toolbar_width, height));
-//    ImGui::Begin("Main", nullptr, window_flags);
-//    render_toolbar();
-//    ImGui::End();
+//    ImGui::SetNextWindowSize(ImVec2((float)width, (float)height));// , ImGuiSetCond_FirstUseEver);
 //
-//    ImGui::SetNextWindowPos(ImVec2(toolbar_width, 0));
-//    ImGui::SetNextWindowSize(ImVec2(width-toolbar_width, height));
-//    ImGui::Begin("Area", nullptr, window_flags);
-//    render_area();
-//    ImGui::End();
-
-
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2((float)width, (float)height));// , ImGuiSetCond_FirstUseEver);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    if (ImGui::Begin("Main Window", nullptr, window_flags))
-    {
-        render_main_window();
-        ImGui::End();
-    }
-    ImGui::PopStyleVar();
+//    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+//    if (ImGui::Begin("Main Window", nullptr, window_flags))
+//    {
+//        render_main_window();
+//        ImGui::End();
+//    }
+//    ImGui::PopStyleVar();
 
 }
 
 void MainWindow::init(float _fontScale)
 {
 #ifndef NDEBUG
-    image=std::make_shared<Image>("../img/test.png");
-    curve=std::make_shared<CurveDetect>(image);
-    curve->reset_all();
+//    image=std::make_shared<Image>("../img/test.png");
+//    curve=std::make_shared<CurveDetect>(image);
+//    curve->reset_all();
 #endif
     fontScale = _fontScale;
 }
@@ -98,12 +197,9 @@ void MainWindow::on_resize(int w, int h)
 
 void MainWindow::render_main_window()
 {
-    if(bShowFps)
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
     render_side_panel();
 
-    ImGui::SameLine();
+    /*ImGui::SameLine();
 
 
     ImGui::BeginGroup();
@@ -193,10 +289,10 @@ void MainWindow::render_main_window()
     ImGui::EndChild();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
-    ImGui::EndGroup();
+    ImGui::EndGroup();*/
 }
 
-void MainWindow::render_image(ImVec2 canvasSize)
+/*void MainWindow::render_image(ImVec2 canvasSize)
 {
     if(image)
     {
@@ -276,11 +372,11 @@ void MainWindow::render_image(ImVec2 canvasSize)
         //and all other textures (that should be rendered without changes)
         ImGui_ImplOpenGL3_SetImageBin(texID, bShowBinarization);
     }
-}
+}*/
 
 void MainWindow::on_mouse_down(int btn)
 {
-    ImGuiIO& io = ImGui::GetIO();
+    /*ImGuiIO& io = ImGui::GetIO();
     if (btn == 0)
     {
         switch (currentMode)
@@ -301,12 +397,12 @@ void MainWindow::on_mouse_down(int btn)
             default:
                 break;
         }
-    }
+    }*/
 }
 
 void MainWindow::on_mouse_up(int btn)
 {
-    auto& app= MainApp::get();
+    /*auto& app= MainApp::get();
     if (btn == 0)
     {
         switch (currentMode)
@@ -324,19 +420,19 @@ void MainWindow::on_mouse_up(int btn)
             default:
                 break;
         }
-    }
+    }*/
 }
 
 void MainWindow::on_mouse_double_click(int btn)
 {
-    auto& app= MainApp::get();
+//    auto& app= MainApp::get();
     if (btn == 0)
     {
         switch (currentMode)
         {
             case MODE_GRID:
-                if(curve->get_selected_id())
-                    ImGui::OpenPopup("TickConfig");
+//                if(curve->get_selected_id())
+//                    ImGui::OpenPopup("TickConfig");
                 break;
             default:
                 break;
@@ -346,27 +442,27 @@ void MainWindow::on_mouse_double_click(int btn)
 
 void MainWindow::on_mouse_drag(int btn)
 {
-    ImGuiIO& io = ImGui::GetIO();
-    if (btn == 0 && curve)
+//    ImGuiIO& io = ImGui::GetIO();
+//    if (btn == 0 && curve)
     {
         deleteOnRelease = false;
 
-        if(curve->move_selected(Vec2D(hoveredImagePixel)))
-        {
-            if(io.KeyCtrl)
-                curve->snap_selected();
-
-            if(currentMode == MODE_POINTS || currentMode == MODE_HORIZON)
-            {
-                curve->update_subdiv();
-            }
-        }
+//        if(curve->move_selected(Vec2D(hoveredImagePixel)))
+//        {
+//            if(io.KeyCtrl)
+//                curve->snap_selected();
+//
+//            if(currentMode == MODE_POINTS || currentMode == MODE_HORIZON)
+//            {
+//                curve->update_subdiv();
+//            }
+//        }
     }
 }
 
 void MainWindow::process_input()
 {
-    ImGuiIO& io = ImGui::GetIO();
+    /*ImGuiIO& io = ImGui::GetIO();
     auto& app= MainApp::get();
     static bool bIsMouseDownFirst = true;
     static ImVec2 lastMousePos = ImGui::GetMousePos();
@@ -432,10 +528,10 @@ void MainWindow::process_input()
         bIsReadyForAction = true;
     }
     lastMousePos+=delta;
-    prevCtrl = io.KeyCtrl;
+    prevCtrl = io.KeyCtrl;*/
 }
 
-void MainWindow::render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos)
+/*void MainWindow::render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos)
 {
     if(!curve)
         return;
@@ -546,18 +642,18 @@ int onTickInput(ImGuiInputTextCallbackData *data)
         data->CursorPos=(int)tickVal.length();
     data->BufDirty=true;
     return 0;
-}
+}*/
 
 void MainWindow::render_tick_config_popup()
 {
-    if(!curve)
-        return;
+//    if(!curve)
+//        return;
 
     static bool bTickInputAutoFocus = true;
 
     static bool bTickConfigInit = true;
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.0f);
+    /*ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
     if (ImGui::BeginPopupModal("TickConfig", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
@@ -634,9 +730,9 @@ void MainWindow::render_tick_config_popup()
     {
         bTickInputAutoFocus = true;
     }
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleVar(2);*/
 }
-
+/*
 bool MainWindow::render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOrigin)
 {
     if(!image)
@@ -882,14 +978,14 @@ void MainWindow::render_horizon(const ImVec2 &im_pos)
     draw_list->AddCircleFilled(CoordTargetScreen, pointSize*0.5f-1.f, fill);
 
 
-}
+}*/
 
 void MainWindow::render_side_panel()
 {
     float SettingsWidth = fontScale*250.0f;
     float columnMargin = fontScale*3.f;
     float secondColumnX = SettingsWidth/2+columnMargin;
-
+/*
     static bool scrollbarShown = false;
     auto size = ImVec2(SettingsWidth, 0.f);
     if(scrollbarShown)
@@ -1093,12 +1189,12 @@ void MainWindow::render_side_panel()
 
     render_hints_panel();
 
-    ImGui::EndChild();
+    ImGui::EndChild();*/
 }
 
 void MainWindow::render_hints_panel()
 {
-    if(!curve)
+    /*if(!curve)
     {
         ImGui::TextUnformatted("Open/paste image to begin");
         return;
@@ -1166,15 +1262,15 @@ void MainWindow::render_hints_panel()
 
     ImGui::Text("Work mode: %s %s", modeStr.c_str(), modifierStr.c_str());
     ImGui::TextUnformatted("");
-    ImGui::TextUnformatted(helpStr.c_str());
+    ImGui::TextUnformatted(helpStr.c_str());*/
 }
 
 void MainWindow::on_export_points()
 {
 
     int out_Result;
-    if (!curve || !curve->is_export_ready(out_Result))
-        return;
+//    if (!curve || !curve->is_export_ready(out_Result))
+//        return;
 
     auto path = pfd::save_file("Choose a save file", "",
             {"Text file (.txt)", "*.txt",
@@ -1234,15 +1330,15 @@ void MainWindow::on_export_points()
 
     if(bUseTextFormat)
     {
-        auto text=curve->get_points_text(columnSeparator, lineEnding, decimalSeparator);
+//        auto text=curve->get_points_text(columnSeparator, lineEnding, decimalSeparator);
 
         std::ofstream ofs;
         ofs.open(path);
-        ofs<<text;
+//        ofs<<text;
         ofs.close();
     }
-    else
-        curve->export_points_mat_file(path.c_str());
+//    else
+//        curve->export_points_mat_file(path.c_str());
 }
 
 
@@ -1260,22 +1356,22 @@ void MainWindow::on_open_image()
 
     std::cout << "open: "<<path<<"\n";
 
-    auto newImage = std::make_shared<Image>(path);
+//    auto newImage = std::make_shared<Image>(path);
 
-    if(!newImage->is_loaded())
-    {
-        pfd::message("Can't open image",
-                              "Opened file is not an image.\nTry again.",
-                              pfd::choice::ok,
-                              pfd::icon::error).result();
-        return;
-    }
-    else
-    {
-        image = newImage;
-        curve=std::make_shared<CurveDetect>(image);
-        currentMode = ActionMode::MODE_POINTS;
-    }
+//    if(!newImage->is_loaded())
+//    {
+//        pfd::message("Can't open image",
+//                              "Opened file is not an image.\nTry again.",
+//                              pfd::choice::ok,
+//                              pfd::icon::error).result();
+//        return;
+//    }
+//    else
+//    {
+//        image = newImage;
+//        curve=std::make_shared<CurveDetect>(image);
+//        currentMode = ActionMode::MODE_POINTS;
+//    }
 
     //TODO don't reset if image was not opened
     reset_all();
@@ -1286,7 +1382,7 @@ void MainWindow::on_paste_image()
 {
 
     std::cout << "paste from buf\n";
-
+/*
     ImageData imageData;
 
     if(Clipboard::get().get_image(imageData))
@@ -1303,7 +1399,7 @@ void MainWindow::on_paste_image()
                      "Clipboard doesn't contain any valid image data\nTry again.",
                      pfd::choice::ok,
                      pfd::icon::error).result();
-    }
+    }*/
 }
 
 void MainWindow::on_reset()
@@ -1322,16 +1418,16 @@ void MainWindow::reset_all()
 {
     imageScale = 0.0f;
 
-    if (curve)
-    {
-        curve->reset_all();
-    }
+//    if (curve)
+//    {
+//        curve->reset_all();
+//    }
 
 }
 
-
+/*
 bool MainWindow::extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, ImVec2 &out_End, ImVec2 RegionSize,
-                             ImVec2 RegionTL/*=ImVec2(0.0f,0.0f)*/)
+                             ImVec2 RegionTL)
 {
     out_Start = Point;
     out_End = Point + Direction;
@@ -1381,7 +1477,7 @@ bool MainWindow::extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, 
     }
 
     return true;
-}
+}*/
 
 
 std::string MainWindow::unescape(const std::string& s)
@@ -1452,13 +1548,13 @@ std::string MainWindow::escape(const std::string& s)
 
 void MainWindow::ImGui_PopDisableButton()
 {
-    ImGui::PopStyleColor(3);
+    //ImGui::PopStyleColor(3);
 }
 
 void MainWindow::ImGui_PushDisableButton()
 {
-    ImGui::PushStyleColor(ImGuiCol_Button, colorDisabled.Value);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, colorDisabled.Value);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colorDisabled.Value);
+//    ImGui::PushStyleColor(ImGuiCol_Button, colorDisabled.Value);
+//    ImGui::PushStyleColor(ImGuiCol_ButtonActive, colorDisabled.Value);
+//    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colorDisabled.Value);
 }
 
