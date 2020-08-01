@@ -20,6 +20,8 @@ MainWindow::MainWindow()
 {
     setMinimumSize(600, 400);
 
+    readSettings();
+
     auto mainLayout = new QHBoxLayout;
 
     auto window = new QWidget();
@@ -31,9 +33,6 @@ MainWindow::MainWindow()
 
     curveView = new CurveView();
     mainLayout->addWidget(curveView, 1);
-
-    width=1280;
-    height=720;
 
     currentMode = MODE_POINTS;
 
@@ -50,6 +49,11 @@ MainWindow::MainWindow()
 
 }
 
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    writeSettings();
+    event->accept();
+}
 
 void MainWindow::createSidePanel()
 {
@@ -161,6 +165,25 @@ void MainWindow::createSidePanel()
     sidePanelLayout->addWidget(helpArea,1);
 }
 
+void MainWindow::readSettings()
+{
+    QSettings settings;
+    const QByteArray geometry = settings.value(SETTINGS_GEOMETRY, QByteArray()).toByteArray();
+    if (geometry.isEmpty())
+    {
+        const QRect availableGeometry = QApplication::desktop()->availableGeometry(this);
+        resize(availableGeometry.width() / 3, availableGeometry.height() / 2);
+        move((availableGeometry.width() - width()) / 2,
+             (availableGeometry.height() - height()) / 2);
+    } else
+        restoreGeometry(geometry);
+}
+
+void MainWindow::writeSettings()
+{
+    QSettings settings;
+    settings.setValue(SETTINGS_GEOMETRY, saveGeometry());
+}
 
 void MainWindow::on_render()
 {
@@ -192,7 +215,7 @@ void MainWindow::init(float _fontScale)
 
 void MainWindow::on_resize(int w, int h)
 {
-    width=w; height=h;
+
 }
 
 void MainWindow::render_main_window()

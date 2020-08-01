@@ -28,8 +28,6 @@ enum ActionMode
 class MainWindow : public QMainWindow
 {
 public:
-    int width;
-    int height;
     MainWindow();
 
     void on_render();
@@ -37,7 +35,14 @@ public:
 
     void init(float _fontScale);
 
+protected:
+    void closeEvent(QCloseEvent *event) override;
+
 private:
+    //settings keys
+    const char* SETTINGS_GEOMETRY = "geometry";
+
+
     QVBoxLayout* sidePanelLayout = nullptr;
 
     QGroupBox* viewSettings = nullptr;
@@ -100,6 +105,9 @@ private:
     bool deleteOnRelease = false;
 
     void createSidePanel();
+
+    void readSettings();
+    void writeSettings();
 
     void render_main_window();
 //    void render_image(ImVec2 canvasSize);
