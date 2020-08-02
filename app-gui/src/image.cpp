@@ -7,8 +7,6 @@
 #include "snap_cache.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#include "imgui.h"
-#include "imgui_impl_opengl3.h"
 #include <bitset>
 #include <algorithm>
 #include <portable-file-dialogs.h>
@@ -42,10 +40,8 @@ ImageData::~ImageData()
         delete[](pixels);
 }
 
-Image::Image(std::string path)
+Image::Image(const std::string& path)
 {
-    texture=0;
-
     //create at most 10 mipmaps
     images.resize(10);
     images_inv.resize(10);
@@ -55,14 +51,16 @@ Image::Image(std::string path)
 #else
     auto file = fopen(path.c_str(), "rb");
 #endif
-    image = stbi_load_from_file(file, &width, &height, nullptr, 3);
+    if(file != nullptr)
+        image = stbi_load_from_file(file, &width, &height, nullptr, 3);
 
     if(image)
     {
+        imagePix.load(path.c_str());
+
         images[0].pixels = new uint8_t[width*height];
         images[0].width = width;
         images[0].height = height;
-        texture = ImGui_ImplOpenGL3_CreateTexture(image, width, height, false, false);
 
         snapCache.resize(width, height);
 
@@ -102,8 +100,6 @@ Image::Image(ImageData& imageData)
     if(!imageData.pixels)
         return;
 
-    texture=0;
-
     //create at most 10 mipmaps
     images.resize(10);
     images_inv.resize(10);
@@ -117,7 +113,6 @@ Image::Image(ImageData& imageData)
     images[0].pixels = new uint8_t[width*height];
     images[0].width = width;
     images[0].height = height;
-    texture = ImGui_ImplOpenGL3_CreateTexture(image, width, height, false, false);
 
     snapCache.resize(width, height);
 
@@ -155,6 +150,11 @@ Image::~Image()
     //TODO SIGSEGV if destroying after window close
 //    if(texture!=0)
 //        ImGui_ImplOpenGL3_DestroyTexture(texture);
+}
+
+QPixmap Image::getPixmap() const
+{
+    return imagePix;
 }
 
 void Image::generate_mipmaps()

@@ -3,6 +3,8 @@
 
 #include <QWidget>
 
+#include "image.h"
+
 class CurveView : public QWidget
 {
     Q_OBJECT
@@ -10,6 +12,7 @@ public:
     CurveView();
     ~CurveView() override;
 
+    void setImage(const Image& image);
 
 protected:
 
@@ -21,7 +24,8 @@ protected:
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 //    void timerEvent(QTimerEvent *event) override;
-
+private:
+    QPixmap image;
 };
 
 #endif //CURVEDETECT_CURVEVIEW_H

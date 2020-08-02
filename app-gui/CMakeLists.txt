@@ -16,14 +16,14 @@ target_sources(curvedetect_gui PRIVATE
 #        ${CMAKE_CURRENT_SOURCE_DIR}/src/clipboard-nix.cpp
 #        ${CMAKE_CURRENT_SOURCE_DIR}/src/clipboard-win.cpp
 #        ${CMAKE_CURRENT_SOURCE_DIR}/src/curve_detect.cpp
-#        ${CMAKE_CURRENT_SOURCE_DIR}/src/image.cpp
-#        ${CMAKE_CURRENT_SOURCE_DIR}/src/image_elements.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/image.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/image_elements.cpp
 #        ${CMAKE_CURRENT_SOURCE_DIR}/src/main_app.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/curveview.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/mainwindow.cpp
 #        ${CMAKE_CURRENT_SOURCE_DIR}/src/mat_file_writer.cpp
 #        ${CMAKE_CURRENT_SOURCE_DIR}/src/resources.cpp
-#        ${CMAKE_CURRENT_SOURCE_DIR}/src/snap_cache.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/snap_cache.cpp
         )
 
 # headers for moc generation
@@ -48,7 +48,7 @@ target_include_directories(curvedetect_gui
         )
 
 target_link_libraries(curvedetect_gui PRIVATE
-        Qt5::Widgets Qt5::Svg portable_file_dialogs
+        Qt5::Widgets Qt5::Svg portable_file_dialogs STB::STB
         CurvedetectRes::CurvedetectRes
         )
 

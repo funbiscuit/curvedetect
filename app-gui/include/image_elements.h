@@ -21,15 +21,15 @@ public:
         this->x=x;
         this->y=y;
     }
-    explicit Vec2D(const ImVec2& vec)
-    {
-        x=vec.x;
-        y=vec.y;
-    }
-    inline ImVec2 to_imvec() const
-    {
-        return ImVec2((float)x, (float)y);
-    }
+//    explicit Vec2D(const ImVec2& vec)
+//    {
+//        x=vec.x;
+//        y=vec.y;
+//    }
+//    inline ImVec2 to_imvec() const
+//    {
+//        return ImVec2((float)x, (float)y);
+//    }
     inline double norm2()
     {
         return x*x + y*y;

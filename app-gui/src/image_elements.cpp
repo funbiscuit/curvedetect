@@ -1,10 +1,6 @@
-
-
-
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
-#include <image_elements.h>
 #include <regex>
 
 #include "image_elements.h"

@@ -4,6 +4,9 @@
 
 #include <string>
 #include <vector>
+
+#include <QPixmap>
+
 #include "image_elements.h"
 #include "snap_cache.h"
 
@@ -22,16 +25,18 @@ public:
 
 class Image {
 public:
-    Image(std::string path);
+    Image(const std::string& path);
     Image(ImageData& imageData);
     ~Image();
+
+    QPixmap getPixmap() const;
 
     int get_width();
     int get_height();
     bool is_loaded();
-    unsigned int get_texture() {
-        return texture;
-    }
+//    unsigned int get_texture() {
+//        return texture;
+//    }
     
     bool is_pixel_inside(int px, int py);
 
@@ -43,15 +48,16 @@ public:
 private:
     std::vector<ImageData> images;
     std::vector<ImageData> images_inv;
-    unsigned char* image;
-    
+    unsigned char* image = nullptr;
+
+    QPixmap imagePix;
     
     //int snapDistance = 25;
     int snapMultiplier = 8; //snapDistance=snapMultiplier*curveThickness
     int curveThickness = 5;
     bool bInvertImage = false;
     
-    unsigned int texture;
+//    unsigned int texture;
     int width;
     int height;
 

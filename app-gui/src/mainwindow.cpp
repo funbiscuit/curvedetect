@@ -44,9 +44,18 @@ MainWindow::MainWindow()
     columnSeparator = "\t";
     lineEnding = "\n";
 
-//    image = nullptr;
+    image = nullptr;
 //    curve = nullptr;
 
+
+    //TODO should be in curve view?
+#ifndef NDEBUG
+    image=std::make_shared<Image>("../../img/test.png");
+    std::cout << "im " <<image->is_loaded()<<"\n";
+//    curve=std::make_shared<CurveDetect>(image);
+//    curve->reset_all();
+    curveView->setImage(*image);
+#endif
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

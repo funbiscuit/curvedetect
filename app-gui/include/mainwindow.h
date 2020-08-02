@@ -6,7 +6,7 @@
 
 #include <QMainWindow>
 
-//#include "image.h"
+#include "image.h"
 //#include "curve_detect.h"
 
 QT_BEGIN_NAMESPACE
@@ -52,7 +52,7 @@ private:
     CurveView* curveView = nullptr;
 
     float fontScale;
-//    std::shared_ptr<Image> image;
+    std::shared_ptr<Image> image;
 //    std::shared_ptr<CurveDetect> curve;
 
 
