@@ -45,16 +45,20 @@ MainWindow::MainWindow()
     lineEnding = "\n";
 
     image = nullptr;
-//    curve = nullptr;
+    curve = nullptr;
 
 
     //TODO should be in curve view?
 #ifndef NDEBUG
     image=std::make_shared<Image>("../../img/test.png");
     std::cout << "im " <<image->is_loaded()<<"\n";
-//    curve=std::make_shared<CurveDetect>(image);
-//    curve->reset_all();
-    curveView->setImage(*image);
+    curve=std::make_shared<CurveDetect>(image);
+    curve->reset_all();
+    curveView->setCurve(curve);
+
+    curve->add_point(Vec2D(168,3));
+    curve->add_point(Vec2D(501,234));
+    curve->add_point(Vec2D(765,505));
 #endif
 }
 

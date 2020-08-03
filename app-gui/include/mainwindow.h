@@ -7,7 +7,7 @@
 #include <QMainWindow>
 
 #include "image.h"
-//#include "curve_detect.h"
+#include "curve_detect.h"
 
 QT_BEGIN_NAMESPACE
 class QGroupBox;
@@ -53,7 +53,7 @@ private:
 
     float fontScale;
     std::shared_ptr<Image> image;
-//    std::shared_ptr<CurveDetect> curve;
+    std::shared_ptr<CurveDetect> curve;
 
 
 //    ImColor colorDisabled = ImColor(200, 200, 200);

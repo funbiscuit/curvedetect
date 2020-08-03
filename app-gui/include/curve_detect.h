@@ -52,8 +52,10 @@ public:
         LOG  = 2,
     };
 
-    CurveDetect(std::shared_ptr<Image> image);
-    
+    explicit CurveDetect(std::shared_ptr<Image> image);
+
+    std::shared_ptr<Image> getImage();
+
     bool can_reset();
     void reset_all();
     bool can_reset_horizon();

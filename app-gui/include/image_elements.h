@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cmath>
 
+#include <QPoint>
 
 class Vec2D
 {
@@ -26,10 +27,10 @@ public:
 //        x=vec.x;
 //        y=vec.y;
 //    }
-//    inline ImVec2 to_imvec() const
-//    {
-//        return ImVec2((float)x, (float)y);
-//    }
+    inline QPointF toQPoint() const
+    {
+        return QPointF(x, y);
+    }
     inline double norm2()
     {
         return x*x + y*y;

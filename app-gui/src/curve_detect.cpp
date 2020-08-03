@@ -10,10 +10,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include <curve_detect.h>
 
 #include "mat_file_writer.h"
-#include "main_app.h"
+//#include "main_app.h"
 
 
 
@@ -24,6 +23,11 @@ CurveDetect::CurveDetect(std::shared_ptr<Image> image) : horizon(Vec2D(100,100))
     binLevel = 127;
 
     subdivLevel = 3;
+}
+
+std::shared_ptr<Image> CurveDetect::getImage()
+{
+    return image;
 }
 
 uint64_t CurveDetect::get_hovered_id(int selectionFilter)

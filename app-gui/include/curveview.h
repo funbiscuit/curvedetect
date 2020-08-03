@@ -1,9 +1,11 @@
 #ifndef CURVEDETECT_CURVEVIEW_H
 #define CURVEDETECT_CURVEVIEW_H
 
+#include <memory>
+
 #include <QWidget>
 
-#include "image.h"
+#include "curve_detect.h"
 
 class CurveView : public QWidget
 {
@@ -12,7 +14,7 @@ public:
     CurveView();
     ~CurveView() override;
 
-    void setImage(const Image& image);
+    void setCurve(std::shared_ptr<CurveDetect> curve);
 
 protected:
 
@@ -26,6 +28,12 @@ protected:
 //    void timerEvent(QTimerEvent *event) override;
 private:
     QPixmap image;
+    std::shared_ptr<CurveDetect> curve;
+
+    float imageScale;
+    Vec2D imagePos;
+
+    void drawPoints(QPainter& painter);
 };
 
 #endif //CURVEDETECT_CURVEVIEW_H
