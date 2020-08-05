@@ -22,14 +22,19 @@ public:
         this->x=x;
         this->y=y;
     }
-//    explicit Vec2D(const ImVec2& vec)
-//    {
-//        x=vec.x;
-//        y=vec.y;
-//    }
+    explicit Vec2D(const QPointF& vec)
+    {
+        x=vec.x();
+        y=vec.y();
+    }
+    explicit Vec2D(const QPoint& vec)
+    {
+        x=vec.x();
+        y=vec.y();
+    }
     inline QPointF toQPoint() const
     {
-        return QPointF(x, y);
+        return {x, y};
     }
     inline double norm2()
     {

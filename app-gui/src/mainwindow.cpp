@@ -59,6 +59,7 @@ MainWindow::MainWindow()
     curve->add_point(Vec2D(168,3));
     curve->add_point(Vec2D(501,234));
     curve->add_point(Vec2D(765,505));
+    curve->deselect_all();
 #endif
 }
 
@@ -410,55 +411,6 @@ void MainWindow::render_main_window()
     }
 }*/
 
-void MainWindow::on_mouse_down(int btn)
-{
-    /*ImGuiIO& io = ImGui::GetIO();
-    if (btn == 0)
-    {
-        switch (currentMode)
-        {
-            case MODE_POINTS:
-                if (io.KeyCtrl)
-                    curve->add_point(Vec2D(hoveredImagePixel));
-                else
-                    curve->select_hovered(ImageElement::POINT);
-                break;
-            case MODE_HORIZON:
-                curve->select_hovered(ImageElement::HORIZON);
-                break;
-            case MODE_GRID:
-                if (curve->select_hovered(ImageElement::TICKS))
-                    curve->backup_selected_tick();
-                break;
-            default:
-                break;
-        }
-    }*/
-}
-
-void MainWindow::on_mouse_up(int btn)
-{
-    /*auto& app= MainApp::get();
-    if (btn == 0)
-    {
-        switch (currentMode)
-        {
-            case MODE_POINTS:
-            case MODE_HORIZON:
-                if (deleteOnRelease)
-                    curve->delete_selected();
-                else
-                    curve->deselect_all();
-                break;
-            case MODE_GRID:
-                curve->deselect_all();
-                break;
-            default:
-                break;
-        }
-    }*/
-}
-
 void MainWindow::on_mouse_double_click(int btn)
 {
 //    auto& app= MainApp::get();
@@ -567,107 +519,7 @@ void MainWindow::process_input()
     prevCtrl = io.KeyCtrl;*/
 }
 
-/*void MainWindow::render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos)
-{
-    if(!curve)
-        return;
-
-    ImVec2 WinPos = ImGui::GetWindowPos();
-
-
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-    uint64_t selectedId= curve->get_selected_id();
-    uint64_t hoveredId= curve->get_hovered_id(ImageElement::POINT);
-    auto& segments= curve->get_segments();
-    auto& userPoints= curve->get_user_points();
-
-    float subdivSize = 8.f;
-    float userSize = 12.f;
-    auto lineColor = ImColor(128, 128, 128, 255);
-    auto pointStroke = ImColor(64, 64, 64, 255);
-    auto userHover = ImColor(255, 255, 255, 255);
-    auto userFill = ImColor(124, 252, 0, 255);
-    auto deleteFill = ImColor(205, 92, 92, 255);
-    auto subdivFill = ImColor(128, 128, 128, 255);
-    auto subdivBadFill = deleteFill;
-
-    double subdivSpacing = subdivSize;
-
-    //draw lines between subdivided points
-    if (!segments.empty())
-    {
-        for(auto& segment : segments)
-        {
-            ImVec2 PointPos0 = segment.begin.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
-
-            bool prevSnapped = true;
-            for(size_t i=1;i<segment.points.size();++i)
-            {
-                const ImagePoint& point = segment.points[i];
-                ImVec2 PointPos1 = point.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
-
-                bool snapped = point.isSnapped || !point.isSubdivisionPoint;
-                ImU32 stroke = (prevSnapped && snapped) ? lineColor : subdivBadFill;
-
-                draw_list->AddLine(PointPos0, PointPos1, stroke, 1.5f);
-                PointPos0=PointPos1;
-                prevSnapped=snapped;
-            }
-        }
-
-        //used to limit number of drawn points (so points are not drawn on top of each other)
-        ImVec2 LastDrawnPos = segments[0].begin.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
-        if (bShowSubdivPoints)
-        {
-            for (auto &segment : segments) {
-                for (size_t i = 1; i < segment.points.size(); ++i) {
-                    const ImagePoint &point = segment.points[i];
-                    ImVec2 PointPos1 = point.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
-
-                    ImU32 fill = point.isSnapped ? subdivFill : subdivBadFill;
-
-                    double dist1 = Vec2D(PointPos1 - LastDrawnPos).norm2();
-
-                    if (point.isSubdivisionPoint && (dist1 > subdivSpacing * subdivSpacing))
-                    {
-                        draw_list->AddCircleFilled(PointPos1, subdivSize * 0.5f, fill);
-                        draw_list->AddCircle(PointPos1, subdivSize * 0.5f, pointStroke);
-                        LastDrawnPos = PointPos1;
-                    }
-                }
-
-            }
-        }
-    }
-
-
-    //TODO maybe not needed
-    //if we are pressing button - draw a line from press location to snapped point
-//    if (SelectedItem >= 0 && ImGui::IsMouseDown(0) && CurrentMode == ActionMode1_AddPoints
-//        && SelectedItem < int(userPoints.size()) && ImGui::IsMouseHoveringWindow())
-//    {
-//        ImVec2 PointPos0 = userPoints[SelectedItem] * im_scale + im_pos + WinPos;
-//
-//        ImU32 LineColor = ImColor(80, 220, 80, 220);
-//        draw_list->AddLine(PointPos0, MousePos, LineColor, 2.0f);
-//    }
-
-    auto& app= MainApp::get();
-    for (const auto &point : userPoints) {
-        ImVec2 PointPos = point.imagePosition.to_imvec() * ImageScale + im_pos + WinPos;
-
-        ImU32 fill = userFill;
-
-        if (currentMode == MODE_POINTS)
-            if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
-                fill = deleteOnRelease ? deleteFill : userHover;
-
-        draw_list->AddCircleFilled(PointPos, userSize*0.5f, fill);
-        draw_list->AddCircle(PointPos, userSize*0.5f, pointStroke);
-    }
-}
-
+/*
 int onTickInput(ImGuiInputTextCallbackData *data)
 {
     std::string tickVal = data->Buf;

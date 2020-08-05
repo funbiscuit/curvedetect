@@ -1,11 +1,15 @@
-#include <QPainter>
+#include <iostream>
+
+#include <QtWidgets>
 
 #include "curveview.h"
 
 
 CurveView::CurveView()
 {
+    setMouseTracking(true);
 
+    currentMode = ActionMode::MODE_POINTS;
 }
 
 CurveView::~CurveView()
@@ -17,6 +21,71 @@ void CurveView::setCurve(std::shared_ptr<CurveDetect> _curve)
 {
     curve = std::move(_curve);
     image = curve->getImage()->getPixmap();
+}
+
+void CurveView::mousePressEvent(QMouseEvent *event)
+{
+    if(event->button() == Qt::LeftButton)
+    {
+
+        switch (currentMode)
+        {
+            case MODE_POINTS:
+                //TODO
+                if (true) // io.KeyCtrl
+                    curve->add_point(screen2image(Vec2D(event->localPos())));
+                else
+                    curve->select_hovered(ImageElement::POINT);
+                break;
+            case MODE_HORIZON:
+                curve->select_hovered(ImageElement::HORIZON);
+                break;
+            case MODE_GRID:
+                if (curve->select_hovered(ImageElement::TICKS))
+                    curve->backup_selected_tick();
+                break;
+            default:
+                break;
+        }
+        repaint();
+    }
+}
+
+void CurveView::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton)
+    {
+        switch (currentMode)
+        {
+            case MODE_POINTS:
+            case MODE_HORIZON:
+                //TODO
+                if (false) // deleteOnRelease
+                    curve->delete_selected();
+                else
+                    curve->deselect_all();
+                break;
+            case MODE_GRID:
+                curve->deselect_all();
+                break;
+            default:
+                break;
+        }
+        repaint();
+    }
+}
+
+void CurveView::mouseMoveEvent(QMouseEvent *event)
+{
+    auto hoveredImagePixel = (Vec2D(event->x(),event->y()) - imagePos)/imageScale;
+
+    if(curve)
+    {
+        auto prevHovered = curve->get_hovered_id(ImageElement::ALL);
+        curve->update_hovered(hoveredImagePixel);
+        if(curve->get_hovered_id(ImageElement::ALL) != prevHovered)
+            repaint();
+    }
 }
 
 void CurveView::paintEvent(QPaintEvent *event)
@@ -57,6 +126,9 @@ void CurveView::resizeEvent(QResizeEvent *event)
 
 void CurveView::drawPoints(QPainter& painter)
 {
+    if(!curve)
+        return;
+
     painter.setRenderHint(QPainter::RenderHint::Antialiasing);
 
     uint64_t selectedId= curve->get_selected_id();
@@ -131,9 +203,10 @@ void CurveView::drawPoints(QPainter& painter)
         auto fill = userFill;
 
         //TODO
-//        if (currentMode == MODE_POINTS)
-//            if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
+        if (currentMode == MODE_POINTS)
+            if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
 //                fill = deleteOnRelease ? deleteFill : userHover;
+                fill = userHover;
 
         painter.setPen(pointStroke);
         painter.setBrush(QBrush(fill));
@@ -141,4 +214,9 @@ void CurveView::drawPoints(QPainter& painter)
     }
 
 
+}
+
+Vec2D CurveView::screen2image(Vec2D screenPos)
+{
+    return (screenPos - imagePos) / imageScale;
 }

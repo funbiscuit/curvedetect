@@ -6,6 +6,7 @@
 #include <QWidget>
 
 #include "curve_detect.h"
+#include "mainwindow.h"
 
 class CurveView : public QWidget
 {
@@ -18,10 +19,10 @@ public:
 
 protected:
 
-//    void mousePressEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 
-//    void mouseReleaseEvent(QMouseEvent *event) override;
-//    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
 //    void leaveEvent(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
@@ -33,7 +34,11 @@ private:
     float imageScale;
     Vec2D imagePos;
 
+    ActionMode currentMode;
+
     void drawPoints(QPainter& painter);
+
+    Vec2D screen2image(Vec2D screenPos);
 };
 
 #endif //CURVEDETECT_CURVEVIEW_H

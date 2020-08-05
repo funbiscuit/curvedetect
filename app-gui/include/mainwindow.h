@@ -113,8 +113,6 @@ private:
 //    void render_image(ImVec2 canvasSize);
 
     void process_input();
-    void on_mouse_down(int btn);
-    void on_mouse_up(int btn);
     void on_mouse_double_click(int btn);
     void on_mouse_drag(int btn);
 
