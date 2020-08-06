@@ -31,8 +31,7 @@ void CurveView::mousePressEvent(QMouseEvent *event)
         switch (currentMode)
         {
             case MODE_POINTS:
-                //TODO
-                if (true) // io.KeyCtrl
+                if (QApplication::keyboardModifiers() & Qt::ControlModifier)
                     curve->add_point(screen2image(Vec2D(event->localPos())));
                 else
                     curve->select_hovered(ImageElement::POINT);
@@ -80,16 +79,15 @@ void CurveView::mouseMoveEvent(QMouseEvent *event)
     if(!curve)
         return;
 
-    auto hoveredImagePixel = screen2image(Vec2D(event->localPos()));
+    hoveredImagePos = screen2image(Vec2D(event->localPos()));
     auto prevHovered = curve->get_hovered_id(ImageElement::ALL);
-    curve->update_hovered(hoveredImagePixel);
+    curve->update_hovered(hoveredImagePos);
     if(curve->get_hovered_id(ImageElement::ALL) != prevHovered)
         repaint();
 
-    if(curve->move_selected(hoveredImagePixel))
+    if(curve->move_selected(hoveredImagePos))
     {
-        //TODO
-        if(false) //io.KeyCtrl
+        if(QApplication::keyboardModifiers() & Qt::ControlModifier)
             curve->snap_selected();
 
         if(currentMode == MODE_POINTS || currentMode == MODE_HORIZON)
@@ -231,4 +229,36 @@ void CurveView::drawPoints(QPainter& painter)
 Vec2D CurveView::screen2image(Vec2D screenPos)
 {
     return (screenPos - imagePos) / imageScale;
+}
+
+void CurveView::keyPressEvent(QKeyEvent *event)
+{
+    if(event->key() == Qt::Key_Control)
+    {
+        curve->snap_selected();
+        curve->update_subdiv();
+        repaint();
+    }
+
+}
+
+void CurveView::keyReleaseEvent(QKeyEvent *event)
+{
+    if(event->key() == Qt::Key_Control)
+    {
+        curve->move_selected(hoveredImagePos);
+        curve->update_subdiv();
+        repaint();
+    }
+
+}
+
+void CurveView::enterEvent(QEvent *event) {
+    QWidget::enterEvent(event);
+    grabKeyboard();
+}
+
+void CurveView::leaveEvent(QEvent *event) {
+    QWidget::enterEvent(event);
+    releaseKeyboard();
 }

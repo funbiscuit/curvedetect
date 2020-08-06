@@ -114,7 +114,6 @@ private:
 
     void process_input();
     void on_mouse_double_click(int btn);
-    void on_mouse_drag(int btn);
 
 //    void render_points(float ImageScale, ImVec2 im_pos, ImVec2 MousePos);
 

@@ -21,9 +21,14 @@ protected:
 
     void mousePressEvent(QMouseEvent *event) override;
 
+    void keyPressEvent(QKeyEvent *event) override;
+
+    void keyReleaseEvent(QKeyEvent *event) override;
+
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
-//    void leaveEvent(QEvent *event) override;
+    void leaveEvent(QEvent *event) override;
+    void enterEvent(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 //    void timerEvent(QTimerEvent *event) override;
@@ -33,6 +38,8 @@ private:
 
     float imageScale;
     Vec2D imagePos;
+
+    Vec2D hoveredImagePos;
 
     ActionMode currentMode;
 

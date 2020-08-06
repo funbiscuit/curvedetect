@@ -428,25 +428,6 @@ void MainWindow::on_mouse_double_click(int btn)
     }
 }
 
-void MainWindow::on_mouse_drag(int btn)
-{
-//    ImGuiIO& io = ImGui::GetIO();
-//    if (btn == 0 && curve)
-    {
-        deleteOnRelease = false;
-
-//        if(curve->move_selected(Vec2D(hoveredImagePixel)))
-//        {
-//            if(io.KeyCtrl)
-//                curve->snap_selected();
-//
-//            if(currentMode == MODE_POINTS || currentMode == MODE_HORIZON)
-//            {
-//                curve->update_subdiv();
-//            }
-//        }
-    }
-}
 
 void MainWindow::process_input()
 {
@@ -478,20 +459,10 @@ void MainWindow::process_input()
     {
         if (ImGui::IsMouseDown(0) && image->is_pixel_inside((int) hoveredImagePixel.x, (int) hoveredImagePixel.y))
         {
-            if (bIsMouseDownFirst) //first press
-            {
-                on_mouse_down(0);
-            }
-            else if(moving)
-            {
-                on_mouse_drag(0);
-            }
             bIsMouseDownFirst = false;
         }
         if (ImGui::IsMouseReleased(0))
         {
-            on_mouse_up(0);
-
             bIsMouseDownFirst = true;
         }
         if(ImGui::IsMouseDoubleClicked(0))
