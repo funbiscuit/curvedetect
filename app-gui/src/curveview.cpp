@@ -77,14 +77,26 @@ void CurveView::mouseReleaseEvent(QMouseEvent *event)
 
 void CurveView::mouseMoveEvent(QMouseEvent *event)
 {
-    auto hoveredImagePixel = (Vec2D(event->x(),event->y()) - imagePos)/imageScale;
+    if(!curve)
+        return;
 
-    if(curve)
+    auto hoveredImagePixel = screen2image(Vec2D(event->localPos()));
+    auto prevHovered = curve->get_hovered_id(ImageElement::ALL);
+    curve->update_hovered(hoveredImagePixel);
+    if(curve->get_hovered_id(ImageElement::ALL) != prevHovered)
+        repaint();
+
+    if(curve->move_selected(hoveredImagePixel))
     {
-        auto prevHovered = curve->get_hovered_id(ImageElement::ALL);
-        curve->update_hovered(hoveredImagePixel);
-        if(curve->get_hovered_id(ImageElement::ALL) != prevHovered)
-            repaint();
+        //TODO
+        if(false) //io.KeyCtrl
+            curve->snap_selected();
+
+        if(currentMode == MODE_POINTS || currentMode == MODE_HORIZON)
+        {
+            curve->update_subdiv();
+        }
+        repaint();
     }
 }
 
