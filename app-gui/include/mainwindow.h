@@ -102,7 +102,6 @@ private:
     bool bIsContextMenuOpened = false;
     bool bIsReadyForAction = true;
 
-    bool deleteOnRelease = false;
 
     void createSidePanel();
 

@@ -58,8 +58,7 @@ void CurveView::mouseReleaseEvent(QMouseEvent *event)
         {
             case MODE_POINTS:
             case MODE_HORIZON:
-                //TODO
-                if (false) // deleteOnRelease
+                if (deleteOnRelease)
                     curve->delete_selected();
                 else
                     curve->deselect_all();
@@ -79,11 +78,13 @@ void CurveView::mouseMoveEvent(QMouseEvent *event)
     if(!curve)
         return;
 
+    bool redraw = false;
+
     hoveredImagePos = screen2image(Vec2D(event->localPos()));
     auto prevHovered = curve->get_hovered_id(ImageElement::ALL);
     curve->update_hovered(hoveredImagePos);
     if(curve->get_hovered_id(ImageElement::ALL) != prevHovered)
-        repaint();
+        redraw = true;
 
     if(curve->move_selected(hoveredImagePos))
     {
@@ -94,8 +95,11 @@ void CurveView::mouseMoveEvent(QMouseEvent *event)
         {
             curve->update_subdiv();
         }
-        repaint();
+        redraw = true;
     }
+
+    if(redraw)
+        repaint();
 }
 
 void CurveView::paintEvent(QPaintEvent *event)
@@ -212,11 +216,9 @@ void CurveView::drawPoints(QPainter& painter)
 
         auto fill = userFill;
 
-        //TODO
         if (currentMode == MODE_POINTS)
             if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
-//                fill = deleteOnRelease ? deleteFill : userHover;
-                fill = userHover;
+                fill = deleteOnRelease ? deleteFill : userHover;
 
         painter.setPen(pointStroke);
         painter.setBrush(QBrush(fill));
@@ -233,10 +235,17 @@ Vec2D CurveView::screen2image(Vec2D screenPos)
 
 void CurveView::keyPressEvent(QKeyEvent *event)
 {
+    if(!curve)
+        return;
+
     if(event->key() == Qt::Key_Control)
     {
         curve->snap_selected();
         curve->update_subdiv();
+        repaint();
+    } else if(event->key() == Qt::Key_Shift)
+    {
+        deleteOnRelease = curve->get_selected_id() == 0;
         repaint();
     }
 
@@ -248,6 +257,10 @@ void CurveView::keyReleaseEvent(QKeyEvent *event)
     {
         curve->move_selected(hoveredImagePos);
         curve->update_subdiv();
+        repaint();
+    } else if(event->key() == Qt::Key_Shift)
+    {
+        deleteOnRelease = false;
         repaint();
     }
 
@@ -261,4 +274,5 @@ void CurveView::enterEvent(QEvent *event) {
 void CurveView::leaveEvent(QEvent *event) {
     QWidget::enterEvent(event);
     releaseKeyboard();
+    deleteOnRelease = false;
 }

@@ -43,6 +43,8 @@ private:
 
     ActionMode currentMode;
 
+    bool deleteOnRelease = false;
+
     void drawPoints(QPainter& painter);
 
     Vec2D screen2image(Vec2D screenPos);
