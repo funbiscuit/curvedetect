@@ -30,16 +30,16 @@ void CurveView::mousePressEvent(QMouseEvent *event)
 
         switch (currentMode)
         {
-            case MODE_POINTS:
+            case ActionMode::MODE_POINTS:
                 if (QApplication::keyboardModifiers() & Qt::ControlModifier)
                     curve->add_point(screen2image(Vec2D(event->localPos())));
                 else
                     curve->select_hovered(ImageElement::POINT);
                 break;
-            case MODE_HORIZON:
+            case ActionMode::MODE_HORIZON:
                 curve->select_hovered(ImageElement::HORIZON);
                 break;
-            case MODE_GRID:
+            case ActionMode::MODE_GRID:
                 if (curve->select_hovered(ImageElement::TICKS))
                     curve->backup_selected_tick();
                 break;
@@ -56,14 +56,14 @@ void CurveView::mouseReleaseEvent(QMouseEvent *event)
     {
         switch (currentMode)
         {
-            case MODE_POINTS:
-            case MODE_HORIZON:
+            case ActionMode::MODE_POINTS:
+            case ActionMode::MODE_HORIZON:
                 if (deleteOnRelease)
                     curve->delete_selected();
                 else
                     curve->deselect_all();
                 break;
-            case MODE_GRID:
+            case ActionMode::MODE_GRID:
                 curve->deselect_all();
                 break;
             default:
@@ -91,7 +91,8 @@ void CurveView::mouseMoveEvent(QMouseEvent *event)
         if(QApplication::keyboardModifiers() & Qt::ControlModifier)
             curve->snap_selected();
 
-        if(currentMode == MODE_POINTS || currentMode == MODE_HORIZON)
+        if(currentMode == ActionMode::MODE_POINTS ||
+           currentMode == ActionMode::MODE_HORIZON)
         {
             curve->update_subdiv();
         }
@@ -105,14 +106,31 @@ void CurveView::mouseMoveEvent(QMouseEvent *event)
 void CurveView::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
-    auto width = float(size().width());
-    auto height = float(size().height());
 
+    // draw frame for curve view
     painter.setPen(QColor(Qt::gray));
     painter.drawRect(0, 0, size().width()-1, size().height()-1);
 
+    // nothing else to do if image is not loaded
     if(!curve || image.isNull())
         return;
+
+    drawImage(painter);
+
+    drawPoints(painter);
+
+    drawGrid(painter);
+}
+
+void CurveView::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+}
+
+void CurveView::drawImage(QPainter& painter)
+{
+    auto width = float(size().width());
+    auto height = float(size().height());
 
     auto imWidth = float(image.width());
     auto imHeight = float(image.height());
@@ -127,22 +145,12 @@ void CurveView::paintEvent(QPaintEvent *event)
 
     painter.drawPixmap(
             QRectF(imagePos.x, imagePos.y,
-                    imageScale*imWidth-2, imageScale*imHeight-2), image,
+                   imageScale*imWidth-2, imageScale*imHeight-2), image,
             QRectF(image.rect()));
-
-    drawPoints(painter);
-}
-
-void CurveView::resizeEvent(QResizeEvent *event)
-{
-    QWidget::resizeEvent(event);
 }
 
 void CurveView::drawPoints(QPainter& painter)
 {
-    if(!curve)
-        return;
-
     painter.setRenderHint(QPainter::RenderHint::Antialiasing);
 
     uint64_t selectedId= curve->get_selected_id();
@@ -216,7 +224,7 @@ void CurveView::drawPoints(QPainter& painter)
 
         auto fill = userFill;
 
-        if (currentMode == MODE_POINTS)
+        if (currentMode == ActionMode::MODE_POINTS)
             if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
                 fill = deleteOnRelease ? deleteFill : userHover;
 
@@ -228,9 +236,183 @@ void CurveView::drawPoints(QPainter& painter)
 
 }
 
+void CurveView::drawGrid(QPainter& painter)
+{
+    const auto tickColor = QColor(128, 128, 128);
+    const auto tickHover = QColor(152, 248, 59);
+    const auto tickSel = QColor(59, 155, 59);
+
+
+    auto horizon= curve->get_horizon();
+    auto CoordOriginImg= horizon.imagePosition;
+    auto CoordOriginTargetX= horizon.target.imagePosition;
+    uint64_t hoveredId= curve->get_hovered_id(ImageElement::TICKS);
+    uint64_t selectedId= curve->get_selected_id();
+    auto& XTicks= curve->get_xticks();
+    auto& YTicks= curve->get_yticks();
+
+    auto TargetDirX = CoordOriginTargetX - CoordOriginImg;
+    TargetDirX/=std::sqrt(TargetDirX.x*TargetDirX.x + TargetDirX.y*TargetDirX.y);
+
+    Vec2D TargetDirY;
+    TargetDirY.x = TargetDirX.y;
+    TargetDirY.y = -TargetDirX.x;
+
+    if(bShowSubTicks)
+    {
+        int N=10;
+        auto begin = XTicks[0].imagePosition;
+        auto end = XTicks[1].imagePosition;
+        for(int j=1; j<N; ++j)
+        {
+            double v = bLogX ? std::log(j)/std::log(10.0) : double(j)/N;
+            if(XTicks[0].tickValue>XTicks[1].tickValue)
+                v=1.0-v;
+            auto pos = begin + (end-begin)*v;
+
+            drawGridLine(painter, pos, TargetDirY, tickColor);
+        }
+        begin = YTicks[0].imagePosition;
+        end = YTicks[1].imagePosition;
+        for(int j=1; j<N; ++j)
+        {
+            double v = bLogY ? std::log(j)/std::log(10.0) : double(j)/N;
+            if(YTicks[0].tickValue>YTicks[1].tickValue)
+                v=1.0-v;
+            auto pos = begin + (end-begin)*v;
+
+            drawGridLine(painter, pos, TargetDirX, tickColor);
+        }
+    }
+
+    //draw tick lines
+    for (auto &tick : XTicks) {
+        auto col = tickColor;
+
+        if (currentMode == ActionMode::MODE_GRID)
+        {
+            if (tick.id == selectedId)
+                col = tickSel;
+            else if (tick.id == hoveredId && !selectedId)
+                col = tickHover;
+        }
+
+        drawGridLine(painter, tick.imagePosition,
+                         TargetDirY, col, tick.tickValueStr);
+    }
+    for (auto &tick : YTicks) {
+        auto col = tickColor;
+
+        if (currentMode == ActionMode::MODE_GRID)
+        {
+            if (tick.id == selectedId)
+                col = tickSel;
+            else if (tick.id == hoveredId && !selectedId)
+                col = tickHover;
+        }
+
+        drawGridLine(painter, tick.imagePosition,
+                         TargetDirX, col, tick.tickValueStr);
+    }
+}
+
+void CurveView::drawGridLine(QPainter& painter, Vec2D point, Vec2D dir,
+                             const QColor& color, const std::string& value)
+{
+    Vec2D LineStart, LineEnd, LabelPos;
+
+    auto LineMargin = Vec2D(10.0f, 10.0f);
+
+    float lineThick = value.empty() ? 1.f : 2.f;
+
+    if (!extendLine(point, dir, LineStart, LineEnd,
+                     Vec2D((float) image.width(), (float) image.height()) - LineMargin * 2, LineMargin))
+    {
+        LineStart = Vec2D(LineMargin.x, point.y);
+        LineEnd = Vec2D(image.width() - LineMargin.x, point.y);
+    }
+    LineStart = imagePos + LineStart*imageScale;
+    LineEnd = imagePos + LineEnd*imageScale;
+
+    painter.setPen(QPen(QBrush(color), lineThick));
+    painter.drawLine(LineStart.toQPoint(), LineEnd.toQPoint());
+
+    if(!value.empty())
+    {
+        auto f = painter.font();
+        f.setPointSize(13);
+        painter.setFont(f);
+        auto sz = painter.fontMetrics().size(Qt::TextSingleLine, value.c_str());
+        sz = sz.grownBy(QMargins(5,5,5,5));
+
+        LabelPos = image2screen(point);
+        LabelPos.x -= sz.width()/2;
+        LabelPos.y -= sz.height()/2;
+        QRectF labelRect(LabelPos.toQPoint(), sz);
+        painter.fillRect(labelRect, QColor(255, 255, 255));
+
+        painter.setPen(QColor(0,0,0));
+        painter.drawText(labelRect, Qt::AlignCenter, value.c_str());
+    }
+}
+
 Vec2D CurveView::screen2image(Vec2D screenPos)
 {
     return (screenPos - imagePos) / imageScale;
+}
+
+Vec2D CurveView::image2screen(Vec2D pos)
+{
+    return imagePos + pos * imageScale;
+}
+
+bool CurveView::extendLine(Vec2D point, Vec2D dir, Vec2D &out_Start,
+                           Vec2D &out_End, Vec2D RegionSize, Vec2D RegionTL)
+{
+    out_Start = point;
+    out_End = point + dir;
+
+
+    if (std::abs(dir.x) + std::abs(dir.y)<0.0001f)
+    {
+        return false;
+    }
+
+    float A = dir.y;
+    float B = -dir.x;
+    float C = -A*point.x - B*point.y;
+    float C2 = B*point.x - A*point.y;
+
+    auto RegionBR = RegionTL + RegionSize;//bottom-right corner
+
+    //x line: A*x+B*y+C=0		C=-A*x0-B*y0
+    //y line: -B*x+A*y+C2=0;	C2=B*x0-A*y0
+
+    float lefty, righty, topx, botx;
+
+    righty = (-C - A *RegionBR.x) / B;
+    lefty = (-C - A *RegionTL.x) / B;
+    botx = (-C - B *RegionBR.y) / A;
+    topx = (-C - B *RegionTL.y) / A;
+
+    out_Start = Vec2D(RegionTL.x, lefty);
+
+    if (lefty<RegionTL.y)
+        out_Start = Vec2D(topx, RegionTL.y);
+    if (lefty>RegionBR.y)
+        out_Start = Vec2D(botx, RegionBR.y);
+
+    out_End = Vec2D(RegionBR.x, righty);
+
+    if (righty<RegionTL.y)
+        out_End = Vec2D(topx, RegionTL.y);
+    if (righty>RegionBR.y)
+        out_End = Vec2D(botx, RegionBR.y);
+
+    if (B > 0.0f)
+        std::swap(out_Start, out_End);
+
+    return true;
 }
 
 void CurveView::keyPressEvent(QKeyEvent *event)

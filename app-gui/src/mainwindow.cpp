@@ -34,7 +34,7 @@ MainWindow::MainWindow()
     curveView = new CurveView();
     mainLayout->addWidget(curveView, 1);
 
-    currentMode = MODE_POINTS;
+    currentMode = ActionMode::MODE_POINTS;
 
 
     minImageScale = 1.0f;
@@ -418,7 +418,7 @@ void MainWindow::on_mouse_double_click(int btn)
     {
         switch (currentMode)
         {
-            case MODE_GRID:
+            case ActionMode::MODE_GRID:
 //                if(curve->get_selected_id())
 //                    ImGui::OpenPopup("TickConfig");
                 break;
@@ -660,133 +660,6 @@ bool MainWindow::render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOri
     }
 
     return false;
-}
-
-void MainWindow::render_grid_line(ImVec2 imPos, ImVec2 linePoint, ImVec2 lineDir, ImColor lineColor, const char* value)
-{
-    ImVec2 WinPos = ImGui::GetWindowPos();
-
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-    ImVec2 LineStart, LineEnd, LabelPos;
-
-    ImVec2 LineMargin = ImVec2(10.0f, 10.0f);
-
-    float lineThick = value==nullptr ? 1.f : 2.f;
-
-    if (!extend_line(linePoint, lineDir, LineStart, LineEnd,
-                     ImVec2((float) image->get_width(), (float) image->get_height()) - LineMargin * 2, LineMargin))
-    {
-        LineStart = ImVec2(LineMargin.x, linePoint.y);
-        LineEnd = ImVec2(image->get_width() - LineMargin.x, linePoint.y);
-    }
-    LineStart = WinPos + imPos + LineStart*imageScale;
-    LineEnd = WinPos + imPos + LineEnd*imageScale;
-
-    draw_list->AddLine(LineStart, LineEnd, lineColor, lineThick);
-
-
-    if(value!= nullptr)
-    {
-        ImVec2 padding(5.f, 5.f);
-
-        ImVec2 sz = ImGui::CalcTextSize(value);
-        LabelPos = WinPos + imPos+ linePoint*imageScale-sz/2;
-        draw_list->AddRectFilled(LabelPos-padding, LabelPos+sz+padding, ImColor(255,255,255));
-
-        ImGui::SetCursorScreenPos(LabelPos);
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 255));
-        ImGui::TextUnformatted(value);
-        ImGui::PopStyleColor();
-    }
-}
-
-void MainWindow::render_grid_lines(ImVec2 im_pos)
-{
-    if(!curve || !bShowTicks)
-        return;
-
-    const auto tickColor = ImColor(128, 128, 128, 255);
-    const auto tickHover = ImColor(152, 248, 59, 255);
-    const auto tickSel = ImColor(59, 155, 59, 255);
-
-
-    auto horizon= curve->get_horizon();
-    auto CoordOriginImg= horizon.imagePosition.to_imvec();
-    auto CoordOriginTargetX= horizon.target.imagePosition.to_imvec();
-    uint64_t hoveredId= curve->get_hovered_id(ImageElement::TICKS);
-    uint64_t selectedId= curve->get_selected_id();
-    auto& XTicks= curve->get_xticks();
-    auto& YTicks= curve->get_yticks();
-
-    ImVec2 TargetDirX = CoordOriginTargetX - CoordOriginImg;
-    TargetDirX/=std::sqrt(TargetDirX.x*TargetDirX.x + TargetDirX.y*TargetDirX.y);
-
-    ImVec2 TargetDirY;
-    TargetDirY.x = TargetDirX.y;
-    TargetDirY.y = -TargetDirX.x;
-
-
-    if(bShowSubTicks)
-    {
-        int N=10;
-        auto begin = XTicks[0].imagePosition;
-        auto end = XTicks[1].imagePosition;
-        for(int j=1; j<N; ++j)
-        {
-            double v = bLogX ? std::log(j)/std::log(10.0) : double(j)/N;
-            if(XTicks[0].tickValue>XTicks[1].tickValue)
-                v=1.0-v;
-            auto pos = begin + (end-begin)*v;
-
-            render_grid_line(im_pos, pos.to_imvec(), TargetDirY, tickColor);
-        }
-        begin = YTicks[0].imagePosition;
-        end = YTicks[1].imagePosition;
-        for(int j=1; j<N; ++j)
-        {
-            double v = bLogY ? std::log(j)/std::log(10.0) : double(j)/N;
-            if(YTicks[0].tickValue>YTicks[1].tickValue)
-                v=1.0-v;
-            auto pos = begin + (end-begin)*v;
-
-            render_grid_line(im_pos, pos.to_imvec(), TargetDirX, tickColor);
-        }
-    }
-
-
-    //draw tick lines
-    for (auto &tick : XTicks) {
-        ImU32 col = tickColor;
-
-        if (currentMode & MODE_GRID)
-        {
-            if (tick.id == selectedId)
-                col = tickSel;
-            else if (tick.id == hoveredId && !selectedId)
-                col = tickHover;
-        }
-
-        render_grid_line(im_pos, tick.imagePosition.to_imvec(),
-                TargetDirY, col, tick.tickValueStr.c_str());
-    }
-    for (auto &tick : YTicks) {
-        ImU32 col = tickColor;
-
-        if (currentMode & MODE_GRID)
-        {
-            if (tick.id == selectedId)
-                col = tickSel;
-            else if (tick.id == hoveredId && !selectedId)
-                col = tickHover;
-        }
-
-        render_grid_line(im_pos, tick.imagePosition.to_imvec(),
-                         TargetDirX, col, tick.tickValueStr.c_str());
-    }
-
-
-
 }
 
 void MainWindow::render_horizon(const ImVec2 &im_pos)
@@ -1283,61 +1156,6 @@ void MainWindow::reset_all()
 //    }
 
 }
-
-/*
-bool MainWindow::extend_line(ImVec2 Point, ImVec2 Direction, ImVec2 &out_Start, ImVec2 &out_End, ImVec2 RegionSize,
-                             ImVec2 RegionTL)
-{
-    out_Start = Point;
-    out_End = Point + Direction;
-
-
-    if (std::abs(Direction.x) + std::abs(Direction.y)<0.0001f)
-    {
-        return false;
-    }
-
-    float A = Direction.y;
-    float B = -Direction.x;
-    float C = -A*Point.x - B*Point.y;
-    float C2 = B*Point.x - A*Point.y;
-
-    ImVec2 RegionBR = RegionTL + RegionSize;//bottom-right corner
-
-    //x line: A*x+B*y+C=0		C=-A*x0-B*y0
-    //y line: -B*x+A*y+C2=0;	C2=B*x0-A*y0
-
-    float lefty, righty, topx, botx;
-
-    righty = (-C - A *RegionBR.x) / B;
-    lefty = (-C - A *RegionTL.x) / B;
-    botx = (-C - B *RegionBR.y) / A;
-    topx = (-C - B *RegionTL.y) / A;
-
-    out_Start = ImVec2(RegionTL.x, lefty);
-
-    if (lefty<RegionTL.y)
-        out_Start = ImVec2(topx, RegionTL.y);
-    if (lefty>RegionBR.y)
-        out_Start = ImVec2(botx, RegionBR.y);
-
-    out_End = ImVec2(RegionBR.x, righty);
-
-    if (righty<RegionTL.y)
-        out_End = ImVec2(topx, RegionTL.y);
-    if (righty>RegionBR.y)
-        out_End = ImVec2(botx, RegionBR.y);
-
-    if (B > 0.0f)
-    {
-        ImVec2 temp = out_Start;
-        out_Start = out_End;
-        out_End = temp;
-    }
-
-    return true;
-}*/
-
 
 std::string MainWindow::unescape(const std::string& s)
 {

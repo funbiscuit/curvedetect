@@ -16,11 +16,11 @@ QT_END_NAMESPACE
 
 class CurveView;
 
-enum ActionMode
+enum class ActionMode
 {
-    MODE_POINTS  = 1 << 1,
-    MODE_HORIZON = 1 << 2,
-    MODE_GRID  = 1 << 3,
+    MODE_POINTS,
+    MODE_HORIZON,
+    MODE_GRID,
 
 };
 
