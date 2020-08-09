@@ -65,6 +65,8 @@ private:
     void drawGridLine(QPainter& painter, Vec2D point, Vec2D dir,
                       const QColor& color, const std::string& value = "");
 
+    void openModePopup();
+
     Vec2D screen2image(Vec2D screenPos);
     Vec2D image2screen(Vec2D pos);
 

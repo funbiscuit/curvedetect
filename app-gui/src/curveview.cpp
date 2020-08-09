@@ -70,6 +70,11 @@ void CurveView::mouseReleaseEvent(QMouseEvent *event)
                 break;
         }
         repaint();
+    } else if (event->button() == Qt::RightButton)
+    {
+        curve->deselect_all();
+        repaint();
+        openModePopup();
     }
 }
 
@@ -403,6 +408,33 @@ void CurveView::drawGridLine(QPainter& painter, Vec2D point, Vec2D dir,
         painter.setPen(QColor(0,0,0));
         painter.drawText(labelRect, Qt::AlignCenter, value.c_str());
     }
+}
+
+void CurveView::openModePopup()
+{
+    QMenu menu(this);
+    auto titleAction = menu.addAction("Choose mode:");
+    titleAction->setEnabled(false);
+    menu.addSeparator();
+
+
+    const char* items[]={"[1] Points","[2] Grid","[3] Horizon"};
+    ActionMode modes[]={ActionMode::MODE_POINTS,ActionMode::MODE_GRID,
+                        ActionMode::MODE_HORIZON};
+
+    for(int j=0;j<3;++j)
+    {
+        auto action = new QAction(items[j], this);
+        connect(action, &QAction::triggered, this, [j, modes, this]()
+        {
+            currentMode = modes[j];
+        });
+        if(currentMode == modes[j])
+            action->setDisabled(true);
+        menu.addAction(action);
+    }
+
+    menu.exec(QCursor::pos()+QPoint(10,10));
 }
 
 Vec2D CurveView::screen2image(Vec2D screenPos)

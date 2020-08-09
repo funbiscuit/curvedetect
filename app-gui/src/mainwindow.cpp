@@ -287,38 +287,6 @@ void MainWindow::render_main_window()
     }
 
 
-
-
-    // Draw context menu
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
-    if (ImGui::BeginPopup("context_menu"))
-    {
-        bIsContextMenuOpened = true;
-        bIsReadyForAction = false;
-
-        const char* items[]={"[1] Points","[2] Grid",
-                             "[3] Horizon"};
-        ActionMode modes[]={MODE_POINTS,MODE_GRID,MODE_HORIZON};
-
-        for(int j=0;j<3;++j)
-        {
-            if (ImGui::MenuItem(items[j], nullptr, currentMode == modes[j], true))
-            {
-                currentMode = modes[j];
-                bIsReadyForAction = true;
-            }
-
-        }
-
-        ImGui::EndPopup();
-    }
-    else
-    {
-        bIsContextMenuOpened = false;
-    }
-    ImGui::PopStyleVar();
-
-
     render_tick_config_popup();
 
 
