@@ -12,6 +12,7 @@
 QT_BEGIN_NAMESPACE
 class QGroupBox;
 class QVBoxLayout;
+class QTextEdit;
 QT_END_NAMESPACE
 
 class CurveView;
@@ -39,6 +40,8 @@ private:
     QGroupBox* viewSettings = nullptr;
     QGroupBox* curveSettings = nullptr;
     QGroupBox* fileGroup = nullptr;
+
+    QTextEdit* helpArea = nullptr;
 
     CurveView* curveView = nullptr;
 
@@ -96,6 +99,8 @@ private:
     void readSettings();
     void writeSettings();
 
+    void updateHelpText();
+
     void render_main_window();
 //    void render_image(ImVec2 canvasSize);
 
@@ -115,7 +120,6 @@ private:
 
 
     void render_side_panel();
-    void render_hints_panel();
 
 
     void on_open_image();

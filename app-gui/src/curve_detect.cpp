@@ -38,6 +38,14 @@ ActionMode CurveDetect::getCurrentMode()
 void CurveDetect::setMode(ActionMode mode)
 {
     currentMode = mode;
+
+    if(onStateChanged)
+        onStateChanged();
+}
+
+void CurveDetect::setOnStateChangeCallback(std::function<void(void)> callback)
+{
+    onStateChanged = std::move(callback);
 }
 
 uint64_t CurveDetect::get_hovered_id(int selectionFilter)
@@ -591,6 +599,9 @@ void CurveDetect::reset_all()
     reset_horizon();
 
     currentMode = ActionMode::MODE_POINTS;
+
+    if(onStateChanged)
+        onStateChanged();
 }
 void CurveDetect::reset_horizon()
 {
@@ -605,6 +616,9 @@ void CurveDetect::reset_horizon()
         horizon.target.imagePosition.x=image->get_width()*0.9;
         horizon.target.imagePosition.y=image->get_height()*0.5;
     }
+
+    if(onStateChanged)
+        onStateChanged();
 }
 
 bool CurveDetect::can_reset_horizon()
@@ -635,7 +649,12 @@ void CurveDetect::snap_selected()
     auto sel = get_selected();
 
     if(sel && image)
+    {
         sel->isSnapped = snap(sel->imagePosition);
+
+        if(onStateChanged)
+            onStateChanged();
+    }
 }
 
 void CurveDetect::backup_selected_tick()
@@ -651,6 +670,9 @@ void CurveDetect::add_point(Vec2D pos)
     selectedPoint = userPoints.back().id;
     snap_selected();
     update_subdiv(true);
+
+    if(onStateChanged)
+        onStateChanged();
 }
 
 bool CurveDetect::select_hovered(int selectionFilter)
@@ -728,11 +750,17 @@ void CurveDetect::delete_selected()
         selectedPoint = 0;
         hoveredPoint = 0;
         update_subdiv(true);
+
+        if(onStateChanged)
+            onStateChanged();
     }
     else if(selectedOrigin)
     {
         reset_horizon();
         update_subdiv(true);
+
+        if(onStateChanged)
+            onStateChanged();
     }
 }
 
@@ -762,7 +790,12 @@ bool CurveDetect::move_selected(Vec2D pos)
     auto sel = get_selected();
 
     if(sel)
+    {
         sel->imagePosition = pos;
+
+        if(onStateChanged)
+            onStateChanged();
+    }
 
     return sel!= nullptr;
 }

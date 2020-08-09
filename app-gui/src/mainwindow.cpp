@@ -52,6 +52,11 @@ MainWindow::MainWindow()
     image=std::make_shared<Image>("../../img/test.png");
     std::cout << "im " <<image->is_loaded()<<"\n";
     curve=std::make_shared<CurveDetect>(image);
+
+    curve->setOnStateChangeCallback([this](){
+        updateHelpText();
+    });
+
     curve->reset_all();
     curveView->setCurve(curve);
 
@@ -168,14 +173,15 @@ void MainWindow::createSidePanel()
     curveLayout->addWidget(resetBtn,4,1);
 
 
-    auto helpArea = new QTextEdit();
-    helpArea->setText("Open or paste new image");
+    helpArea = new QTextEdit();
     helpArea->setReadOnly(true);
 
     sidePanelLayout->addWidget(viewSettings,0);
     sidePanelLayout->addWidget(curveSettings,0);
     sidePanelLayout->addWidget(fileGroup,0);
     sidePanelLayout->addWidget(helpArea,1);
+
+    updateHelpText();
 }
 
 void MainWindow::readSettings()
@@ -196,6 +202,68 @@ void MainWindow::writeSettings()
 {
     QSettings settings;
     settings.setValue(SETTINGS_GEOMETRY, saveGeometry());
+}
+
+void MainWindow::updateHelpText()
+{
+    if(!curve)
+    {
+        helpArea->setText("Open/paste image to begin");
+        return;
+    }
+
+    int out_Result;
+    curve->is_export_ready(out_Result);
+
+    std::string hints;
+
+    if(out_Result & CurveDetect::NO_POINTS || out_Result & CurveDetect::ONE_POINT)
+        hints.append("<b>Add at least 2 points</b><br/>");
+
+
+    if(out_Result & CurveDetect::PIXEL_OVERLAP_X_GRID)
+        hints.append("<b>Vertical grid lines are overlapping</b><br/>");
+    else if(out_Result & CurveDetect::VALUE_OVERLAP_X_GRID)
+        hints.append("<b>Vertical grid lines have the same value</b><br/>");
+
+    if(out_Result & CurveDetect::PIXEL_OVERLAP_Y_GRID)
+        hints.append("<b>Horizontal grid lines are overlapping</b><br/>");
+    else if(out_Result & CurveDetect::VALUE_OVERLAP_Y_GRID)
+        hints.append("<b>Horizontal grid lines have the same value</b><br/>");
+
+    if(out_Result != CurveDetect::READY)
+        hints.append("<br/>");
+
+    //describe current work mode
+    std::string modeStr;
+
+    std::string helpStr;
+
+    switch (curve->getCurrentMode())
+    {
+        case ActionMode::MODE_POINTS:
+            modeStr = "Points";
+            helpStr = "Drag (or use arrow keys) to move a point<br/>Hold Ctrl to add a new point<br/>Shift+Click to delete a point<br/>Hold Ctrl to snap selected point";
+            break;
+        case ActionMode::MODE_HORIZON:
+            modeStr = "Horizon";
+            helpStr = "Drag (or use arrow keys) to change horizon of image<br/>Hold Ctrl to snap selected end";
+            break;
+        case ActionMode::MODE_GRID:
+            modeStr = "Grid";
+            helpStr = "Drag (or use arrow keys) to move grid lines<br/>Double click to change value<br/>Hold Ctrl to snap selected line";
+            break;
+
+    }
+
+    helpStr += "<br/><br/>Drag with middle button to pan<br/>Use mouse wheel to zoom";
+
+    hints.append("Work mode: ");
+    hints.append(modeStr);
+    hints.append("<br/>");
+    hints.append(helpStr);
+
+    helpArea->setText(hints.c_str());
 }
 
 void MainWindow::on_render()
@@ -840,79 +908,6 @@ void MainWindow::render_side_panel()
     render_hints_panel();
 
     ImGui::EndChild();*/
-}
-
-void MainWindow::render_hints_panel()
-{
-    /*if(!curve)
-    {
-        ImGui::TextUnformatted("Open/paste image to begin");
-        return;
-    }
-
-    int out_Result;
-    curve->is_export_ready(out_Result);
-
-//    std::string buf;
-
-    if(out_Result & CurveDetect::NO_POINTS || out_Result & CurveDetect::ONE_POINT)
-        ImGui::TextUnformatted("Add at least 2 points");
-
-
-    if(out_Result & CurveDetect::PIXEL_OVERLAP_X_GRID)
-        ImGui::TextUnformatted("Vertical grid lines are overlapping");
-    else if(out_Result & CurveDetect::VALUE_OVERLAP_X_GRID)
-        ImGui::TextUnformatted("Vertical grid lines have the same value");
-
-    if(out_Result & CurveDetect::PIXEL_OVERLAP_Y_GRID)
-        ImGui::TextUnformatted("Horizontal grid lines are overlapping");
-    else if(out_Result & CurveDetect::VALUE_OVERLAP_Y_GRID)
-        ImGui::TextUnformatted("Horizontal grid lines have the same value");
-
-    if(out_Result != CurveDetect::READY)
-        ImGui::TextUnformatted("");
-
-    //describe current work mode
-    std::string modeStr;
-    std::string modifierStr = "(move)";
-
-    auto& app= MainApp::get();
-
-    bool snap = curve ? curve->get_selected_id()!=0 : false;
-
-    ImGuiIO& io = ImGui::GetIO();
-
-    if (io.KeyCtrl)
-        modifierStr = snap ? "(snap)" : "(new)";
-    else if (deleteOnRelease)
-        modifierStr = "(delete)";
-
-    std::string helpStr;
-
-    switch (currentMode)
-    {
-        case MODE_POINTS:
-            modeStr = "Point";
-            helpStr = "Drag (or use arrow keys)\nto move a point\nHold Ctrl to add a new point\nShift+Click to delete a point\nHold Ctrl to snap selected point";
-            break;
-        case MODE_HORIZON:
-            modeStr = "Horizon";
-            modifierStr = "";
-            helpStr = "Drag (or use arrow keys) to change\nhorizon of image\nHold Ctrl to snap selected end";
-            break;
-        case MODE_GRID:
-            modeStr = "Grid";
-            modifierStr = "";
-            helpStr = "Drag (or use arrow keys)\nto move grid lines\nDouble click to change value\nHold Ctrl to snap selected line";
-            break;
-
-    }
-
-    helpStr += "\n\nDrag with middle button to pan\nUse mouse wheel to zoom";
-
-    ImGui::Text("Work mode: %s %s", modeStr.c_str(), modifierStr.c_str());
-    ImGui::TextUnformatted("");
-    ImGui::TextUnformatted(helpStr.c_str());*/
 }
 
 void MainWindow::on_export_points()

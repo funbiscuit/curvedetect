@@ -67,6 +67,10 @@ public:
 
     void setMode(ActionMode mode);
 
+
+    void setOnStateChangeCallback(std::function<void(void)> callback);
+
+
     bool can_reset();
     void reset_all();
     bool can_reset_horizon();
@@ -116,6 +120,8 @@ private:
     std::shared_ptr<Image> image;
 
     ActionMode currentMode;
+
+    std::function<void(void)> onStateChanged = nullptr;
 
     int binLevel;
     int subdivLevel;
