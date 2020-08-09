@@ -120,6 +120,8 @@ void CurveView::paintEvent(QPaintEvent *event)
     drawPoints(painter);
 
     drawGrid(painter);
+
+    drawHorizon(painter);
 }
 
 void CurveView::resizeEvent(QResizeEvent *event)
@@ -314,6 +316,53 @@ void CurveView::drawGrid(QPainter& painter)
         drawGridLine(painter, tick.imagePosition,
                          TargetDirX, col, tick.tickValueStr);
     }
+}
+
+void CurveView::drawHorizon(QPainter& painter)
+{
+    if(currentMode != ActionMode::MODE_HORIZON)
+        return;
+
+    auto horizon = curve->get_horizon();
+    auto selectedId = curve->get_selected_id();
+    auto hoveredId = curve->get_hovered_id(ImageElement::HORIZON);
+
+    float pointSize = 12.f;
+    QColor lineColor(128, 128, 128);
+    QColor pointStroke(64, 64, 64);
+    QColor pointHover(255, 255, 255);
+    QColor pointFill(255, 200, 60);
+    QColor deleteFill(205, 92, 92);
+
+    auto origin = horizon.imagePosition;
+    auto target = horizon.target.imagePosition;
+
+    auto originScr = image2screen(origin).toQPoint();
+    auto targetScr = image2screen(target).toQPoint();
+
+    //draw horizon
+    painter.setPen(QPen(QBrush(lineColor), 2.f));
+    painter.drawLine(originScr, targetScr);
+
+    auto fill = pointFill;
+
+    if (ImageHorizon::ORIGIN == selectedId ||
+        (selectedId == 0 && ImageHorizon::ORIGIN == hoveredId))
+        fill = deleteOnRelease ? deleteFill : pointHover;
+
+    painter.setPen(pointStroke);
+    painter.setBrush(QBrush(fill));
+    painter.drawEllipse(originScr, pointSize * 0.5, pointSize * 0.5);
+
+    fill = pointFill;
+
+    if (ImageHorizon::TARGET == selectedId ||
+        (selectedId == 0 && ImageHorizon::TARGET == hoveredId))
+        fill = deleteOnRelease ? deleteFill : pointHover;
+
+    painter.setPen(pointStroke);
+    painter.setBrush(QBrush(fill));
+    painter.drawEllipse(targetScr, pointSize * 0.5, pointSize * 0.5);
 }
 
 void CurveView::drawGridLine(QPainter& painter, Vec2D point, Vec2D dir,

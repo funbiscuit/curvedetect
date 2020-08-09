@@ -661,56 +661,7 @@ bool MainWindow::render_zoom_window(const ImVec2 &canvas_sz, ImVec2 &out_ZoomOri
 
     return false;
 }
-
-void MainWindow::render_horizon(const ImVec2 &im_pos)
-{
-    if(!curve || currentMode != MODE_HORIZON)
-        return;
-
-    ImVec2 WinPos = ImGui::GetWindowPos();
-
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-    auto horizon= curve->get_horizon();
-    auto selectedId= curve->get_selected_id();
-    auto hoveredId= curve->get_hovered_id(ImageElement::HORIZON);
-
-    float pointSize = 12.f;
-    auto lineColor = ImColor(128, 128, 128, 255);
-    auto pointStroke = ImColor(64, 64, 64, 255);
-    auto pointHover = ImColor(255, 255, 255, 255);
-    auto pointFill = ImColor(255, 200, 60, 255);
-    auto deleteFill = ImColor(205, 92, 92, 255);
-
-    auto CoordOriginImg= horizon.imagePosition.to_imvec();
-    auto CoordOriginTargetX= horizon.target.imagePosition.to_imvec();
-
-    ImVec2 CoordOriginScreen = CoordOriginImg*imageScale + im_pos + WinPos;
-    ImVec2 CoordTargetScreen = CoordOriginTargetX*imageScale + im_pos + WinPos;
-
-    //draw horizon
-    draw_list->AddLine(CoordOriginScreen, CoordTargetScreen, lineColor, 2.0f);
-
-    ImU32 fill = pointFill;
-
-    if (ImageHorizon::ORIGIN == selectedId || (selectedId == 0 && ImageHorizon::ORIGIN == hoveredId))
-        fill = deleteOnRelease ? deleteFill : pointHover;
-
-    draw_list->AddCircleFilled(CoordOriginScreen, pointSize*0.5f, pointStroke);
-    draw_list->AddCircleFilled(CoordOriginScreen, pointSize*0.5f-1.f, fill);
-
-
-
-    fill = pointFill;
-
-    if (ImageHorizon::TARGET == selectedId || (selectedId == 0 && ImageHorizon::TARGET == hoveredId))
-        fill = pointHover;
-
-    draw_list->AddCircleFilled(CoordTargetScreen, pointSize*0.5f, pointStroke);
-    draw_list->AddCircleFilled(CoordTargetScreen, pointSize*0.5f-1.f, fill);
-
-
-}*/
+*/
 
 void MainWindow::render_side_panel()
 {

@@ -51,6 +51,7 @@ private:
     void drawImage(QPainter& painter);
     void drawPoints(QPainter& painter);
     void drawGrid(QPainter& painter);
+    void drawHorizon(QPainter& painter);
 
     /**
      * Draw grid line that goes through specified point and has specified
