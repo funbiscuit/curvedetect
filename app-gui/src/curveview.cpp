@@ -8,8 +8,6 @@
 CurveView::CurveView()
 {
     setMouseTracking(true);
-
-    currentMode = ActionMode::MODE_POINTS;
 }
 
 CurveView::~CurveView()
@@ -25,10 +23,13 @@ void CurveView::setCurve(std::shared_ptr<CurveDetect> _curve)
 
 void CurveView::mousePressEvent(QMouseEvent *event)
 {
+    if(!curve)
+        return;
+
     if(event->button() == Qt::LeftButton)
     {
 
-        switch (currentMode)
+        switch (curve->getCurrentMode())
         {
             case ActionMode::MODE_POINTS:
                 if (QApplication::keyboardModifiers() & Qt::ControlModifier)
@@ -52,9 +53,12 @@ void CurveView::mousePressEvent(QMouseEvent *event)
 
 void CurveView::mouseReleaseEvent(QMouseEvent *event)
 {
+    if(!curve)
+        return;
+
     if (event->button() == Qt::LeftButton)
     {
-        switch (currentMode)
+        switch (curve->getCurrentMode())
         {
             case ActionMode::MODE_POINTS:
             case ActionMode::MODE_HORIZON:
@@ -96,8 +100,9 @@ void CurveView::mouseMoveEvent(QMouseEvent *event)
         if(QApplication::keyboardModifiers() & Qt::ControlModifier)
             curve->snap_selected();
 
-        if(currentMode == ActionMode::MODE_POINTS ||
-           currentMode == ActionMode::MODE_HORIZON)
+        auto mode = curve->getCurrentMode();
+        if(mode == ActionMode::MODE_POINTS ||
+           mode == ActionMode::MODE_HORIZON)
         {
             curve->update_subdiv();
         }
@@ -226,12 +231,13 @@ void CurveView::drawPoints(QPainter& painter)
         }
     }
 
+    auto mode = curve->getCurrentMode();
     for (const auto &point : userPoints) {
         auto pointPos = point.imagePosition * imageScale + imagePos;
 
         auto fill = userFill;
 
-        if (currentMode == ActionMode::MODE_POINTS)
+        if (mode == ActionMode::MODE_POINTS)
             if (point.id == selectedId || (selectedId == 0 && point.id == hoveredId))
                 fill = deleteOnRelease ? deleteFill : userHover;
 
@@ -292,11 +298,13 @@ void CurveView::drawGrid(QPainter& painter)
         }
     }
 
+    auto mode = curve->getCurrentMode();
+
     //draw tick lines
     for (auto &tick : XTicks) {
         auto col = tickColor;
 
-        if (currentMode == ActionMode::MODE_GRID)
+        if (mode == ActionMode::MODE_GRID)
         {
             if (tick.id == selectedId)
                 col = tickSel;
@@ -310,7 +318,7 @@ void CurveView::drawGrid(QPainter& painter)
     for (auto &tick : YTicks) {
         auto col = tickColor;
 
-        if (currentMode == ActionMode::MODE_GRID)
+        if (mode == ActionMode::MODE_GRID)
         {
             if (tick.id == selectedId)
                 col = tickSel;
@@ -325,7 +333,7 @@ void CurveView::drawGrid(QPainter& painter)
 
 void CurveView::drawHorizon(QPainter& painter)
 {
-    if(currentMode != ActionMode::MODE_HORIZON)
+    if(curve->getCurrentMode() != ActionMode::MODE_HORIZON)
         return;
 
     auto horizon = curve->get_horizon();
@@ -422,14 +430,16 @@ void CurveView::openModePopup()
     ActionMode modes[]={ActionMode::MODE_POINTS,ActionMode::MODE_GRID,
                         ActionMode::MODE_HORIZON};
 
+    auto mode = curve->getCurrentMode();
     for(int j=0;j<3;++j)
     {
         auto action = new QAction(items[j], this);
         connect(action, &QAction::triggered, this, [j, modes, this]()
         {
-            currentMode = modes[j];
+            curve->setMode(modes[j]);
+            repaint();
         });
-        if(currentMode == modes[j])
+        if(mode == modes[j])
             action->setDisabled(true);
         menu.addAction(action);
     }

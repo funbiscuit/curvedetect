@@ -34,7 +34,6 @@ MainWindow::MainWindow()
     curveView = new CurveView();
     mainLayout->addWidget(curveView, 1);
 
-    currentMode = ActionMode::MODE_POINTS;
 
 
     minImageScale = 1.0f;
@@ -384,7 +383,7 @@ void MainWindow::on_mouse_double_click(int btn)
 //    auto& app= MainApp::get();
     if (btn == 0)
     {
-        switch (currentMode)
+        switch (curve->getCurrentMode())
         {
             case ActionMode::MODE_GRID:
 //                if(curve->get_selected_id())

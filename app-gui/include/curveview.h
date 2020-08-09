@@ -41,8 +41,6 @@ private:
 
     Vec2D hoveredImagePos;
 
-    ActionMode currentMode;
-
     bool deleteOnRelease = false;
     bool bShowSubTicks = false;
     bool bLogX = false;

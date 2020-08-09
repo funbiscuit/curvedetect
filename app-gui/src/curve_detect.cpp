@@ -30,6 +30,16 @@ std::shared_ptr<Image> CurveDetect::getImage()
     return image;
 }
 
+ActionMode CurveDetect::getCurrentMode()
+{
+    return currentMode;
+}
+
+void CurveDetect::setMode(ActionMode mode)
+{
+    currentMode = mode;
+}
+
 uint64_t CurveDetect::get_hovered_id(int selectionFilter)
 {
     if( (selectionFilter & ImageElement::POINT) && hoveredPoint )
@@ -580,6 +590,7 @@ void CurveDetect::reset_all()
 
     reset_horizon();
 
+    currentMode = ActionMode::MODE_POINTS;
 }
 void CurveDetect::reset_horizon()
 {

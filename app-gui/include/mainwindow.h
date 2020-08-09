@@ -16,15 +16,6 @@ QT_END_NAMESPACE
 
 class CurveView;
 
-enum class ActionMode
-{
-    MODE_POINTS,
-    MODE_HORIZON,
-    MODE_GRID,
-
-};
-
-
 class MainWindow : public QMainWindow
 {
 public:
@@ -65,9 +56,6 @@ private:
     int subdivLevel=10;
     const int maxSubdivLevel=10;
     int binLevel=127;
-
-
-    ActionMode currentMode;
 
     int zoomPixelHalfSide = 20;
 

@@ -8,6 +8,13 @@
 #include <image_elements.h>
 
 
+enum class ActionMode
+{
+    MODE_POINTS,
+    MODE_HORIZON,
+    MODE_GRID,
+};
+
 class PointsBundle
 {
 public:
@@ -56,6 +63,10 @@ public:
 
     std::shared_ptr<Image> getImage();
 
+    ActionMode getCurrentMode();
+
+    void setMode(ActionMode mode);
+
     bool can_reset();
     void reset_all();
     bool can_reset_horizon();
@@ -103,6 +114,8 @@ public:
 
 private:
     std::shared_ptr<Image> image;
+
+    ActionMode currentMode;
 
     int binLevel;
     int subdivLevel;
